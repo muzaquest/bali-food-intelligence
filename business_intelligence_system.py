@@ -608,3 +608,178 @@ def test_business_hypothesis(restaurant_name: str, hypothesis: str,
     start_date = (df['date'].max() - timedelta(days=days_back)).strftime('%Y-%m-%d')
     
     return bi_system.test_hypothesis(restaurant_name, hypothesis, start_date, end_date)
+
+def generate_client_report(restaurant_name: str, start_date: str, end_date: str) -> Dict:
+    """
+    Генерирует подробный клиентский отчет за период
+    
+    Args:
+        restaurant_name: Название ресторана
+        start_date: Начальная дата периода (YYYY-MM-DD)
+        end_date: Конечная дата периода (YYYY-MM-DD)
+    
+    Returns:
+        Детальный отчет с анализом и рекомендациями
+    """
+    logger.info(f"Генерация клиентского отчета для {restaurant_name} за период {start_date} - {end_date}")
+    
+    try:
+        # Загружаем данные ресторана
+        df = get_restaurant_data(restaurant_name)
+        if df is None:
+            return {"error": f"Нет данных для ресторана {restaurant_name}"}
+        
+        df['date'] = pd.to_datetime(df['date'])
+        
+        # Фильтруем по периоду
+        period_df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+        
+        if period_df.empty:
+            return {"error": f"Нет данных за период {start_date} - {end_date}"}
+        
+        # Основные метрики
+        total_sales = period_df['total_sales'].sum()
+        total_orders = period_df['orders'].sum()
+        avg_check = total_sales / total_orders if total_orders > 0 else 0
+        avg_daily_sales = period_df['total_sales'].mean()
+        days_count = len(period_df)
+        
+        # Анализ рекламы
+        ads_days = period_df[period_df['ads_on'] == 1]
+        no_ads_days = period_df[period_df['ads_on'] == 0]
+        
+        ads_effectiveness = {}
+        if len(ads_days) > 0 and len(no_ads_days) > 0:
+            ads_avg_sales = ads_days['total_sales'].mean()
+            no_ads_avg_sales = no_ads_days['total_sales'].mean()
+            ads_impact = ((ads_avg_sales - no_ads_avg_sales) / no_ads_avg_sales) * 100
+            
+            ads_effectiveness = {
+                'days_with_ads': len(ads_days),
+                'days_without_ads': len(no_ads_days),
+                'ads_percentage': len(ads_days) / len(period_df) * 100,
+                'avg_sales_with_ads': ads_avg_sales,
+                'avg_sales_without_ads': no_ads_avg_sales,
+                'ads_impact_percent': ads_impact
+            }
+        
+        # Анализ по месяцам
+        period_df['month'] = period_df['date'].dt.month
+        period_df['month_name'] = period_df['date'].dt.strftime('%B')
+        
+        monthly_analysis = {}
+        for month in period_df['month'].unique():
+            month_data = period_df[period_df['month'] == month]
+            month_name = month_data['month_name'].iloc[0]
+            
+            monthly_analysis[month_name] = {
+                'sales': month_data['total_sales'].sum(),
+                'orders': month_data['orders'].sum(),
+                'avg_rating': month_data['rating'].mean(),
+                'days_with_ads': (month_data['ads_on'] == 1).sum(),
+                'total_days': len(month_data),
+                'avg_daily_sales': month_data['total_sales'].mean()
+            }
+        
+        # Тренд продаж
+        first_month_sales = list(monthly_analysis.values())[0]['sales']
+        last_month_sales = list(monthly_analysis.values())[-1]['sales']
+        
+        sales_growth = 0
+        if first_month_sales > 0:
+            sales_growth = ((last_month_sales - first_month_sales) / first_month_sales) * 100
+        
+        # Анализ рейтинга и качества
+        avg_rating = period_df['rating'].mean()
+        avg_delivery_time = period_df['delivery_time'].mean()
+        avg_cancel_rate = period_df['cancel_rate'].mean()
+        
+        # Анализ праздников
+        holiday_impact = {}
+        if 'is_holiday' in period_df.columns:
+            holiday_days = period_df[period_df['is_holiday'] == True]
+            regular_days = period_df[period_df['is_holiday'] == False]
+            
+            if len(holiday_days) > 0 and len(regular_days) > 0:
+                holiday_avg_sales = holiday_days['total_sales'].mean()
+                regular_avg_sales = regular_days['total_sales'].mean()
+                holiday_impact_percent = ((holiday_avg_sales - regular_avg_sales) / regular_avg_sales) * 100
+                
+                holiday_impact = {
+                    'holiday_days': len(holiday_days),
+                    'regular_days': len(regular_days),
+                    'holiday_avg_sales': holiday_avg_sales,
+                    'regular_avg_sales': regular_avg_sales,
+                    'holiday_impact_percent': holiday_impact_percent
+                }
+        
+        # Генерируем выводы и рекомендации
+        conclusions = []
+        recommendations = []
+        
+        # Выводы по рекламе
+        if ads_effectiveness:
+            impact = ads_effectiveness['ads_impact_percent']
+            if impact > 20:
+                conclusions.append(f"✅ Реклама высокоэффективна - повышает продажи на {impact:.1f}%")
+                recommendations.append("Увеличить рекламный бюджет для максимизации эффекта")
+            elif impact > 0:
+                conclusions.append(f"⚠️ Реклама эффективна - повышает продажи на {impact:.1f}%")
+                recommendations.append("Оптимизировать рекламные кампании для повышения эффективности")
+            else:
+                conclusions.append(f"❌ Реклама неэффективна - снижает продажи на {abs(impact):.1f}%")
+                recommendations.append("Срочно пересмотреть рекламную стратегию")
+        
+        # Выводы по росту
+        if sales_growth > 10:
+            conclusions.append(f"📈 Отличный рост продаж - {sales_growth:.1f}% за период")
+            recommendations.append("Масштабировать успешные практики")
+        elif sales_growth > 0:
+            conclusions.append(f"📊 Умеренный рост продаж - {sales_growth:.1f}% за период")
+            recommendations.append("Найти дополнительные точки роста")
+        else:
+            conclusions.append(f"📉 Снижение продаж - {abs(sales_growth):.1f}% за период")
+            recommendations.append("Срочно проанализировать причины снижения")
+        
+        # Выводы по качеству
+        if avg_rating < 4.5:
+            conclusions.append(f"⚠️ Рейтинг требует внимания - {avg_rating:.2f}")
+            recommendations.append("Улучшить качество обслуживания и продукции")
+        
+        if avg_cancel_rate > 0.1:
+            conclusions.append(f"❌ Высокий уровень отмен - {avg_cancel_rate*100:.1f}%")
+            recommendations.append("Снизить время подготовки заказов")
+        
+        # Выводы по праздникам
+        if holiday_impact and holiday_impact['holiday_impact_percent'] > 50:
+            conclusions.append(f"🎉 Праздники значительно повышают продажи - {holiday_impact['holiday_impact_percent']:.1f}%")
+            recommendations.append("Подготовить специальные предложения к праздникам")
+        
+        # Формируем итоговый отчет
+        report = {
+            'restaurant_name': restaurant_name,
+            'period': f"{start_date} - {end_date}",
+            'summary': {
+                'total_sales': total_sales,
+                'total_orders': total_orders,
+                'avg_check': avg_check,
+                'avg_daily_sales': avg_daily_sales,
+                'days_count': days_count,
+                'avg_rating': avg_rating,
+                'avg_delivery_time': avg_delivery_time,
+                'avg_cancel_rate': avg_cancel_rate * 100
+            },
+            'advertising_analysis': ads_effectiveness,
+            'monthly_analysis': monthly_analysis,
+            'sales_growth_percent': sales_growth,
+            'holiday_impact': holiday_impact,
+            'conclusions': conclusions,
+            'recommendations': recommendations,
+            'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        return report
+        
+    except Exception as e:
+        logger.error(f"Ошибка генерации клиентского отчета: {e}")
+        return {"error": f"Ошибка генерации отчета: {str(e)}"}
