@@ -36,7 +36,7 @@ def load_grab_stats(db_path: str) -> pd.DataFrame:
             1 as position,
             COALESCE(g.cancelation_rate, 0.05) as cancel_rate
         FROM grab_stats g
-        WHERE g.sales > 0
+        WHERE g.sales > 0 AND g.restaurant_id IS NOT NULL
         ORDER BY g.restaurant_id, g.stat_date
         """
         
@@ -51,10 +51,14 @@ def load_grab_stats(db_path: str) -> pd.DataFrame:
         df['date'] = pd.to_datetime(df['date'])
         
         # Убеждаемся, что числовые колонки имеют правильный тип
-        numeric_columns = ['total_sales', 'ads_sales', 'rating', 'roas', 'position', 'cancel_rate', 'ads_on']
+        numeric_columns = ['total_sales', 'orders', 'ads_sales', 'rating', 'roas', 'position', 'cancel_rate', 'ads_on']
         for col in numeric_columns:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        
+        # Убеждаемся, что orders имеет целочисленный тип
+        if 'orders' in df.columns:
+            df['orders'] = df['orders'].astype('int64')
         
         conn.close()
         
@@ -99,7 +103,7 @@ def load_gojek_stats(db_path: str) -> pd.DataFrame:
             1 as position,
             0.05 as cancel_rate
         FROM gojek_stats g
-        WHERE g.sales > 0
+        WHERE g.sales > 0 AND g.restaurant_id IS NOT NULL
         ORDER BY g.restaurant_id, g.stat_date
         """
         
@@ -114,10 +118,14 @@ def load_gojek_stats(db_path: str) -> pd.DataFrame:
         df['date'] = pd.to_datetime(df['date'])
         
         # Убеждаемся, что числовые колонки имеют правильный тип
-        numeric_columns = ['total_sales', 'ads_sales', 'rating', 'roas', 'position', 'cancel_rate', 'ads_on']
+        numeric_columns = ['total_sales', 'orders', 'ads_sales', 'rating', 'roas', 'position', 'cancel_rate', 'ads_on']
         for col in numeric_columns:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        
+        # Убеждаемся, что orders имеет целочисленный тип
+        if 'orders' in df.columns:
+            df['orders'] = df['orders'].astype('int64')
         
         conn.close()
         
