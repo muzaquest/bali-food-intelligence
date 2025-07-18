@@ -4,8 +4,8 @@
 import os
 
 # Пути к файлам
-DATABASE_PATH = "client_data.db"
-MAIN_DATABASE_PATH = "data/database.sqlite"
+DATABASE_PATH = "data/database.sqlite"  # Основная база с 59 ресторанами
+MAIN_DATABASE_PATH = "data/database.sqlite"  # Основная база с 59 ресторанами
 MODEL_PATH = "models/client_sales_model.joblib"
 SCALER_PATH = "models/scaler.joblib"
 RESULTS_PATH = "results/"
@@ -31,7 +31,7 @@ LAG_DAYS = 1
 
 # Категории признаков
 INTERNAL_FEATURES = [
-    'total_sales', 'ads_sales', 'rating', 'roas', 
+    'total_sales', 'ads_sales', 'rating', 'roas',
     'position', 'cancel_rate', 'ads_on'
 ]
 

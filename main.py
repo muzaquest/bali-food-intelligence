@@ -308,23 +308,19 @@ def info_command(args):
         return False
 
 def list_restaurants_command(args):
-    """Команда для получения списка ресторанов"""
+    """Показать список всех ресторанов"""
     logger.info("=== Список ресторанов ===")
     
     try:
-        # Загружаем данные
-        df = load_data_for_training()
-        
-        if df is None:
-            logger.error("Не удалось загрузить данные")
-            return False
-        
-        # Получаем список ресторанов
         restaurants = get_restaurants_list()
+        
+        if not restaurants:
+            logger.error("Нет доступных ресторанов")
+            return False
         
         print(f"\nНайдено {len(restaurants)} ресторанов:")
         for restaurant in restaurants:
-            print(f"  • {restaurant['restaurant_name']} ({restaurant['records_count']} записей)")
+            print(f"  • {restaurant}")
         
         return True
         
