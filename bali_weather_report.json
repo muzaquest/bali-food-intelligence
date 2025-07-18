@@ -1,0 +1,80 @@
+{
+  "timestamp": "2025-07-18T07:52:51.758941",
+  "regions": {
+    "Seminyak": {
+      "impact_percent": 5.0,
+      "weather_summary": "Ясно, 28.0°C, ветер 5.0м/с",
+      "delivery_conditions": "Отличные условия для доставки",
+      "reasons": [
+        "Хорошая погода для доставки"
+      ]
+    },
+    "Ubud": {
+      "impact_percent": 5.0,
+      "weather_summary": "Ясно, 28.0°C, ветер 5.0м/с",
+      "delivery_conditions": "Отличные условия для доставки",
+      "reasons": [
+        "Хорошая погода для доставки"
+      ]
+    },
+    "Canggu": {
+      "impact_percent": 5.0,
+      "weather_summary": "Ясно, 28.0°C, ветер 5.0м/с",
+      "delivery_conditions": "Отличные условия для доставки",
+      "reasons": [
+        "Хорошая погода для доставки"
+      ]
+    },
+    "Denpasar": {
+      "impact_percent": 5.0,
+      "weather_summary": "Ясно, 28.0°C, ветер 5.0м/с",
+      "delivery_conditions": "Отличные условия для доставки",
+      "reasons": [
+        "Хорошая погода для доставки"
+      ]
+    },
+    "Sanur": {
+      "impact_percent": 5.0,
+      "weather_summary": "Ясно, 28.0°C, ветер 5.0м/с",
+      "delivery_conditions": "Отличные условия для доставки",
+      "reasons": [
+        "Хорошая погода для доставки"
+      ]
+    },
+    "Nusa Dua": {
+      "impact_percent": 5.0,
+      "weather_summary": "Ясно, 28.0°C, ветер 5.0м/с",
+      "delivery_conditions": "Отличные условия для доставки",
+      "reasons": [
+        "Хорошая погода для доставки"
+      ]
+    },
+    "Jimbaran": {
+      "impact_percent": 5.0,
+      "weather_summary": "Ясно, 28.0°C, ветер 5.0м/с",
+      "delivery_conditions": "Отличные условия для доставки",
+      "reasons": [
+        "Хорошая погода для доставки"
+      ]
+    },
+    "Kuta": {
+      "impact_percent": 5.0,
+      "weather_summary": "Ясно, 28.0°C, ветер 5.0м/с",
+      "delivery_conditions": "Отличные условия для доставки",
+      "reasons": [
+        "Хорошая погода для доставки"
+      ]
+    }
+  },
+  "summary": {
+    "best_region": {
+      "name": "Seminyak",
+      "impact": 5.0
+    },
+    "worst_region": {
+      "name": "Seminyak",
+      "impact": 5.0
+    },
+    "avg_impact": 5.0
+  }
+}

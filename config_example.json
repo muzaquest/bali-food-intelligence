@@ -1,0 +1,20 @@
+{
+  "weather_api_key": "72d020d7f113b2e26ee71c1f6e9d7ae1",
+  "holiday_api_key": "YOUR_CALENDARIFIC_API_KEY",
+  "openai_api_key": "YOUR_OPENAI_API_KEY",
+  "openai_model": "gpt-4",
+  "database_config": {
+    "type": "sqlite",
+    "file_path": "client_data.db"
+  },
+  "cache_settings": {
+    "weather_cache_minutes": 15,
+    "holiday_cache_hours": 24,
+    "ai_cache_minutes": 5
+  },
+  "retry_settings": {
+    "max_retries": 3,
+    "retry_delay": 2,
+    "timeout_seconds": 30
+  }
+}
