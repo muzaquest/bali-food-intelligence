@@ -1,0 +1,14 @@
+{
+  "restaurant": "Honeycomb",
+  "date": "2023-06-15",
+  "actual_sales": 18500000,
+  "predicted_sales": 16200000,
+  "change_percent": -12.4,
+  "top_factors": {
+    "lag_1_sales": 0.45,
+    "rain_mm": -0.15,
+    "rolling_mean_3": 0.12
+  },
+  "explanation": "Изменение продаж: +45% от продажи вчера, -15% от дождь, +12% от средние продажи",
+  "timestamp": "2025-07-17T12:25:37.294189"
+}

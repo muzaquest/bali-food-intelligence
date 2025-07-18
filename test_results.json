@@ -1,0 +1,162 @@
+[
+  {
+    "restaurant_id": 1,
+    "restaurant_name": "Warung Bali Asli",
+    "region": "Seminyak",
+    "date": "2023-06-15",
+    "actual_sales": 5347743.0,
+    "predicted_sales": 5362250.529845239,
+    "sales_difference": -14507.529845238663,
+    "sales_difference_percent": -0.2705492733786418,
+    "analysis": {
+      "orders": 90,
+      "avg_order_value": 59419.36666666667,
+      "ads_enabled": true,
+      "rating": 4.0,
+      "delivery_time": 30,
+      "is_weekend": false,
+      "is_high_season": true
+    },
+    "feature_importance": {
+      "orders": 0.9346619160072533,
+      "avg_order_value": 0.061245735034694354,
+      "sales_ma_3": 0.002620348781523587,
+      "sales_change_1d": 0.0004521546844790498,
+      "sales_ma_7": 0.00014759899444613764,
+      "sales_lag_3": 0.00012478673988070777,
+      "sales_lag_2": 0.000112102711790888,
+      "sales_lag_1": 0.00010845770245813663,
+      "sales_change_7d": 0.00010215433796087806,
+      "day": 9.331089500541818e-05
+    },
+    "generated_at": "2025-07-18T07:06:34.093499"
+  },
+  {
+    "restaurant_id": 2,
+    "restaurant_name": "Ubud Organic Cafe",
+    "region": "Ubud",
+    "date": "2023-03-10",
+    "actual_sales": 3652599.0,
+    "predicted_sales": 3646559.8890043306,
+    "sales_difference": 6039.110995669384,
+    "sales_difference_percent": 0.165611183676962,
+    "analysis": {
+      "orders": 57,
+      "avg_order_value": 64080.68421052631,
+      "ads_enabled": true,
+      "rating": 4.0,
+      "delivery_time": 30,
+      "is_weekend": false,
+      "is_high_season": false
+    },
+    "feature_importance": {
+      "orders": 0.9346619160072533,
+      "avg_order_value": 0.061245735034694354,
+      "sales_ma_3": 0.002620348781523587,
+      "sales_change_1d": 0.0004521546844790498,
+      "sales_ma_7": 0.00014759899444613764,
+      "sales_lag_3": 0.00012478673988070777,
+      "sales_lag_2": 0.000112102711790888,
+      "sales_lag_1": 0.00010845770245813663,
+      "sales_change_7d": 0.00010215433796087806,
+      "day": 9.331089500541818e-05
+    },
+    "generated_at": "2025-07-18T07:06:34.168186"
+  },
+  {
+    "restaurant_id": 3,
+    "restaurant_name": "Canggu Surf Cafe",
+    "region": "Canggu",
+    "date": "2023-12-25",
+    "actual_sales": 3419083.0,
+    "predicted_sales": 3414939.0926904767,
+    "sales_difference": 4143.907309523318,
+    "sales_difference_percent": 0.12134644856164975,
+    "analysis": {
+      "orders": 66,
+      "avg_order_value": 51804.28787878788,
+      "ads_enabled": true,
+      "rating": 4.0,
+      "delivery_time": 30,
+      "is_weekend": false,
+      "is_high_season": false
+    },
+    "feature_importance": {
+      "orders": 0.9346619160072533,
+      "avg_order_value": 0.061245735034694354,
+      "sales_ma_3": 0.002620348781523587,
+      "sales_change_1d": 0.0004521546844790498,
+      "sales_ma_7": 0.00014759899444613764,
+      "sales_lag_3": 0.00012478673988070777,
+      "sales_lag_2": 0.000112102711790888,
+      "sales_lag_1": 0.00010845770245813663,
+      "sales_change_7d": 0.00010215433796087806,
+      "day": 9.331089500541818e-05
+    },
+    "generated_at": "2025-07-18T07:06:34.246693"
+  },
+  {
+    "restaurant_id": 6,
+    "restaurant_name": "Nusa Dua Fine Dining",
+    "region": "Seminyak",
+    "date": "2023-07-01",
+    "actual_sales": 8717934.0,
+    "predicted_sales": 8112007.573170638,
+    "sales_difference": 605926.4268293623,
+    "sales_difference_percent": 7.469500260741639,
+    "analysis": {
+      "orders": 149,
+      "avg_order_value": 58509.62416107383,
+      "ads_enabled": true,
+      "rating": 4.0,
+      "delivery_time": 30,
+      "is_weekend": true,
+      "is_high_season": true
+    },
+    "feature_importance": {
+      "orders": 0.9346619160072533,
+      "avg_order_value": 0.061245735034694354,
+      "sales_ma_3": 0.002620348781523587,
+      "sales_change_1d": 0.0004521546844790498,
+      "sales_ma_7": 0.00014759899444613764,
+      "sales_lag_3": 0.00012478673988070777,
+      "sales_lag_2": 0.000112102711790888,
+      "sales_lag_1": 0.00010845770245813663,
+      "sales_change_7d": 0.00010215433796087806,
+      "day": 9.331089500541818e-05
+    },
+    "generated_at": "2025-07-18T07:06:34.322565"
+  },
+  {
+    "restaurant_id": 8,
+    "restaurant_name": "Kuta Night Market",
+    "region": "Denpasar",
+    "date": "2023-04-15",
+    "actual_sales": 2018430.0,
+    "predicted_sales": 2013864.666214286,
+    "sales_difference": 4565.333785714116,
+    "sales_difference_percent": 0.22669516290268632,
+    "analysis": {
+      "orders": 32,
+      "avg_order_value": 63075.9375,
+      "ads_enabled": true,
+      "rating": 4.0,
+      "delivery_time": 30,
+      "is_weekend": true,
+      "is_high_season": false
+    },
+    "feature_importance": {
+      "orders": 0.9346619160072533,
+      "avg_order_value": 0.061245735034694354,
+      "sales_ma_3": 0.002620348781523587,
+      "sales_change_1d": 0.0004521546844790498,
+      "sales_ma_7": 0.00014759899444613764,
+      "sales_lag_3": 0.00012478673988070777,
+      "sales_lag_2": 0.000112102711790888,
+      "sales_lag_1": 0.00010845770245813663,
+      "sales_change_7d": 0.00010215433796087806,
+      "day": 9.331089500541818e-05
+    },
+    "generated_at": "2025-07-18T07:06:34.394168"
+  }
+]

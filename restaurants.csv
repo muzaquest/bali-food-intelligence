@@ -1,0 +1,9 @@
+id,name,region,grab_restaurant_id,gojek_restaurant_id,connected_date,cuisine_type,rating,avg_delivery_time
+1,Warung Bali Asli,Seminyak,grab_001,gojek_001,2022-01-01,Indonesian,4.4,31
+2,Ubud Organic Cafe,Ubud,grab_002,gojek_002,2022-01-01,Healthy,4.0,33
+3,Canggu Surf Cafe,Canggu,grab_003,gojek_003,2022-01-01,Western,4.6,44
+4,Denpasar Local,Denpasar,grab_004,gojek_004,2022-01-01,Local,4.7,36
+5,Sanur Beach Resto,Sanur,grab_005,gojek_005,2022-01-01,Seafood,4.8,41
+6,Nusa Dua Fine Dining,Seminyak,grab_006,gojek_006,2022-01-01,Fine Dining,4.1,25
+7,Jimbaran Seafood,Canggu,grab_007,gojek_007,2022-01-01,Seafood,4.8,42
+8,Kuta Night Market,Denpasar,grab_008,gojek_008,2022-01-01,Street Food,4.7,33
