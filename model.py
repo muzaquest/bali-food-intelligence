@@ -243,24 +243,57 @@ class SalesPredictor:
     def load_model(self, model_path=None):
         """Загрузка модели"""
         model_path = model_path or MODEL_PATH
+        metadata_path = "models/client_model_metadata.json"  # Правильный путь к метаданным
         
         try:
+            # Загружаем модель
             model_data = joblib.load(model_path)
             
-            self.model = model_data['model']
-            self.feature_engineer = model_data['feature_engineer']
-            self.feature_names = model_data['feature_names']
-            self.model_type = model_data['model_type']
-            self.training_metrics = model_data.get('training_metrics', {})
+            # Проверяем, сохранена ли модель как словарь или как объект sklearn
+            if isinstance(model_data, dict):
+                # Старый формат - словарь
+                self.model = model_data['model']
+                self.feature_engineer = model_data['feature_engineer']
+                self.feature_names = model_data['feature_names']
+                self.model_type = model_data['model_type']
+                self.training_metrics = model_data.get('training_metrics', {})
+            else:
+                # Новый формат - объект sklearn
+                self.model = model_data
+                
+                # Загружаем метаданные из отдельного файла
+                if os.path.exists(metadata_path):
+                    import json
+                    with open(metadata_path, 'r') as f:
+                        metadata = json.load(f)
+                    
+                    self.feature_names = metadata.get('feature_names', [])
+                    self.model_type = metadata.get('model_type', 'random_forest')
+                    self.training_metrics = metadata.get('metrics', {})
+                    
+                    # Создаем feature_engineer с правильными именами признаков
+                    self.feature_engineer = FeatureEngineer()
+                    self.feature_engineer.feature_names = self.feature_names
+                else:
+                    logger.warning(f"Файл метаданных {metadata_path} не найден")
+                    self.feature_names = []
+                    self.model_type = 'random_forest'
+                    self.training_metrics = {}
+                    self.feature_engineer = FeatureEngineer()
+            
             self.is_trained = True
             
             logger.info(f"Модель загружена из {model_path}")
-            logger.info(f"Дата обучения: {model_data.get('trained_at', 'неизвестно')}")
+            if self.training_metrics:
+                logger.info(f"R² score: {self.training_metrics.get('test_r2', 'N/A')}")
+                logger.info(f"Количество признаков: {len(self.feature_names)}")
             
             return True
             
         except Exception as e:
             logger.error(f"Ошибка загрузки модели: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def retrain(self, df, target_col='target'):

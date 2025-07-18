@@ -4,8 +4,8 @@
 import os
 
 # Пути к файлам
-DATABASE_PATH = "deliverybooster.db"
-MODEL_PATH = "models/sales_model.joblib"
+DATABASE_PATH = "client_data.db"
+MODEL_PATH = "models/client_sales_model.joblib"
 SCALER_PATH = "models/scaler.joblib"
 RESULTS_PATH = "results/"
 
