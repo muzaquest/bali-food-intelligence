@@ -5,6 +5,7 @@ import os
 
 # Пути к файлам
 DATABASE_PATH = "client_data.db"
+MAIN_DATABASE_PATH = "data/database.sqlite"
 MODEL_PATH = "models/client_sales_model.joblib"
 SCALER_PATH = "models/scaler.joblib"
 RESULTS_PATH = "results/"

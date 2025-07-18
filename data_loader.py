@@ -1,312 +1,325 @@
 """
-Модуль для загрузки и обработки данных из SQLite базы
+Модуль для загрузки и обработки данных
 """
-import sqlite3
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+import sqlite3
 import logging
-from config import DATABASE_PATH
-from utils import check_data_quality, create_sample_data
+from datetime import datetime, timedelta
+import os
+from config import DATABASE_PATH, MAIN_DATABASE_PATH
 
 logger = logging.getLogger(__name__)
 
-class DataLoader:
-    """Класс для загрузки данных из базы deliverybooster.db"""
-    
-    def __init__(self, db_path=DATABASE_PATH):
-        self.db_path = db_path
-        self.connection = None
-    
-    def connect(self):
-        """Подключение к базе данных"""
-        try:
-            self.connection = sqlite3.connect(self.db_path)
-            logger.info(f"Подключение к базе {self.db_path} установлено")
-            return True
-        except sqlite3.Error as e:
-            logger.error(f"Ошибка подключения к базе: {e}")
-            return False
-    
-    def disconnect(self):
-        """Отключение от базы данных"""
-        if self.connection:
-            self.connection.close()
-            logger.info("Соединение с базой закрыто")
-    
-    def get_table_info(self, table_name):
-        """Получение информации о структуре таблицы"""
-        if not self.connection:
-            logger.error("Нет подключения к базе данных")
-            return None
+def load_grab_stats(db_path):
+    """Загрузка статистики Grab"""
+    try:
+        conn = sqlite3.connect(db_path)
+        logger.info(f"Подключение к базе {db_path} установлено")
         
-        try:
-            query = f"PRAGMA table_info({table_name})"
-            df = pd.read_sql_query(query, self.connection)
-            return df
-        except Exception as e:
-            logger.error(f"Ошибка получения информации о таблице {table_name}: {e}")
-            return None
-    
-    def load_grab_stats(self, start_date=None, end_date=None):
-        """Загрузка данных из таблицы grab_stats"""
-        if not self.connection:
-            logger.error("Нет подключения к базе данных")
-            return None
+        # Проверяем наличие таблицы
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='grab_stats'")
+        if not cursor.fetchone():
+            logger.warning("Таблица grab_stats не найдена")
+            return pd.DataFrame()
         
+        # Сначала получаем список ресторанов
+        restaurants_query = """
+        SELECT id, name FROM restaurants ORDER BY name
+        """
+        restaurants_df = pd.read_sql_query(restaurants_query, conn)
+        
+        # Загружаем статистику с правильными колонками
         query = """
         SELECT 
-            restaurant_id,
+            g.restaurant_id,
+            g.date,
+            g.sales as total_sales,
+            g.orders,
+            g.avg_order_value,
+            g.ads_spend as ads_sales,
+            g.ads_enabled as ads_on,
+            g.rating,
+            g.delivery_time,
+            CASE WHEN g.ads_spend > 0 THEN g.sales / g.ads_spend ELSE 0 END as roas,
+            1 as position,
+            0.05 as cancel_rate
+        FROM grab_stats g
+        ORDER BY g.restaurant_id, g.date
+        """
+        
+        df = pd.read_sql_query(query, conn)
+        
+        # Добавляем названия ресторанов
+        df = df.merge(restaurants_df, left_on='restaurant_id', right_on='id', how='left')
+        df['restaurant_name'] = df['name']
+        
+        # Удаляем лишние колонки
+        df = df.drop(['restaurant_id', 'id', 'name'], axis=1)
+        
+        logger.info(f"Загружено {len(df)} записей из grab_stats")
+        
+        conn.close()
+        return df
+        
+    except Exception as e:
+        logger.error(f"Ошибка загрузки grab_stats: {e}")
+        return pd.DataFrame()
+
+def load_gojek_stats(db_path):
+    """Загрузка статистики Gojek"""
+    try:
+        conn = sqlite3.connect(db_path)
+        
+        # Проверяем наличие таблицы
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='gojek_stats'")
+        if not cursor.fetchone():
+            logger.info("Таблица gojek_stats не найдена, возвращаю пустой DataFrame")
+            conn.close()
+            return pd.DataFrame()
+        
+        # Если таблица есть, загружаем данные
+        query = """
+        SELECT 
+            restaurant_name,
             date,
             sales as total_sales,
-            ads_spend as ads_sales,
+            orders,
             rating,
-            CASE WHEN ads_spend > 0 THEN sales / ads_spend ELSE 0 END as roas,
-            1 as position,
-            0.05 as cancel_rate,
-            CASE WHEN ads_enabled = 1 THEN 1 ELSE 0 END as ads_on
-        FROM grab_stats
+            cancel_rate,
+            ads_on,
+            ads_sales,
+            position,
+            roas
+        FROM gojek_stats
+        ORDER BY restaurant_name, date
         """
         
-        if start_date and end_date:
-            query += f" WHERE date BETWEEN '{start_date}' AND '{end_date}'"
+        df = pd.read_sql_query(query, conn)
+        logger.info(f"Загружено {len(df)} записей из gojek_stats")
         
-        query += " ORDER BY restaurant_id, date"
+        conn.close()
+        return df
         
-        try:
-            df = pd.read_sql_query(query, self.connection)
-            logger.info(f"Загружено {len(df)} записей из grab_stats")
-            return df
-        except Exception as e:
-            logger.error(f"Ошибка загрузки grab_stats: {e}")
-            return None
-    
-    def load_gojek_stats(self, start_date=None, end_date=None):
-        """Загрузка данных из таблицы gojek_stats (используем grab_stats как источник)"""
-        if not self.connection:
-            logger.error("Нет подключения к базе данных")
-            return None
-        
-        # Поскольку у нас нет таблицы gojek_stats, возвращаем пустой DataFrame
-        try:
-            df = pd.DataFrame(columns=['restaurant_id', 'date', 'total_sales', 'ads_sales', 'rating', 'roas', 'position', 'cancel_rate', 'ads_on'])
-            logger.info("Таблица gojek_stats не найдена, возвращаю пустой DataFrame")
-            return df
-        except Exception as e:
-            logger.error(f"Ошибка загрузки gojek_stats: {e}")
-            return None
-    
-    def load_restaurants(self):
-        """Загрузка информации о ресторанах"""
-        if not self.connection:
-            logger.error("Нет подключения к базе данных")
-            return None
+    except Exception as e:
+        logger.error(f"Ошибка загрузки gojek_stats: {e}")
+        return pd.DataFrame()
+
+def load_restaurants_list(db_path):
+    """Загрузка списка ресторанов"""
+    try:
+        conn = sqlite3.connect(db_path)
         
         query = """
         SELECT 
-            id as restaurant_id,
-            name as restaurant_name,
-            region as location,
-            'Indonesian' as cuisine_type
+            id,
+            name,
+            region as location
         FROM restaurants
+        ORDER BY name
         """
         
-        try:
-            df = pd.read_sql_query(query, self.connection)
-            logger.info(f"Загружено {len(df)} ресторанов")
-            return df
-        except Exception as e:
-            logger.error(f"Ошибка загрузки restaurants: {e}")
-            return None
-    
-    def load_weather(self, start_date=None, end_date=None):
-        """Загрузка погодных данных (создаем синтетические данные)"""
-        if not self.connection:
-            logger.error("Нет подключения к базе данных")
-            return None
+        df = pd.read_sql_query(query, conn)
+        logger.info(f"Загружено {len(df)} ресторанов")
         
-        try:
-            # Создаем синтетические погодные данные
-            if start_date and end_date:
-                date_range = pd.date_range(start=start_date, end=end_date, freq='D')
-            else:
-                date_range = pd.date_range(start='2022-01-01', end='2023-12-31', freq='D')
-            
-            # Генерируем случайные погодные данные для Бали
-            np.random.seed(42)
-            weather_data = []
-            for date in date_range:
-                weather_data.append({
-                    'date': date.strftime('%Y-%m-%d'),
-                    'location': 'Bali',
-                    'rain_mm': np.random.exponential(5),  # Экспоненциальное распределение для дождя
-                    'temp_c': np.random.normal(28, 3)     # Нормальное распределение для температуры
-                })
-            
-            df = pd.DataFrame(weather_data)
-            logger.info(f"Создано {len(df)} синтетических погодных записей")
-            return df
-        except Exception as e:
-            logger.error(f"Ошибка создания погодных данных: {e}")
-            return None
-    
-    def load_holidays(self, start_date=None, end_date=None):
-        """Загрузка данных о праздниках (создаем синтетические данные)"""
-        if not self.connection:
-            logger.error("Нет подключения к базе данных")
-            return None
+        conn.close()
+        return df
         
-        try:
-            # Создаем данные о праздниках в Индонезии
-            holidays_data = [
-                {'date': '2022-01-01', 'holiday_type': 'national', 'holiday_name': 'New Year'},
-                {'date': '2022-02-01', 'holiday_type': 'religious', 'holiday_name': 'Chinese New Year'},
-                {'date': '2022-03-03', 'holiday_type': 'religious', 'holiday_name': 'Nyepi'},
-                {'date': '2022-04-15', 'holiday_type': 'religious', 'holiday_name': 'Good Friday'},
-                {'date': '2022-05-01', 'holiday_type': 'national', 'holiday_name': 'Labor Day'},
-                {'date': '2022-05-03', 'holiday_type': 'religious', 'holiday_name': 'Eid al-Fitr'},
-                {'date': '2022-05-26', 'holiday_type': 'religious', 'holiday_name': 'Vesak Day'},
-                {'date': '2022-06-01', 'holiday_type': 'national', 'holiday_name': 'Pancasila Day'},
-                {'date': '2022-07-10', 'holiday_type': 'religious', 'holiday_name': 'Eid al-Adha'},
-                {'date': '2022-08-17', 'holiday_type': 'national', 'holiday_name': 'Independence Day'},
-                {'date': '2022-10-24', 'holiday_type': 'religious', 'holiday_name': 'Diwali'},
-                {'date': '2022-12-25', 'holiday_type': 'religious', 'holiday_name': 'Christmas'},
-                {'date': '2023-01-01', 'holiday_type': 'national', 'holiday_name': 'New Year'},
-                {'date': '2023-01-22', 'holiday_type': 'religious', 'holiday_name': 'Chinese New Year'},
-                {'date': '2023-03-22', 'holiday_type': 'religious', 'holiday_name': 'Nyepi'},
-                {'date': '2023-04-07', 'holiday_type': 'religious', 'holiday_name': 'Good Friday'},
-                {'date': '2023-04-22', 'holiday_type': 'religious', 'holiday_name': 'Eid al-Fitr'},
-                {'date': '2023-05-01', 'holiday_type': 'national', 'holiday_name': 'Labor Day'},
-                {'date': '2023-05-18', 'holiday_type': 'religious', 'holiday_name': 'Vesak Day'},
-                {'date': '2023-06-01', 'holiday_type': 'national', 'holiday_name': 'Pancasila Day'},
-                {'date': '2023-06-29', 'holiday_type': 'religious', 'holiday_name': 'Eid al-Adha'},
-                {'date': '2023-08-17', 'holiday_type': 'national', 'holiday_name': 'Independence Day'},
-                {'date': '2023-11-12', 'holiday_type': 'religious', 'holiday_name': 'Diwali'},
-                {'date': '2023-12-25', 'holiday_type': 'religious', 'holiday_name': 'Christmas'}
-            ]
-            
-            df = pd.DataFrame(holidays_data)
-            
-            # Фильтруем по датам если указаны
-            if start_date and end_date:
-                df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
-            
-            logger.info(f"Создано {len(df)} праздничных дней")
-            return df
-        except Exception as e:
-            logger.error(f"Ошибка создания данных о праздниках: {e}")
-            return None
-    
-    def load_combined_data(self, start_date=None, end_date=None, platform='both'):
-        """Загрузка объединенных данных со всех таблиц"""
-        if not self.connect():
-            logger.error("Не удалось подключиться к базе данных")
-            # Создаем тестовые данные для демонстрации
-            logger.info("Создаю тестовые данные для демонстрации")
-            return create_sample_data()
-        
-        try:
-            # Загрузка основных данных
-            if platform == 'grab':
-                stats_df = self.load_grab_stats(start_date, end_date)
-            elif platform == 'gojek':
-                stats_df = self.load_gojek_stats(start_date, end_date)
-            else:  # both
-                grab_df = self.load_grab_stats(start_date, end_date)
-                gojek_df = self.load_gojek_stats(start_date, end_date)
-                if grab_df is not None and gojek_df is not None:
-                    grab_df['platform'] = 'grab'
-                    gojek_df['platform'] = 'gojek'
-                    stats_df = pd.concat([grab_df, gojek_df], ignore_index=True)
-                else:
-                    stats_df = grab_df if grab_df is not None else gojek_df
-            
-            if stats_df is None:
-                logger.error("Не удалось загрузить данные статистики")
-                return None
-            
-            # Загрузка дополнительных данных
-            restaurants_df = self.load_restaurants()
-            weather_df = self.load_weather(start_date, end_date)
-            holidays_df = self.load_holidays(start_date, end_date)
-            
-            # Объединение данных
-            # Добавляем информацию о ресторанах
-            if restaurants_df is not None:
-                combined_df = stats_df.merge(restaurants_df, on='restaurant_id', how='left')
-            else:
-                combined_df = stats_df.copy()
-                combined_df['restaurant_name'] = 'Unknown'
-                combined_df['location'] = 'Unknown'
-            
-            # Добавляем погодные данные
-            if weather_df is not None:
-                combined_df = combined_df.merge(weather_df, 
-                                              on=['date', 'location'], 
-                                              how='left')
-            else:
-                combined_df['rain_mm'] = 0
-                combined_df['temp_c'] = 25
-            
-            # Добавляем информацию о праздниках
-            if holidays_df is not None:
-                holidays_df['is_holiday'] = 1
-                combined_df = combined_df.merge(holidays_df[['date', 'is_holiday']], 
-                                              on='date', how='left')
-                combined_df['is_holiday'] = combined_df['is_holiday'].fillna(0)
-            else:
-                combined_df['is_holiday'] = 0
-            
-            # Добавляем день недели
-            combined_df['date'] = pd.to_datetime(combined_df['date'])
-            combined_df['day_of_week'] = combined_df['date'].dt.dayofweek
-            combined_df['date'] = combined_df['date'].dt.strftime('%Y-%m-%d')
-            
-            # Заполняем пропущенные значения
-            combined_df = combined_df.fillna({
-                'rain_mm': 0,
-                'temp_c': 25,
-                'is_holiday': 0,
-                'rating': 4.0,
-                'roas': 0,
-                'position': 10,
-                'cancel_rate': 0.1
-            })
-            
-            logger.info(f"Объединенный датасет содержит {len(combined_df)} записей")
-            
-            # Проверка качества данных
-            check_data_quality(combined_df)
-            
-            return combined_df
-            
-        except Exception as e:
-            logger.error(f"Ошибка при загрузке объединенных данных: {e}")
-            return None
-        finally:
-            self.disconnect()
+    except Exception as e:
+        logger.error(f"Ошибка загрузки списка ресторанов: {e}")
+        return pd.DataFrame()
 
-def load_data_for_training(start_date=None, end_date=None, platform='both'):
-    """Функция для загрузки данных для обучения модели"""
-    loader = DataLoader()
-    return loader.load_combined_data(start_date, end_date, platform)
+def create_synthetic_weather_data(df):
+    """Создание синтетических данных о погоде"""
+    logger.info("Создание синтетических погодных данных...")
+    
+    # Получаем уникальные даты
+    dates = pd.to_datetime(df['date']).dt.date.unique()
+    
+    weather_data = []
+    np.random.seed(42)  # Для воспроизводимости
+    
+    for date in dates:
+        # Сезонные колебания температуры
+        day_of_year = pd.to_datetime(date).timetuple().tm_yday
+        base_temp = 26 + 3 * np.sin(2 * np.pi * day_of_year / 365)
+        
+        weather_data.append({
+            'date': date,
+            'temp_c': base_temp + np.random.normal(0, 2),
+            'rain_mm': np.random.exponential(2) if np.random.random() < 0.3 else 0,
+            'humidity': np.random.normal(75, 10)
+        })
+    
+    weather_df = pd.DataFrame(weather_data)
+    logger.info(f"Создано {len(weather_df)} синтетических погодных записей")
+    
+    return weather_df
 
-def get_restaurant_data(restaurant_name, start_date=None, end_date=None):
+def create_synthetic_holiday_data(df):
+    """Создание синтетических данных о праздниках"""
+    logger.info("Создание синтетических данных о праздниках...")
+    
+    # Получаем уникальные даты
+    dates = pd.to_datetime(df['date']).dt.date.unique()
+    
+    # Определяем праздники (примерные даты)
+    holidays = [
+        '2023-01-01', '2023-03-22', '2023-04-22', '2023-05-01',
+        '2023-06-01', '2023-08-17', '2023-12-25', '2024-01-01',
+        '2024-03-11', '2024-04-10', '2024-05-01', '2024-06-01',
+        '2024-08-17', '2024-12-25'
+    ]
+    
+    # Добавляем случайные праздники
+    np.random.seed(42)
+    random_holidays = np.random.choice(dates, size=10, replace=False)
+    all_holidays = set(holidays + [str(d) for d in random_holidays])
+    
+    holiday_data = []
+    for date in dates:
+        is_holiday = str(date) in all_holidays
+        holiday_data.append({
+            'date': date,
+            'is_holiday': is_holiday
+        })
+    
+    holiday_df = pd.DataFrame(holiday_data)
+    logger.info(f"Создано {len(holiday_df[holiday_df['is_holiday']])} праздничных дней")
+    
+    return holiday_df
+
+def combine_data_sources(grab_df, gojek_df, weather_df, holiday_df):
+    """Объединение всех источников данных"""
+    logger.info("Объединение источников данных...")
+    
+    # Объединяем grab и gojek данные
+    if not gojek_df.empty:
+        stats_df = pd.concat([grab_df, gojek_df], ignore_index=True)
+    else:
+        stats_df = grab_df.copy()
+    
+    # Убеждаемся, что date в правильном формате
+    stats_df['date'] = pd.to_datetime(stats_df['date'])
+    weather_df['date'] = pd.to_datetime(weather_df['date'])
+    holiday_df['date'] = pd.to_datetime(holiday_df['date'])
+    
+    # Объединяем с погодными данными
+    combined_df = stats_df.merge(weather_df, on='date', how='left')
+    
+    # Объединяем с данными о праздниках
+    combined_df = combined_df.merge(holiday_df, on='date', how='left')
+    
+    # Заполняем пропущенные значения
+    numeric_columns = ['total_sales', 'orders', 'rating', 'cancel_rate', 'ads_on', 
+                      'ads_sales', 'position', 'roas', 'temp_c', 'rain_mm', 'humidity']
+    
+    for col in numeric_columns:
+        if col in combined_df.columns:
+            combined_df[col] = combined_df[col].fillna(0)
+    
+    # Заполняем булевы значения
+    if 'is_holiday' in combined_df.columns:
+        combined_df['is_holiday'] = combined_df['is_holiday'].fillna(False)
+    
+    # Преобразуем ads_on в числовой формат
+    if 'ads_on' in combined_df.columns:
+        combined_df['ads_on'] = combined_df['ads_on'].astype(float)
+    
+    logger.info(f"Объединенный датасет содержит {len(combined_df)} записей")
+    return combined_df
+
+def load_data_for_training(db_path=None, start_date=None, end_date=None):
+    """Загрузка данных для обучения модели"""
+    if db_path is None:
+        db_path = DATABASE_PATH
+    
+    logger.info(f"Загрузка данных для обучения из {db_path}")
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        logger.info(f"Подключение к базе {db_path} установлено")
+        
+        # Загружаем статистику
+        grab_df = load_grab_stats(db_path)
+        gojek_df = load_gojek_stats(db_path)
+        
+        if grab_df.empty and gojek_df.empty:
+            logger.error("Нет данных для загрузки")
+            return None
+        
+        # Загружаем список ресторанов
+        restaurants_df = load_restaurants_list(db_path)
+        logger.info(f"Загружено {len(restaurants_df)} ресторанов")
+        
+        # Создаем синтетические данные
+        weather_df = create_synthetic_weather_data(grab_df if not grab_df.empty else gojek_df)
+        holiday_df = create_synthetic_holiday_data(grab_df if not grab_df.empty else gojek_df)
+        
+        # Объединяем все данные
+        combined_df = combine_data_sources(grab_df, gojek_df, weather_df, holiday_df)
+        
+        # Фильтруем по датам если указано
+        if start_date:
+            combined_df = combined_df[combined_df['date'] >= start_date]
+        if end_date:
+            combined_df = combined_df[combined_df['date'] <= end_date]
+        
+        # Проверяем качество данных
+        from utils import check_data_quality
+        check_data_quality(combined_df)
+        
+        logger.info("Соединение с базой закрыто")
+        conn.close()
+        
+        return combined_df
+        
+    except Exception as e:
+        logger.error(f"Ошибка загрузки данных: {e}")
+        return None
+
+def get_restaurant_data(restaurant_name, db_path=None):
     """Получение данных для конкретного ресторана"""
-    loader = DataLoader()
-    combined_df = loader.load_combined_data(start_date, end_date)
+    if db_path is None:
+        db_path = DATABASE_PATH
     
-    if combined_df is None:
+    logger.info(f"Загрузка данных для ресторана '{restaurant_name}'")
+    
+    # Загружаем все данные
+    df = load_data_for_training(db_path)
+    
+    if df is None:
+        logger.error("Не удалось загрузить данные")
         return None
     
-    restaurant_df = combined_df[combined_df['restaurant_name'] == restaurant_name].copy()
+    # Фильтруем по ресторану
+    restaurant_df = df[df['restaurant_name'] == restaurant_name].copy()
     
     if restaurant_df.empty:
-        logger.warning(f"Данные для ресторана '{restaurant_name}' не найдены")
+        logger.error(f"Нет данных для ресторана '{restaurant_name}'")
         return None
-    
-    # Сортируем по дате
-    restaurant_df = restaurant_df.sort_values('date')
     
     logger.info(f"Загружено {len(restaurant_df)} записей для ресторана '{restaurant_name}'")
     return restaurant_df
+
+def get_restaurants_list(db_path=None):
+    """Получение списка всех ресторанов"""
+    if db_path is None:
+        db_path = DATABASE_PATH
+    
+    logger.info("Получение списка ресторанов")
+    
+    # Загружаем все данные
+    df = load_data_for_training(db_path)
+    
+    if df is None:
+        logger.error("Не удалось загрузить данные")
+        return []
+    
+    # Получаем уникальные рестораны с количеством записей
+    restaurants = df.groupby('restaurant_name').size().reset_index(name='records_count')
+    restaurants = restaurants.sort_values('restaurant_name')
+    
+    return restaurants.to_dict('records')

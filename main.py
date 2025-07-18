@@ -9,8 +9,14 @@ import json
 import os
 
 from model import train_sales_model, load_trained_model
-from explain import explain_sales_change, SalesExplainer
-from data_loader import get_restaurant_data, load_data_for_training
+from business_intelligence_system import (
+    BusinessIntelligenceSystem,
+    analyze_restaurant_performance,
+    get_weekly_report,
+    get_executive_summary,
+    test_business_hypothesis
+)
+from data_loader import load_data_for_training, get_restaurants_list
 from utils import setup_logging, validate_date, format_currency
 from config import MODEL_PATH, RESULTS_PATH
 
@@ -22,21 +28,25 @@ def train_model_command(args):
     """Команда для обучения модели"""
     logger.info("=== Обучение модели ===")
     
-    predictor = train_sales_model(
-        start_date=args.start_date,
-        end_date=args.end_date,
-        model_type=args.model_type,
-        optimize_hyperparams=args.optimize,
-        save_model=True
-    )
-    
-    if predictor:
-        logger.info("Модель успешно обучена и сохранена")
-        print(f"R² score: {predictor.training_metrics.get('test_r2', 'N/A'):.4f}")
-        print(f"Количество признаков: {predictor.training_metrics.get('feature_count', 'N/A')}")
-        return True
-    else:
-        logger.error("Ошибка обучения модели")
+    try:
+        predictor = train_sales_model(
+            start_date=args.start_date,
+            end_date=args.end_date,
+            model_type=args.model_type,
+            optimize_hyperparams=args.optimize,
+            save_model=True
+        )
+        
+        if predictor:
+            logger.info("Модель успешно обучена и сохранена")
+            print(f"R² score: {predictor.training_metrics.get('test_r2', 'N/A'):.4f}")
+            print(f"Количество признаков: {predictor.training_metrics.get('feature_count', 'N/A')}")
+            return True
+        else:
+            logger.error("Ошибка обучения модели")
+            return False
+    except Exception as e:
+        logger.error(f"Ошибка обучения модели: {e}")
         return False
 
 def analyze_command(args):
@@ -50,212 +60,300 @@ def analyze_command(args):
         logger.error("Неверный формат даты. Используйте YYYY-MM-DD")
         return False
     
-    # Проверяем существование модели
-    if not os.path.exists(MODEL_PATH):
-        logger.error(f"Модель не найдена: {MODEL_PATH}")
-        logger.info("Сначала обучите модель: python main.py train")
-        return False
-    
-    # Выполняем анализ
-    result = explain_sales_change(
-        restaurant_name=args.restaurant,
-        date=args.date,
-        save_results=True
-    )
-    
-    if result:
-        print("\n" + "="*50)
-        print("РЕЗУЛЬТАТ АНАЛИЗА")
-        print("="*50)
-        print(f"Ресторан: {result['restaurant']}")
-        print(f"Дата: {result['date']}")
-        print(f"Фактические продажи: {format_currency(result['actual_sales'])}")
-        print(f"Прогноз продаж: {format_currency(result['predicted_sales'])}")
-        print(f"Изменение: {result['change_percent']:.1f}%")
-        print(f"\nОбъяснение: {result['explanation']}")
+    try:
+        # Выполняем анализ через новую бизнес-систему
+        result = analyze_restaurant_performance(args.restaurant, args.date)
         
-        print(f"\nТоп-3 фактора влияния:")
-        for factor, impact in result['top_factors'].items():
-            impact_percent = impact * 100
-            print(f"  • {factor}: {impact_percent:+.1f}%")
+        if "error" in result:
+            logger.error(f"Ошибка анализа: {result['error']}")
+            return False
         
-        print(f"\nДетальные результаты сохранены в: {RESULTS_PATH}")
-        return True
-    else:
-        logger.error("Ошибка анализа")
-        return False
-
-def batch_analyze_command(args):
-    """Команда для пакетного анализа"""
-    logger.info("=== Пакетный анализ ===")
-    
-    # Проверяем существование модели
-    if not os.path.exists(MODEL_PATH):
-        logger.error(f"Модель не найдена: {MODEL_PATH}")
-        return False
-    
-    # Создаем список дат
-    start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
-    end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
-    
-    date_range = []
-    current_date = start_date
-    while current_date <= end_date:
-        date_range.append(current_date.strftime('%Y-%m-%d'))
-        current_date += timedelta(days=1)
-    
-    # Создаем объяснитель
-    explainer = SalesExplainer()
-    if explainer.predictor is None:
-        return False
-    
-    # Получаем данные
-    df = get_restaurant_data(args.restaurant)
-    if df is None:
-        return False
-    
-    # Выполняем пакетный анализ
-    results = explainer.batch_explain(df, args.restaurant, date_range)
-    
-    if results:
-        print(f"\nПроанализировано {len(results)} дней из {len(date_range)}")
+        # Выводим результаты
+        print("\n" + "="*80)
+        print("🎯 АНАЛИЗ ПРОДАЖ РЕСТОРАНА")
+        print("="*80)
+        print(f"📍 Ресторан: {result['restaurant_name']}")
+        print(f"📅 Дата анализа: {result['analysis_date']}")
+        print(f"📊 Период: {result['period_analyzed']}")
+        
+        # Основные метрики
+        summary = result['summary']
+        print(f"\n📈 ОСНОВНЫЕ ПОКАЗАТЕЛИ:")
+        print(f"  • Изменение продаж: {summary['sales_change_percent']:+.1f}%")
+        print(f"  • Тренд: {summary['sales_trend']}")
+        print(f"  • Текущие продажи: {format_currency(summary['latest_period_sales'])}")
+        print(f"  • Предыдущие продажи: {format_currency(summary['earlier_period_sales'])}")
+        print(f"  • Абсолютное изменение: {format_currency(summary['absolute_change'])}")
+        
+        # Ключевые факторы
+        if result['key_factors']:
+            print(f"\n🔍 КЛЮЧЕВЫЕ ФАКТОРЫ ВЛИЯНИЯ:")
+            for i, factor in enumerate(result['key_factors'], 1):
+                impact_emoji = "📈" if factor['impact'] == "положительный" else "📉"
+                print(f"  {i}. {impact_emoji} {factor['factor']}: {factor['change']}")
+                print(f"     Влияние: {factor['impact']} (уверенность: {factor['confidence']})")
+        
+        # Рекомендации
+        if result['recommendations']:
+            print(f"\n💡 РЕКОМЕНДАЦИИ К ДЕЙСТВИЮ:")
+            for i, rec in enumerate(result['recommendations'], 1):
+                priority_emoji = "🔴" if rec['priority'] == "ВЫСОКИЙ" else "🟡" if rec['priority'] == "СРЕДНИЙ" else "🟢"
+                print(f"  {i}. {priority_emoji} {rec['category']}: {rec['action']}")
+                print(f"     {rec['description']}")
+                print(f"     Ожидаемый эффект: {rec.get('expected_impact', 'Не указан')}")
+                print(f"     Как выполнить: {rec.get('implementation', 'Не указано')}")
+                print()
         
         # Сохраняем результаты
-        batch_filename = os.path.join(
-            RESULTS_PATH, 
-            f"{args.restaurant}_batch_{args.start_date}_{args.end_date}.json"
-        )
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        result_filename = f"{args.restaurant}_{args.date}_{timestamp}.json"
+        result_path = os.path.join(RESULTS_PATH, result_filename)
         
-        with open(batch_filename, 'w', encoding='utf-8') as f:
-            json.dump(results, f, ensure_ascii=False, indent=2)
+        os.makedirs(RESULTS_PATH, exist_ok=True)
+        with open(result_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
         
-        print(f"Результаты сохранены в: {batch_filename}")
+        print(f"📄 Детальные результаты сохранены в: {result_path}")
+        return True
         
-        # Создаем сводный отчет
-        summary = explainer.create_summary_report(args.restaurant, date_range)
-        if summary:
-            print("\n" + "="*50)
-            print("СВОДНЫЙ ОТЧЕТ")
-            print("="*50)
-            print(f"Ресторан: {summary['restaurant']}")
-            print(f"Период: {summary['period']}")
-            print(f"Среднее изменение продаж: {summary['average_change']:.1f}%")
-            
-            if summary['top_positive_factors']:
-                print(f"\nТоп положительных факторов:")
-                for factor, impact in summary['top_positive_factors'].items():
-                    print(f"  • {factor}: +{impact*100:.1f}%")
-            
-            if summary['top_negative_factors']:
-                print(f"\nТоп негативных факторов:")
-                for factor, impact in summary['top_negative_factors'].items():
-                    print(f"  • {factor}: {impact*100:.1f}%")
-            
-            if summary['recommendations']:
-                print(f"\nРекомендации:")
-                for rec in summary['recommendations']:
-                    print(f"  • {rec}")
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка: {e}")
+        return False
+
+def weekly_report_command(args):
+    """Команда для генерации недельного отчета"""
+    logger.info(f"=== Недельный отчет ===")
+    logger.info(f"Ресторан: {args.restaurant}")
+    logger.info(f"Недель назад: {args.weeks}")
+    
+    try:
+        # Генерируем недельный отчет
+        result = get_weekly_report(args.restaurant, args.weeks)
+        
+        if "error" in result:
+            logger.error(f"Ошибка генерации отчета: {result['error']}")
+            return False
+        
+        # Выводим результаты
+        print("\n" + "="*80)
+        print("📊 НЕДЕЛЬНЫЙ ОТЧЕТ")
+        print("="*80)
+        print(f"📍 Ресторан: {result['restaurant_name']}")
+        print(f"📅 Период: {result['period']}")
+        print(f"📈 Недель проанализировано: {result['weeks_analyzed']}")
+        
+        # Сводка
+        summary = result['summary']
+        print(f"\n💰 ФИНАНСОВЫЕ ПОКАЗАТЕЛИ:")
+        print(f"  • Общие продажи: {format_currency(summary['total_sales'])}")
+        print(f"  • Средние недельные продажи: {format_currency(summary['average_weekly_sales'])}")
+        print(f"  • Общее количество заказов: {summary['total_orders']}")
+        print(f"  • Средний рейтинг: {summary['average_rating']:.2f}")
+        print(f"  • Средний процент отмен: {summary['average_cancel_rate']:.1%}")
+        
+        # Тренды
+        trends = result['trends']
+        print(f"\n📈 ТРЕНДЫ:")
+        print(f"  • Тренд продаж: {trends['trend_direction']} ({trends['sales_trend_percent']:+.1f}%)")
+        print(f"  • Стабильность: {trends['stability']} (волатильность: {trends['volatility_percent']:.1f}%)")
+        
+        # Рекомендации
+        if result['recommendations']:
+            print(f"\n💡 РЕКОМЕНДАЦИИ:")
+            for i, rec in enumerate(result['recommendations'], 1):
+                priority_emoji = "🔴" if rec['priority'] == "ВЫСОКИЙ" else "🟡" if rec['priority'] == "СРЕДНИЙ" else "🟢"
+                print(f"  {i}. {priority_emoji} {rec['category']}: {rec['action']}")
+                print(f"     {rec['description']}")
+                print(f"     Как выполнить: {rec.get('implementation', 'Не указано')}")
+                print()
+        
+        # Сохраняем результаты
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        result_filename = f"{args.restaurant}_weekly_{timestamp}.json"
+        result_path = os.path.join(RESULTS_PATH, result_filename)
+        
+        os.makedirs(RESULTS_PATH, exist_ok=True)
+        with open(result_path, 'w', encoding='utf-8') as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        
+        print(f"📄 Детальный отчет сохранен в: {result_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Ошибка генерации недельного отчета: {e}")
+        return False
+
+def executive_summary_command(args):
+    """Команда для генерации краткого отчета для руководства"""
+    logger.info(f"=== Краткий отчет для руководства ===")
+    logger.info(f"Ресторан: {args.restaurant}")
+    
+    try:
+        # Генерируем краткий отчет
+        result = get_executive_summary(args.restaurant)
+        
+        if "error" in result:
+            logger.error(f"Ошибка генерации отчета: {result['error']}")
+            return False
+        
+        # Выводим результаты
+        print("\n" + "="*80)
+        print("🎯 КРАТКИЙ ОТЧЕТ ДЛЯ РУКОВОДСТВА")
+        print("="*80)
+        print(f"📍 Ресторан: {result['restaurant_name']}")
+        print(f"📅 Период: {result['period']}")
+        
+        # Общий статус
+        print(f"\n🎯 ОБЩИЙ СТАТУС:")
+        print(f"  {result['overall_status']}")
+        
+        # Ключевые метрики
+        metrics = result['key_metrics']
+        print(f"\n📊 КЛЮЧЕВЫЕ МЕТРИКИ:")
+        print(f"  • Изменение продаж: {metrics['sales_change_percent']:+.1f}%")
+        print(f"  • Тренд: {metrics['sales_trend']}")
+        print(f"  • Текущие продажи: {format_currency(metrics['latest_period_sales'])}")
+        
+        # Топ-3 фактора
+        if result['top_3_factors']:
+            print(f"\n🔍 ТОП-3 ФАКТОРА ВЛИЯНИЯ:")
+            for i, factor in enumerate(result['top_3_factors'], 1):
+                impact_emoji = "📈" if factor['impact'] == "положительный" else "📉"
+                print(f"  {i}. {impact_emoji} {factor['factor']}: {factor['change']}")
+        
+        # Приоритетные действия
+        if result['priority_actions']:
+            print(f"\n🚨 ПРИОРИТЕТНЫЕ ДЕЙСТВИЯ:")
+            for i, action in enumerate(result['priority_actions'], 1):
+                print(f"  {i}. {action['category']}: {action['action']}")
+                print(f"     {action['description']}")
+                print()
         
         return True
-    else:
-        logger.error("Ошибка пакетного анализа")
+        
+    except Exception as e:
+        logger.error(f"Ошибка генерации краткого отчета: {e}")
+        return False
+
+def test_hypothesis_command(args):
+    """Команда для тестирования гипотез"""
+    logger.info(f"=== Тестирование гипотезы ===")
+    logger.info(f"Ресторан: {args.restaurant}")
+    logger.info(f"Гипотеза: {args.hypothesis}")
+    
+    try:
+        # Тестируем гипотезу
+        result = test_business_hypothesis(args.restaurant, args.hypothesis, args.days)
+        
+        if "error" in result:
+            logger.error(f"Ошибка тестирования гипотезы: {result['error']}")
+            return False
+        
+        # Выводим результаты
+        print("\n" + "="*80)
+        print("🧪 ТЕСТИРОВАНИЕ ГИПОТЕЗЫ")
+        print("="*80)
+        print(f"📍 Ресторан: {result['restaurant_name']}")
+        print(f"🔬 Гипотеза: {result['hypothesis']}")
+        print(f"📅 Период: {result['period']}")
+        
+        # Результат
+        test_result = result['result']
+        print(f"\n📊 РЕЗУЛЬТАТ:")
+        print(f"  • Заключение: {test_result['conclusion']}")
+        
+        if 'improvement_percent' in test_result:
+            print(f"  • Улучшение: {test_result['improvement_percent']:+.1f}%")
+        
+        if 'confidence' in test_result:
+            print(f"  • Уверенность: {test_result['confidence']}")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Ошибка тестирования гипотезы: {e}")
         return False
 
 def info_command(args):
     """Команда для получения информации о модели"""
     logger.info("=== Информация о модели ===")
     
-    if not os.path.exists(MODEL_PATH):
-        print("Модель не найдена")
-        print(f"Путь: {MODEL_PATH}")
-        print("Сначала обучите модель: python main.py train")
-        return False
-    
-    predictor = load_trained_model()
-    if predictor:
-        info = predictor.get_model_info()
+    try:
+        if not os.path.exists(MODEL_PATH):
+            print("❌ Модель не найдена")
+            print(f"Путь: {MODEL_PATH}")
+            print("Для обучения модели выполните: python main.py train")
+            return False
         
-        print(f"Статус модели: {info['status']}")
-        print(f"Тип модели: {info['model_type']}")
-        print(f"Количество признаков: {info['feature_count']}")
+        # Загружаем модель
+        predictor = load_trained_model()
         
-        if 'metrics' in info:
-            metrics = info['metrics']
-            print(f"\nМетрики качества:")
-            
-            # Безопасное форматирование метрик
-            test_r2 = metrics.get('test_r2', 'N/A')
-            test_mse = metrics.get('test_mse', 'N/A')
-            test_mae = metrics.get('test_mae', 'N/A')
-            cv_mean_r2 = metrics.get('cv_mean_r2', 'N/A')
-            
-            if isinstance(test_r2, (int, float)):
-                print(f"  R² (тест): {test_r2:.4f}")
-            else:
-                print(f"  R² (тест): {test_r2}")
-                
-            if isinstance(test_mse, (int, float)):
-                print(f"  MSE (тест): {test_mse:.2f}")
-            else:
-                print(f"  MSE (тест): {test_mse}")
-                
-            if isinstance(test_mae, (int, float)):
-                print(f"  MAE (тест): {test_mae:.2f}")
-            else:
-                print(f"  MAE (тест): {test_mae}")
-                
-            if isinstance(cv_mean_r2, (int, float)):
-                print(f"  Кросс-валидация R²: {cv_mean_r2:.4f}")
-            else:
-                print(f"  Кросс-валидация R²: {cv_mean_r2}")
+        if predictor is None:
+            print("❌ Не удалось загрузить модель")
+            return False
         
-        # Показываем важность признаков
-        importance = predictor.get_feature_importance(top_n=10)
-        if importance is not None:
-            print(f"\nТоп-10 важных признаков:")
-            for _, row in importance.iterrows():
-                print(f"  • {row['feature']}: {row['importance']:.4f}")
+        print("\n" + "="*50)
+        print("🤖 ИНФОРМАЦИЯ О МОДЕЛИ")
+        print("="*50)
+        print(f"📊 Тип модели: {predictor.model_type}")
+        print(f"📈 R² score: {predictor.training_metrics.get('test_r2', 'N/A'):.4f}")
+        print(f"🎯 Количество признаков: {predictor.training_metrics.get('feature_count', 'N/A')}")
+        print(f"📅 Дата обучения: {predictor.training_metrics.get('training_date', 'N/A')}")
+        print(f"💾 Размер файла: {os.path.getsize(MODEL_PATH) / 1024 / 1024:.1f} MB")
         
         return True
-    else:
-        logger.error("Ошибка загрузки модели")
+        
+    except Exception as e:
+        logger.error(f"Ошибка получения информации о модели: {e}")
         return False
 
 def list_restaurants_command(args):
     """Команда для получения списка ресторанов"""
     logger.info("=== Список ресторанов ===")
     
-    df = load_data_for_training()
-    if df is None:
-        logger.error("Не удалось загрузить данные")
+    try:
+        # Загружаем данные
+        df = load_data_for_training()
+        
+        if df is None:
+            logger.error("Не удалось загрузить данные")
+            return False
+        
+        # Получаем список ресторанов
+        restaurants = get_restaurants_list()
+        
+        print(f"\nНайдено {len(restaurants)} ресторанов:")
+        for restaurant in restaurants:
+            print(f"  • {restaurant['restaurant_name']} ({restaurant['records_count']} записей)")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Ошибка получения списка ресторанов: {e}")
         return False
-    
-    restaurants = df['restaurant_name'].unique()
-    print(f"Найдено {len(restaurants)} ресторанов:")
-    
-    for restaurant in sorted(restaurants):
-        # Подсчитываем количество записей
-        count = len(df[df['restaurant_name'] == restaurant])
-        print(f"  • {restaurant} ({count} записей)")
-    
-    return True
 
 def main():
     """Главная функция"""
     parser = argparse.ArgumentParser(
-        description="ML-модель объяснимого анализа причин изменения продаж",
+        description="Система бизнес-аналитики для ресторанов",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Примеры использования:
 
+  # Анализ конкретного случая
+  python main.py analyze --restaurant "Canggu Surf Cafe" --date "2023-06-15"
+
+  # Недельный отчет
+  python main.py weekly --restaurant "Canggu Surf Cafe" --weeks 4
+
+  # Краткий отчет для руководства
+  python main.py summary --restaurant "Canggu Surf Cafe"
+
+  # Тестирование гипотезы
+  python main.py test --restaurant "Canggu Surf Cafe" --hypothesis "реклама эффективна"
+
   # Обучение модели
   python main.py train --model-type random_forest
-
-  # Анализ конкретного случая
-  python main.py analyze --restaurant "Honeycomb" --date "2023-06-15"
-
-  # Пакетный анализ за период
-  python main.py batch --restaurant "Honeycomb" --start-date "2023-06-01" --end-date "2023-06-30"
 
   # Информация о модели
   python main.py info
@@ -267,27 +365,35 @@ def main():
     
     subparsers = parser.add_subparsers(dest='command', help='Доступные команды')
     
-    # Команда обучения
-    train_parser = subparsers.add_parser('train', help='Обучение модели')
-    train_parser.add_argument('--start-date', help='Начальная дата (YYYY-MM-DD)')
-    train_parser.add_argument('--end-date', help='Конечная дата (YYYY-MM-DD)')
-    train_parser.add_argument('--model-type', choices=['random_forest', 'gradient_boosting'], 
-                             default='random_forest', help='Тип модели')
-    train_parser.add_argument('--optimize', action='store_true', 
-                             help='Оптимизация гиперпараметров')
-    
     # Команда анализа
     analyze_parser = subparsers.add_parser('analyze', help='Анализ конкретного случая')
     analyze_parser.add_argument('--restaurant', required=True, help='Название ресторана')
     analyze_parser.add_argument('--date', required=True, help='Дата анализа (YYYY-MM-DD)')
     
-    # Команда пакетного анализа
-    batch_parser = subparsers.add_parser('batch', help='Пакетный анализ за период')
-    batch_parser.add_argument('--restaurant', required=True, help='Название ресторана')
-    batch_parser.add_argument('--start-date', required=True, help='Начальная дата (YYYY-MM-DD)')
-    batch_parser.add_argument('--end-date', required=True, help='Конечная дата (YYYY-MM-DD)')
+    # Команда недельного отчета
+    weekly_parser = subparsers.add_parser('weekly', help='Недельный отчет')
+    weekly_parser.add_argument('--restaurant', required=True, help='Название ресторана')
+    weekly_parser.add_argument('--weeks', type=int, default=4, help='Количество недель назад')
     
-    # Команда информации
+    # Команда краткого отчета
+    summary_parser = subparsers.add_parser('summary', help='Краткий отчет для руководства')
+    summary_parser.add_argument('--restaurant', required=True, help='Название ресторана')
+    
+    # Команда тестирования гипотез
+    test_parser = subparsers.add_parser('test', help='Тестирование гипотез')
+    test_parser.add_argument('--restaurant', required=True, help='Название ресторана')
+    test_parser.add_argument('--hypothesis', required=True, help='Гипотеза для тестирования')
+    test_parser.add_argument('--days', type=int, default=30, help='Количество дней для анализа')
+    
+    # Команда обучения модели
+    train_parser = subparsers.add_parser('train', help='Обучение модели')
+    train_parser.add_argument('--model-type', choices=['random_forest', 'xgboost', 'linear'], 
+                             default='random_forest', help='Тип модели')
+    train_parser.add_argument('--start-date', help='Начальная дата (YYYY-MM-DD)')
+    train_parser.add_argument('--end-date', help='Конечная дата (YYYY-MM-DD)')
+    train_parser.add_argument('--optimize', action='store_true', help='Оптимизация гиперпараметров')
+    
+    # Команда информации о модели
     info_parser = subparsers.add_parser('info', help='Информация о модели')
     
     # Команда списка ресторанов
@@ -297,32 +403,27 @@ def main():
     
     if not args.command:
         parser.print_help()
-        return 1
+        return
     
     # Выполняем команду
-    try:
-        if args.command == 'train':
-            success = train_model_command(args)
-        elif args.command == 'analyze':
-            success = analyze_command(args)
-        elif args.command == 'batch':
-            success = batch_analyze_command(args)
-        elif args.command == 'info':
-            success = info_command(args)
-        elif args.command == 'list':
-            success = list_restaurants_command(args)
-        else:
-            logger.error(f"Неизвестная команда: {args.command}")
-            success = False
-        
-        return 0 if success else 1
-        
-    except KeyboardInterrupt:
-        logger.info("Прервано пользователем")
-        return 1
-    except Exception as e:
-        logger.error(f"Неожиданная ошибка: {e}")
-        return 1
+    success = False
+    
+    if args.command == 'analyze':
+        success = analyze_command(args)
+    elif args.command == 'weekly':
+        success = weekly_report_command(args)
+    elif args.command == 'summary':
+        success = executive_summary_command(args)
+    elif args.command == 'test':
+        success = test_hypothesis_command(args)
+    elif args.command == 'train':
+        success = train_model_command(args)
+    elif args.command == 'info':
+        success = info_command(args)
+    elif args.command == 'list':
+        success = list_restaurants_command(args)
+    
+    sys.exit(0 if success else 1)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
