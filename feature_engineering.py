@@ -6,6 +6,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 import logging
+from datetime import datetime
 from config import (
     INTERNAL_FEATURES, EXTERNAL_FEATURES, TEMPORAL_FEATURES,
     ROLLING_WINDOW, LAG_DAYS, TEST_SIZE, RANDOM_STATE
@@ -25,19 +26,28 @@ class FeatureEngineer:
         """Создание временных признаков"""
         logger.info("Создание временных признаков...")
         
+        # Убеждаемся, что date - это datetime
+        if not pd.api.types.is_datetime64_any_dtype(df['date']):
+            df['date'] = pd.to_datetime(df['date'])
+        
         # Сортируем по ресторану и дате
         df = df.sort_values(['restaurant_name', 'date']).reset_index(drop=True)
         
         # Лаговые признаки
         df['lag_1_sales'] = df.groupby('restaurant_name')['total_sales'].shift(1)
         df['lag_2_sales'] = df.groupby('restaurant_name')['total_sales'].shift(2)
+        df['lag_7_sales'] = df.groupby('restaurant_name')['total_sales'].shift(7)
         
         # Скользящие средние
-        df['rolling_mean_3'] = df.groupby('restaurant_name')['total_sales'].rolling(
-            window=ROLLING_WINDOW, min_periods=1).mean().reset_index(0, drop=True)
-        
-        df['rolling_mean_7'] = df.groupby('restaurant_name')['total_sales'].rolling(
-            window=7, min_periods=1).mean().reset_index(0, drop=True)
+        df['rolling_mean_3'] = df.groupby('restaurant_name')['total_sales'].transform(
+            lambda x: x.rolling(window=3, min_periods=1).mean()
+        )
+        df['rolling_mean_7'] = df.groupby('restaurant_name')['total_sales'].transform(
+            lambda x: x.rolling(window=7, min_periods=1).mean()
+        )
+        df['rolling_std_7'] = df.groupby('restaurant_name')['total_sales'].transform(
+            lambda x: x.rolling(window=7, min_periods=1).std()
+        )
         
         # Изменение продаж относительно предыдущего дня
         df['delta_sales_prev'] = df.groupby('restaurant_name')['total_sales'].diff()
@@ -45,32 +55,16 @@ class FeatureEngineer:
         # Процентное изменение
         df['pct_change_sales'] = df.groupby('restaurant_name')['total_sales'].pct_change()
         
-        # Тренд продаж (линейная регрессия за последние 7 дней)
-        df['sales_trend'] = df.groupby('restaurant_name')['total_sales'].transform(
-            lambda x: x.rolling(window=7, min_periods=2).apply(
-                lambda y: np.polyfit(range(len(y)), y, 1)[0] if len(y) > 1 else 0
-            )
-        )
+        # Тренд продаж (простой - сравнение с недельным средним)
+        df['sales_vs_week_avg'] = df['total_sales'] / (df['rolling_mean_7'] + 1e-8)
         
         # Волатильность продаж
-        df['sales_volatility'] = df.groupby('restaurant_name')['total_sales'].rolling(
-            window=7, min_periods=2).std().reset_index(0, drop=True)
-        
-        # Признаки рейтинга
-        df['rating_change'] = df.groupby('restaurant_name')['rating'].diff()
-        df['rating_ma_7'] = df.groupby('restaurant_name')['rating'].rolling(
-            window=7, min_periods=1).mean().reset_index(0, drop=True)
-        
-        # Признаки рекламы
-        df['ads_ratio'] = df['ads_sales'] / (df['total_sales'] + 1e-8)
-        df['ads_efficiency'] = df['total_sales'] / (df['ads_sales'] + 1e-8)
+        df['sales_volatility'] = df['rolling_std_7'] / (df['rolling_mean_7'] + 1e-8)
         
         # Заполняем пропущенные значения
-        temporal_cols = [
-            'lag_1_sales', 'lag_2_sales', 'rolling_mean_3', 'rolling_mean_7',
-            'delta_sales_prev', 'pct_change_sales', 'sales_trend', 'sales_volatility',
-            'rating_change', 'rating_ma_7', 'ads_ratio', 'ads_efficiency'
-        ]
+        temporal_cols = ['lag_1_sales', 'lag_2_sales', 'lag_7_sales', 
+                        'rolling_mean_3', 'rolling_mean_7', 'rolling_std_7',
+                        'delta_sales_prev', 'pct_change_sales', 'sales_vs_week_avg', 'sales_volatility']
         
         for col in temporal_cols:
             if col in df.columns:
@@ -83,13 +77,15 @@ class FeatureEngineer:
         """Создание сезонных признаков"""
         logger.info("Создание сезонных признаков...")
         
-        # Преобразуем дату
-        df['date'] = pd.to_datetime(df['date'])
+        # Убеждаемся, что date - это datetime
+        if not pd.api.types.is_datetime64_any_dtype(df['date']):
+            df['date'] = pd.to_datetime(df['date'])
         
-        # Извлекаем компоненты даты
+        # Временные признаки
         df['month'] = df['date'].dt.month
         df['quarter'] = df['date'].dt.quarter
         df['day_of_month'] = df['date'].dt.day
+        df['day_of_week'] = df['date'].dt.dayofweek
         df['week_of_year'] = df['date'].dt.isocalendar().week
         
         # Циклические признаки
@@ -102,9 +98,6 @@ class FeatureEngineer:
         df['is_weekend'] = (df['day_of_week'] >= 5).astype(int)
         df['is_monday'] = (df['day_of_week'] == 0).astype(int)
         df['is_friday'] = (df['day_of_week'] == 4).astype(int)
-        
-        # Возвращаем дату в строковый формат
-        df['date'] = df['date'].dt.strftime('%Y-%m-%d')
         
         seasonal_features = [
             'month', 'quarter', 'day_of_month', 'week_of_year',
@@ -125,12 +118,11 @@ class FeatureEngineer:
             'rating': ['mean', 'std'],
             'cancel_rate': ['mean', 'std'],
             'ads_on': 'mean'
-        }).reset_index()
+        })
         
         # Сглаживаем названия колонок
-        restaurant_stats.columns = ['restaurant_name'] + [
-            f'restaurant_{col[0]}_{col[1]}' for col in restaurant_stats.columns[1:]
-        ]
+        restaurant_stats.columns = [f'restaurant_{col[0]}_{col[1]}' for col in restaurant_stats.columns]
+        restaurant_stats = restaurant_stats.reset_index()
         
         # Объединяем с основными данными
         df = df.merge(restaurant_stats, on='restaurant_name', how='left')
@@ -152,12 +144,12 @@ class FeatureEngineer:
         # Категории дождя
         df['rain_category'] = pd.cut(df['rain_mm'], 
                                    bins=[-1, 0, 5, 15, float('inf')],
-                                   labels=['no_rain', 'light_rain', 'moderate_rain', 'heavy_rain'])
+                                   labels=[0, 1, 2, 3])  # Используем числа вместо строк
         
         # Категории температуры
         df['temp_category'] = pd.cut(df['temp_c'],
                                    bins=[-float('inf'), 20, 25, 30, float('inf')],
-                                   labels=['cold', 'cool', 'warm', 'hot'])
+                                   labels=[0, 1, 2, 3])  # Используем числа вместо строк
         
         # Экстремальные погодные условия
         df['extreme_weather'] = ((df['rain_mm'] > 20) | (df['temp_c'] < 15) | (df['temp_c'] > 35)).astype(int)
@@ -165,13 +157,9 @@ class FeatureEngineer:
         # Комфортная погода
         df['comfortable_weather'] = ((df['rain_mm'] <= 2) & (df['temp_c'] >= 20) & (df['temp_c'] <= 30)).astype(int)
         
-        # Кодируем категориальные признаки
-        for col in ['rain_category', 'temp_category']:
-            if col not in self.label_encoders:
-                self.label_encoders[col] = LabelEncoder()
-                df[col] = self.label_encoders[col].fit_transform(df[col])
-            else:
-                df[col] = self.label_encoders[col].transform(df[col])
+        # Заполняем пропущенные значения
+        df['rain_category'] = df['rain_category'].fillna(0).astype(int)
+        df['temp_category'] = df['temp_category'].fillna(1).astype(int)
         
         weather_features = [
             'rain_category', 'temp_category', 'extreme_weather', 'comfortable_weather'
@@ -184,23 +172,22 @@ class FeatureEngineer:
         """Создание целевой переменной"""
         logger.info("Создание целевой переменной...")
         
+        # Убеждаемся, что date - это datetime
+        if not pd.api.types.is_datetime64_any_dtype(df['date']):
+            df['date'] = pd.to_datetime(df['date'])
+        
         # Сортируем по ресторану и дате
         df = df.sort_values(['restaurant_name', 'date']).reset_index(drop=True)
         
         # Создаем целевую переменную - изменение продаж
         df['target'] = df.groupby('restaurant_name')['total_sales'].diff()
         
-        # Альтернативный вариант - логарифмическое изменение
-        df['target_log'] = df.groupby('restaurant_name')['total_sales'].apply(
-            lambda x: np.log(x / x.shift(1))
-        )
+        # Альтернативный вариант - процентное изменение
+        df['target_pct'] = df.groupby('restaurant_name')['total_sales'].pct_change()
         
         # Заполняем пропущенные значения
         df['target'] = df['target'].fillna(0)
-        df['target_log'] = df['target_log'].fillna(0)
-        
-        # Удаляем бесконечные значения
-        df['target_log'] = df['target_log'].replace([np.inf, -np.inf], 0)
+        df['target_pct'] = df['target_pct'].fillna(0)
         
         logger.info("Целевая переменная создана")
         return df
@@ -209,43 +196,52 @@ class FeatureEngineer:
         """Подготовка всех признаков"""
         logger.info("Начинаю подготовку признаков...")
         
-        # Создаем все типы признаков
+        # Копируем DataFrame чтобы не изменять исходный
+        df = df.copy()
+        
+        # Создаем временные признаки
         df = self.create_temporal_features(df)
+        
+        # Создаем сезонные признаки
         df = self.create_seasonal_features(df)
+        
+        # Создаем признаки ресторана
         df = self.create_restaurant_features(df)
+        
+        # Создаем признаки погоды
         df = self.create_weather_features(df)
+        
+        # Создаем целевую переменную
         df = self.create_target_variable(df)
         
-        # Определяем финальный список признаков
-        base_features = [
-            'total_sales', 'ads_sales', 'rating', 'roas', 'position', 
-            'cancel_rate', 'ads_on', 'rain_mm', 'temp_c', 'is_holiday', 'day_of_week'
-        ]
-        
-        temporal_features = [
-            'lag_1_sales', 'lag_2_sales', 'rolling_mean_3', 'rolling_mean_7',
-            'delta_sales_prev', 'pct_change_sales', 'sales_trend', 'sales_volatility',
-            'rating_change', 'rating_ma_7', 'ads_ratio', 'ads_efficiency'
-        ]
-        
-        seasonal_features = [
+        # Определяем итоговый список признаков
+        feature_candidates = [
+            # Временные признаки
+            'lag_1_sales', 'lag_2_sales', 'lag_7_sales',
+            'rolling_mean_3', 'rolling_mean_7', 'rolling_std_7',
+            'delta_sales_prev', 'pct_change_sales', 'sales_vs_week_avg', 'sales_volatility',
+            
+            # Сезонные признаки
             'month', 'quarter', 'day_of_month', 'week_of_year',
             'month_sin', 'month_cos', 'day_of_week_sin', 'day_of_week_cos',
-            'is_weekend', 'is_monday', 'is_friday'
+            'is_weekend', 'is_monday', 'is_friday',
+            
+            # Признаки ресторана
+            'sales_vs_restaurant_mean', 'rating_vs_restaurant_mean',
+            
+            # Признаки погоды
+            'rain_category', 'temp_category', 'extreme_weather', 'comfortable_weather',
+            
+            # Основные признаки
+            'rating', 'cancel_rate', 'ads_on', 'is_holiday'
         ]
         
+        # Добавляем признаки ресторана
         restaurant_features = [col for col in df.columns if col.startswith('restaurant_')]
-        restaurant_features.extend(['sales_vs_restaurant_mean', 'rating_vs_restaurant_mean'])
+        feature_candidates.extend(restaurant_features)
         
-        weather_features = [
-            'rain_category', 'temp_category', 'extreme_weather', 'comfortable_weather'
-        ]
-        
-        # Собираем все признаки
-        all_features = base_features + temporal_features + seasonal_features + restaurant_features + weather_features
-        
-        # Оставляем только существующие признаки
-        available_features = [f for f in all_features if f in df.columns]
+        # Фильтруем только существующие признаки
+        available_features = [f for f in feature_candidates if f in df.columns]
         self.feature_names = available_features
         
         logger.info(f"Подготовлено {len(available_features)} признаков")
@@ -309,6 +305,10 @@ class FeatureEngineer:
         # Подготавливаем признаки
         df_prepared = self.prepare_features(df)
         
+        # Убеждаемся, что date в правильном формате
+        if isinstance(date, str):
+            date = pd.to_datetime(date)
+        
         # Фильтруем нужную запись
         sample = df_prepared[
             (df_prepared['restaurant_name'] == restaurant_name) & 
@@ -324,11 +324,15 @@ class FeatureEngineer:
         
         # Масштабируем если нужно
         if hasattr(self, 'scaler') and self.scaler is not None:
-            X_sample = pd.DataFrame(
-                self.scaler.transform(X_sample),
-                columns=X_sample.columns,
-                index=X_sample.index
-            )
+            try:
+                X_sample_scaled = self.scaler.transform(X_sample)
+                X_sample = pd.DataFrame(
+                    X_sample_scaled,
+                    columns=X_sample.columns,
+                    index=X_sample.index
+                )
+            except Exception as e:
+                logger.warning(f"Не удалось масштабировать признаки: {e}")
         
         return X_sample
 
