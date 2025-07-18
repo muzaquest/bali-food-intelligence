@@ -182,10 +182,32 @@ def info_command(args):
         if 'metrics' in info:
             metrics = info['metrics']
             print(f"\nМетрики качества:")
-            print(f"  R² (тест): {metrics.get('test_r2', 'N/A'):.4f}")
-            print(f"  MSE (тест): {metrics.get('test_mse', 'N/A'):.2f}")
-            print(f"  MAE (тест): {metrics.get('test_mae', 'N/A'):.2f}")
-            print(f"  Кросс-валидация R²: {metrics.get('cv_mean_r2', 'N/A'):.4f}")
+            
+            # Безопасное форматирование метрик
+            test_r2 = metrics.get('test_r2', 'N/A')
+            test_mse = metrics.get('test_mse', 'N/A')
+            test_mae = metrics.get('test_mae', 'N/A')
+            cv_mean_r2 = metrics.get('cv_mean_r2', 'N/A')
+            
+            if isinstance(test_r2, (int, float)):
+                print(f"  R² (тест): {test_r2:.4f}")
+            else:
+                print(f"  R² (тест): {test_r2}")
+                
+            if isinstance(test_mse, (int, float)):
+                print(f"  MSE (тест): {test_mse:.2f}")
+            else:
+                print(f"  MSE (тест): {test_mse}")
+                
+            if isinstance(test_mae, (int, float)):
+                print(f"  MAE (тест): {test_mae:.2f}")
+            else:
+                print(f"  MAE (тест): {test_mae}")
+                
+            if isinstance(cv_mean_r2, (int, float)):
+                print(f"  Кросс-валидация R²: {cv_mean_r2:.4f}")
+            else:
+                print(f"  Кросс-валидация R²: {cv_mean_r2}")
         
         # Показываем важность признаков
         importance = predictor.get_feature_importance(top_n=10)
