@@ -595,8 +595,16 @@ def get_executive_summary(restaurant_name: str) -> Dict:
 def test_business_hypothesis(restaurant_name: str, hypothesis: str, 
                            days_back: int = 30) -> Dict:
     """Тестирование бизнес-гипотезы"""
-    end_date = datetime.now().strftime('%Y-%m-%d')
-    start_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d')
-    
     bi_system = BusinessIntelligenceSystem()
+    
+    # Загружаем данные для определения доступного периода
+    df = get_restaurant_data(restaurant_name)
+    if df is None:
+        return {"error": f"Нет данных для ресторана {restaurant_name}"}
+    
+    # Используем последнюю доступную дату из данных
+    df['date'] = pd.to_datetime(df['date'])
+    end_date = df['date'].max().strftime('%Y-%m-%d')
+    start_date = (df['date'].max() - timedelta(days=days_back)).strftime('%Y-%m-%d')
+    
     return bi_system.test_hypothesis(restaurant_name, hypothesis, start_date, end_date)
