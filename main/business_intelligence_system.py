@@ -11,7 +11,8 @@ import json
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from data_loader import load_data_for_training, get_restaurant_data
+from data_integration import load_data_with_all_features, prepare_features_with_all_enhancements
+from data_loader import get_restaurant_data
 
 logger = logging.getLogger(__name__)
 
@@ -1326,7 +1327,7 @@ def generate_causal_analysis_report(restaurant_name: str = None, start_date: str
         
         else:
             # Сравнительный анализ всех ресторанов
-            all_data = load_data_for_training()
+            all_data = load_data_with_all_features()
             if all_data.empty:
                 return {"error": "Нет данных для анализа"}
             
@@ -1379,8 +1380,8 @@ def generate_deep_analytics_report(restaurant_name: str, start_date: str, end_da
         period_df = restaurant_df[(restaurant_df['date'] >= start_date) & (restaurant_df['date'] <= end_date)].copy()
         
         # Загружаем полную базу данных для конкурентного анализа
-        from data_loader import load_data_for_training
-        df = load_data_for_training()
+        from data_integration import load_data_with_all_features
+        df = load_data_with_all_features()
         df['date'] = pd.to_datetime(df['date'])
         
         if period_df.empty:
@@ -2221,7 +2222,7 @@ def generate_market_intelligence_report(start_date: str, end_date: str) -> Dict:
     
     try:
         # Загружаем полную базу данных
-        full_df = load_data_for_training()
+        full_df = load_data_with_all_features()
         if full_df.empty:
             return {"error": "Нет данных для анализа"}
         

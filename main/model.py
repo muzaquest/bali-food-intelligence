@@ -12,8 +12,8 @@ from datetime import datetime
 import os
 
 from config import MODEL_PARAMS, MODEL_PATH, SCALER_PATH, CV_FOLDS, MIN_R2_SCORE, RANDOM_STATE
-from data_loader import load_data_for_training
-from feature_engineering import FeatureEngineer
+from data_integration import load_data_with_all_features
+from data_integration import prepare_features_with_all_enhancements
 
 logger = logging.getLogger(__name__)
 
@@ -322,11 +322,17 @@ def train_sales_model(start_date=None, end_date=None, model_type='random_forest'
     """Главная функция для обучения модели"""
     logger.info("Начинаю обучение модели анализа продаж")
     
-    # Загружаем данные
-    df = load_data_for_training()
-    if df is None:
+    # Загружаем данные с максимальной детализацией
+    logger.info("🚀 Загрузка данных с максимальной детализацией...")
+    df = load_data_with_all_features()
+    if df is None or df.empty:
         logger.error("Не удалось загрузить данные")
         return None
+    
+    # Применяем расширенные features
+    logger.info("🌟 Применение расширенных features...")
+    df = prepare_features_with_all_enhancements(df)
+    logger.info(f"✅ Подготовлено {len(df.columns)} полей для обучения")
     
     # Создаем и обучаем модель
     predictor = SalesPredictor(model_type)
