@@ -1,9 +1,0 @@
-[bandit]
-exclude_dirs = ["tests", "venv", "env", ".venv", ".env", ".git", "__pycache__", "build", "dist"]
-skips = ["B101", "B601", "B603", "B301", "B324"]
-
-# B101: Test for use of assert
-# B601: paramiko calls
-# B603: subprocess calls  
-# B301: pickle usage
-# B324: hashlib usage
