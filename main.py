@@ -274,6 +274,86 @@ def test_hypothesis_command(args):
         logger.error(f"Ошибка тестирования гипотезы: {e}")
         return False
 
+def deep_analysis_command(args):
+    """Глубокий анализ с поиском аномалий и корреляций"""
+    logger.info("=== Глубокий анализ ===")
+    
+    try:
+        from business_intelligence_system import generate_deep_analytics_report
+        
+        report = generate_deep_analytics_report(args.restaurant, args.start_date, args.end_date)
+        
+        if 'error' not in report:
+            print(f"\n🔍 ГЛУБОКИЙ АНАЛИЗ: {report['restaurant_name']}")
+            print(f"📅 Период: {report['period']}")
+            print("=" * 60)
+            
+            # Базовая статистика
+            stats = report['base_statistics']
+            print(f"\n📊 БАЗОВАЯ СТАТИСТИКА:")
+            print(f"  • Общие продажи: {stats['total_sales']:,.0f} IDR")
+            print(f"  • Средние продажи в день: {stats['avg_daily_sales']:,.0f} IDR")
+            print(f"  • Общие заказы: {stats['total_orders']:,}")
+            print(f"  • Средний рейтинг: {stats['avg_rating']:.2f}")
+            print(f"  • Дней проанализировано: {stats['days_analyzed']}")
+            
+            # Аномалии
+            if report['anomalies']:
+                print(f"\n🚨 АНОМАЛИИ И ОТКЛОНЕНИЯ (топ-5):")
+                for i, anomaly in enumerate(report['anomalies'][:5], 1):
+                    print(f"  {i}. {anomaly['date']} - Отклонение: {anomaly['deviation']}")
+                    print(f"     Продажи: {anomaly['sales']:,.0f} IDR")
+                    if anomaly['possible_causes']:
+                        print(f"     Возможные причины:")
+                        for cause in anomaly['possible_causes']:
+                            print(f"       • {cause}")
+                    print()
+            
+            # Корреляции
+            correlations = report['correlations']
+            print(f"\n🔗 СИЛЬНЫЕ КОРРЕЛЯЦИИ:")
+            
+            if correlations['strong_positive']:
+                print(f"  📈 ПОЛОЖИТЕЛЬНЫЕ СВЯЗИ:")
+                for corr in correlations['strong_positive']:
+                    print(f"    • {corr['interpretation']} (r={corr['correlation']:.3f})")
+            
+            if correlations['strong_negative']:
+                print(f"  📉 ОБРАТНЫЕ СВЯЗИ:")
+                for corr in correlations['strong_negative']:
+                    print(f"    • {corr['interpretation']} (r={corr['correlation']:.3f})")
+            
+            # Паттерны
+            if correlations['interesting_patterns']:
+                print(f"\n🎯 ИНТЕРЕСНЫЕ ПАТТЕРНЫ:")
+                for pattern in correlations['interesting_patterns']:
+                    print(f"  • {pattern['description']}")
+            
+            # Тренды
+            trends = report['trends']
+            if trends:
+                print(f"\n📈 ТРЕНДЫ И ИЗМЕНЕНИЯ:")
+                if 'monthly' in trends:
+                    monthly = trends['monthly']
+                    print(f"  • Лучший месяц: {monthly['best_month']} ({monthly['best_sales']:,.0f} IDR)")
+                    print(f"  • Худший месяц: {monthly['worst_month']} ({monthly['worst_sales']:,.0f} IDR)")
+                
+                if 'roas_trend' in trends:
+                    roas_trend = trends['roas_trend']
+                    print(f"  • {roas_trend['interpretation']}")
+            
+            print(f"\n🎉 ИТОГО НАЙДЕНО ИНСАЙТОВ: {report['insights_count']}")
+            print(f"📅 Отчет сгенерирован: {report['generated_at']}")
+            
+            return True
+        else:
+            logger.error(f"Ошибка глубокого анализа: {report['error']}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Ошибка выполнения глубокого анализа: {e}")
+        return False
+
 def info_command(args):
     """Команда для получения информации о модели"""
     logger.info("=== Информация о модели ===")
@@ -345,6 +425,9 @@ def main():
   # Краткий отчет для руководства
   python main.py summary --restaurant "Canggu Surf Cafe"
 
+  # Глубокий анализ с аномалиями и корреляциями
+  python main.py deep --restaurant "Ika Canggu" --start-date "2024-04-01" --end-date "2024-06-30"
+
   # Тестирование гипотезы
   python main.py test --restaurant "Canggu Surf Cafe" --hypothesis "реклама эффективна"
 
@@ -381,6 +464,12 @@ def main():
     test_parser.add_argument('--hypothesis', required=True, help='Гипотеза для тестирования')
     test_parser.add_argument('--days', type=int, default=30, help='Количество дней для анализа')
     
+    # Команда глубокого анализа
+    deep_parser = subparsers.add_parser('deep', help='Глубокий анализ с аномалиями и корреляциями')
+    deep_parser.add_argument('--restaurant', required=True, help='Название ресторана')
+    deep_parser.add_argument('--start-date', required=True, help='Начальная дата (YYYY-MM-DD)')
+    deep_parser.add_argument('--end-date', required=True, help='Конечная дата (YYYY-MM-DD)')
+    
     # Команда обучения модели
     train_parser = subparsers.add_parser('train', help='Обучение модели')
     train_parser.add_argument('--model-type', choices=['random_forest', 'xgboost', 'linear'], 
@@ -412,6 +501,8 @@ def main():
         success = executive_summary_command(args)
     elif args.command == 'test':
         success = test_hypothesis_command(args)
+    elif args.command == 'deep':
+        success = deep_analysis_command(args)
     elif args.command == 'train':
         success = train_model_command(args)
     elif args.command == 'info':
