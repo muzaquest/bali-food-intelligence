@@ -38,25 +38,28 @@ class FeatureEngineer:
         df['lag_2_sales'] = df.groupby('restaurant_name')['total_sales'].shift(2)
         df['lag_7_sales'] = df.groupby('restaurant_name')['total_sales'].shift(7)
         
-        # Скользящие средние
+        # Скользящие средние (сдвинуты для избежания data leakage)
         df['rolling_mean_3'] = df.groupby('restaurant_name')['total_sales'].transform(
             lambda x: x.rolling(window=3, min_periods=1).mean()
-        )
+        ).shift(1)  # Сдвигаем для избежания утечки
+        
         df['rolling_mean_7'] = df.groupby('restaurant_name')['total_sales'].transform(
             lambda x: x.rolling(window=7, min_periods=1).mean()
-        )
+        ).shift(1)  # Сдвигаем для избежания утечки
+        
         df['rolling_std_7'] = df.groupby('restaurant_name')['total_sales'].transform(
             lambda x: x.rolling(window=7, min_periods=1).std()
-        )
+        ).shift(1)  # Сдвигаем для избежания утечки
         
-        # Изменение продаж относительно предыдущего дня
-        df['delta_sales_prev'] = df.groupby('restaurant_name')['total_sales'].diff()
+        # ИСПРАВЛЕНИЕ DATA LEAKAGE: Изменение продаж относительно предыдущего дня
+        # Используем лаги вместо diff, чтобы избежать утечки данных из будущего
+        df['delta_sales_prev'] = df.groupby('restaurant_name')['total_sales'].shift(1) - df.groupby('restaurant_name')['total_sales'].shift(2)
         
-        # Процентное изменение
-        df['pct_change_sales'] = df.groupby('restaurant_name')['total_sales'].pct_change()
+        # Процентное изменение (с лагом для избежания data leakage)
+        df['pct_change_sales'] = df.groupby('restaurant_name')['total_sales'].shift(1).pct_change()
         
-        # Тренд продаж (простой - сравнение с недельным средним)
-        df['sales_vs_week_avg'] = df['total_sales'] / (df['rolling_mean_7'] + 1e-8)
+        # Тренд продаж (сравнение с недельным средним, без data leakage)
+        df['sales_vs_week_avg'] = df['lag_1_sales'] / (df['rolling_mean_7'] + 1e-8)
         
         # Волатильность продаж
         df['sales_volatility'] = df['rolling_std_7'] / (df['rolling_mean_7'] + 1e-8)
