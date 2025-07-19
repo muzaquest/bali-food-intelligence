@@ -1370,13 +1370,18 @@ def generate_deep_analytics_report(restaurant_name: str, start_date: str, end_da
     logger.info(f"Генерация глубокого анализа для {restaurant_name} за период {start_date} - {end_date}")
     
     try:
-        # Загружаем данные
-        df = get_restaurant_data(restaurant_name)
-        if df is None:
+        # Загружаем данные для конкретного ресторана
+        restaurant_df = get_restaurant_data(restaurant_name)
+        if restaurant_df is None:
             return {"error": f"Нет данных для ресторана {restaurant_name}"}
         
+        restaurant_df['date'] = pd.to_datetime(restaurant_df['date'])
+        period_df = restaurant_df[(restaurant_df['date'] >= start_date) & (restaurant_df['date'] <= end_date)].copy()
+        
+        # Загружаем полную базу данных для конкурентного анализа
+        from data_loader import load_data_for_training
+        df = load_data_for_training()
         df['date'] = pd.to_datetime(df['date'])
-        period_df = df[(df['date'] >= start_date) & (df['date'] <= end_date)].copy()
         
         if period_df.empty:
             return {"error": f"Нет данных за период {start_date} - {end_date}"}
@@ -1402,6 +1407,38 @@ def generate_deep_analytics_report(restaurant_name: str, start_date: str, end_da
         # Анализ трендов
         trends = analytics_engine.analyze_trends(period_df, restaurant_name)
         
+        # Временной анализ с YoY сравнениями
+        market_engine = MarketIntelligenceEngine()
+        temporal_analysis = market_engine._analyze_temporal_patterns(period_df, df)
+        
+        # Конкурентное сравнение (топ-5 ресторанов по заказам за тот же период)
+        period_start = pd.to_datetime(start_date)
+        period_end = pd.to_datetime(end_date)
+        all_restaurants_period = df[(df['date'] >= period_start) & (df['date'] <= period_end)].copy()
+        
+        competitor_analysis = {}
+        if not all_restaurants_period.empty:
+            days_in_period = (period_end - period_start).days + 1
+            restaurant_performance = all_restaurants_period.groupby('restaurant_name').agg({
+                'orders': 'sum',
+                'total_sales': 'sum'
+            }).reset_index()
+            restaurant_performance['avg_orders_per_day'] = restaurant_performance['orders'] / days_in_period
+            
+            # Сортируем по заказам и получаем ранг текущего ресторана
+            restaurant_performance = restaurant_performance.sort_values('orders', ascending=False).reset_index(drop=True)
+            
+            top_competitors = restaurant_performance.head(5)[['restaurant_name', 'avg_orders_per_day', 'orders', 'total_sales']]
+            
+            current_rank = None
+            if restaurant_name in restaurant_performance['restaurant_name'].values:
+                current_rank = restaurant_performance[restaurant_performance['restaurant_name'] == restaurant_name].index[0] + 1
+            
+            competitor_analysis = {
+                'top_performers': top_competitors.to_dict('records'),
+                'current_restaurant_rank': current_rank
+            }
+        
         # Формируем итоговый отчет
         report = {
             'restaurant_name': restaurant_name,
@@ -1410,6 +1447,8 @@ def generate_deep_analytics_report(restaurant_name: str, start_date: str, end_da
             'anomalies': anomalies[:10],  # Топ-10 аномалий
             'correlations': correlations,
             'trends': trends,
+            'temporal_analysis': temporal_analysis,
+            'competitor_analysis': competitor_analysis,
             'insights_count': len(anomalies) + len(correlations['strong_positive']) + len(correlations['strong_negative']) + len(correlations['interesting_patterns']),
             'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
