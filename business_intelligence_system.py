@@ -1631,3 +1631,578 @@ def generate_client_report(restaurant_name: str, start_date: str, end_date: str)
     except Exception as e:
         logger.error(f"Ошибка генерации клиентского отчета: {e}")
         return {"error": f"Ошибка генерации отчета: {str(e)}"}
+
+class MarketIntelligenceEngine:
+    """
+    Комплексная рыночная аналитика уровня топ-маркетолога
+    
+    Анализирует всю базу ресторанов по:
+    - Платформам (Grab vs Gojek)
+    - Временным периодам (YoY, QoQ)
+    - Рыночным трендам
+    - Аномалиям и возможностям
+    """
+    
+    def __init__(self):
+        self.platforms = ['grab', 'gojek']
+        self.key_metrics = [
+            'total_sales', 'orders', 'rating', 'delivery_time', 
+            'cancel_rate', 'ads_on', 'roas'
+        ]
+        
+    def analyze_market_overview(self, df: pd.DataFrame, start_date: str, end_date: str) -> Dict:
+        """Комплексный анализ всего рынка за период"""
+        
+        # Фильтруем данные по периоду
+        df['date'] = pd.to_datetime(df['date'])
+        period_df = df[(df['date'] >= start_date) & (df['date'] <= end_date)].copy()
+        
+        analysis = {
+            'period': f"{start_date} - {end_date}",
+            'market_overview': self._get_market_overview(period_df),
+            'platform_analysis': self._analyze_platforms(period_df),
+            'restaurant_performance': self._analyze_restaurant_performance(period_df),
+            'advertising_intelligence': self._analyze_advertising_trends(period_df),
+            'operational_insights': self._analyze_operational_metrics(period_df),
+            'temporal_analysis': self._analyze_temporal_patterns(period_df, df),
+            'market_anomalies': self._detect_market_anomalies(period_df),
+            'strategic_recommendations': [],
+            'expert_hypotheses': []
+        }
+        
+        # Генерируем стратегические рекомендации и гипотезы
+        analysis['strategic_recommendations'] = self._generate_strategic_recommendations(analysis)
+        analysis['expert_hypotheses'] = self._generate_expert_hypotheses(analysis, df)
+        
+        return analysis
+    
+    def _get_market_overview(self, df: pd.DataFrame) -> Dict:
+        """Обзор рынка: ключевые показатели"""
+        total_restaurants = df['restaurant_name'].nunique()
+        total_days = (df['date'].max() - df['date'].min()).days + 1
+        
+        return {
+            'total_restaurants': total_restaurants,
+            'total_days_analyzed': total_days,
+            'total_sales': df['total_sales'].sum(),
+            'total_orders': df['orders'].sum(),
+            'average_daily_sales_per_restaurant': df.groupby('restaurant_name')['total_sales'].sum().mean(),
+            'average_daily_orders_per_restaurant': df.groupby('restaurant_name')['orders'].sum().mean(),
+            'market_average_rating': df['rating'].mean(),
+            'market_average_delivery_time': df['delivery_time'].mean(),
+            'market_cancel_rate': df['cancel_rate'].mean(),
+            'ads_adoption_rate': (df['ads_on'].sum() / len(df)) * 100,
+            'average_roas': df[df['ads_on'] == 1]['roas'].mean()
+        }
+    
+    def _analyze_platforms(self, df: pd.DataFrame) -> Dict:
+        """Глубокий анализ платформ Grab vs Gojek"""
+        
+        # Определяем платформу по времени доставки (эвристика)
+        df['platform_estimate'] = df['delivery_time'].apply(
+            lambda x: 'gojek' if x < 25 else 'grab'
+        )
+        
+        platform_analysis = {}
+        
+        for platform in ['grab', 'gojek']:
+            platform_data = df[df['platform_estimate'] == platform]
+            
+            if len(platform_data) > 0:
+                platform_analysis[platform] = {
+                    'market_share_by_records': (len(platform_data) / len(df)) * 100,
+                    'total_sales': platform_data['total_sales'].sum(),
+                    'total_orders': platform_data['orders'].sum(),
+                    'average_order_value': platform_data['total_sales'].sum() / platform_data['orders'].sum() if platform_data['orders'].sum() > 0 else 0,
+                    'average_rating': platform_data['rating'].mean(),
+                    'average_delivery_time': platform_data['delivery_time'].mean(),
+                    'cancel_rate': platform_data['cancel_rate'].mean(),
+                    'ads_adoption': (platform_data['ads_on'].sum() / len(platform_data)) * 100,
+                    'average_roas': platform_data[platform_data['ads_on'] == 1]['roas'].mean(),
+                    'restaurants_count': platform_data['restaurant_name'].nunique(),
+                    'sales_per_restaurant': platform_data.groupby('restaurant_name')['total_sales'].sum().mean(),
+                    'orders_per_restaurant': platform_data.groupby('restaurant_name')['orders'].sum().mean()
+                }
+        
+        # Сравнительный анализ
+        if 'grab' in platform_analysis and 'gojek' in platform_analysis:
+            grab = platform_analysis['grab']
+            gojek = platform_analysis['gojek']
+            
+            platform_analysis['comparison'] = {
+                'sales_leader': 'grab' if grab['total_sales'] > gojek['total_sales'] else 'gojek',
+                'orders_leader': 'grab' if grab['total_orders'] > gojek['total_orders'] else 'gojek',
+                'efficiency_leader': 'grab' if grab['average_order_value'] > gojek['average_order_value'] else 'gojek',
+                'service_leader': 'grab' if grab['average_rating'] > gojek['average_rating'] else 'gojek',
+                'speed_leader': 'grab' if grab['average_delivery_time'] < gojek['average_delivery_time'] else 'gojek',
+                'reliability_leader': 'grab' if grab['cancel_rate'] < gojek['cancel_rate'] else 'gojek',
+                'ads_adoption_leader': 'grab' if grab['ads_adoption'] > gojek['ads_adoption'] else 'gojek',
+                'roas_leader': 'grab' if grab['average_roas'] > gojek['average_roas'] else 'gojek',
+                
+                'sales_difference_pct': abs(grab['total_sales'] - gojek['total_sales']) / min(grab['total_sales'], gojek['total_sales']) * 100,
+                'aov_difference_pct': abs(grab['average_order_value'] - gojek['average_order_value']) / min(grab['average_order_value'], gojek['average_order_value']) * 100,
+                'delivery_time_difference': abs(grab['average_delivery_time'] - gojek['average_delivery_time']),
+                'roas_difference_pct': abs(grab['average_roas'] - gojek['average_roas']) / min(grab['average_roas'], gojek['average_roas']) * 100 if not pd.isna(grab['average_roas']) and not pd.isna(gojek['average_roas']) else 0
+            }
+        
+        return platform_analysis
+    
+    def _analyze_restaurant_performance(self, df: pd.DataFrame) -> Dict:
+        """Анализ эффективности ресторанов"""
+        
+        restaurant_stats = df.groupby('restaurant_name').agg({
+            'total_sales': ['sum', 'mean'],
+            'orders': ['sum', 'mean'],
+            'rating': 'mean',
+            'delivery_time': 'mean',
+            'cancel_rate': 'mean',
+            'ads_on': ['sum', 'count'],
+            'roas': 'mean'
+        }).round(2)
+        
+        # Упрощаем колонки
+        restaurant_stats.columns = [
+            'total_sales', 'avg_daily_sales', 'total_orders', 'avg_daily_orders',
+            'avg_rating', 'avg_delivery_time', 'avg_cancel_rate', 
+            'ads_days', 'total_days', 'avg_roas'
+        ]
+        
+        restaurant_stats['ads_adoption_pct'] = (restaurant_stats['ads_days'] / restaurant_stats['total_days']) * 100
+        restaurant_stats['avg_order_value'] = restaurant_stats['total_sales'] / restaurant_stats['total_orders']
+        
+        # Топ и аутсайдеры
+        top_by_sales = restaurant_stats.nlargest(5, 'total_sales')
+        bottom_by_sales = restaurant_stats.nsmallest(5, 'total_sales')
+        
+        top_by_orders = restaurant_stats.nlargest(5, 'total_orders')
+        top_by_efficiency = restaurant_stats.nlargest(5, 'avg_order_value')
+        top_by_rating = restaurant_stats.nlargest(5, 'avg_rating')
+        
+        return {
+            'total_restaurants': len(restaurant_stats),
+            'top_performers': {
+                'by_sales': top_by_sales[['total_sales', 'avg_daily_sales', 'total_orders']].to_dict('index'),
+                'by_orders': top_by_orders[['total_orders', 'avg_daily_orders', 'total_sales']].to_dict('index'),
+                'by_efficiency': top_by_efficiency[['avg_order_value', 'total_sales', 'total_orders']].to_dict('index'),
+                'by_rating': top_by_rating[['avg_rating', 'total_sales', 'total_orders']].to_dict('index')
+            },
+            'underperformers': {
+                'by_sales': bottom_by_sales[['total_sales', 'avg_daily_sales', 'total_orders']].to_dict('index')
+            },
+            'market_distribution': {
+                'sales_concentration': (top_by_sales['total_sales'].sum() / restaurant_stats['total_sales'].sum()) * 100,
+                'orders_concentration': (top_by_orders['total_orders'].sum() / restaurant_stats['total_orders'].sum()) * 100,
+                'average_aov': restaurant_stats['avg_order_value'].mean(),
+                'aov_std': restaurant_stats['avg_order_value'].std(),
+                'rating_distribution': {
+                    '4.8+': len(restaurant_stats[restaurant_stats['avg_rating'] >= 4.8]),
+                    '4.5-4.8': len(restaurant_stats[(restaurant_stats['avg_rating'] >= 4.5) & (restaurant_stats['avg_rating'] < 4.8)]),
+                    '4.0-4.5': len(restaurant_stats[(restaurant_stats['avg_rating'] >= 4.0) & (restaurant_stats['avg_rating'] < 4.5)]),
+                    '<4.0': len(restaurant_stats[restaurant_stats['avg_rating'] < 4.0])
+                }
+            }
+        }
+    
+    def _analyze_advertising_trends(self, df: pd.DataFrame) -> Dict:
+        """Анализ рекламных трендов и эффективности"""
+        
+        ads_data = df[df['ads_on'] == 1].copy()
+        no_ads_data = df[df['ads_on'] == 0].copy()
+        
+        if len(ads_data) == 0 or len(no_ads_data) == 0:
+            return {"error": "Недостаточно данных для анализа рекламы"}
+        
+        # Базовая статистика рекламы
+        ads_stats = {
+            'total_ads_days': len(ads_data),
+            'ads_penetration': (len(ads_data) / len(df)) * 100,
+            'average_roas': ads_data['roas'].mean(),
+            'median_roas': ads_data['roas'].median(),
+            'roas_std': ads_data['roas'].std(),
+            'best_roas': ads_data['roas'].max(),
+            'worst_roas': ads_data['roas'].min()
+        }
+        
+        # Эффективность рекламы vs без рекламы
+        ads_performance = {
+            'avg_sales_with_ads': ads_data['total_sales'].mean(),
+            'avg_sales_without_ads': no_ads_data['total_sales'].mean(),
+            'avg_orders_with_ads': ads_data['orders'].mean(),
+            'avg_orders_without_ads': no_ads_data['orders'].mean(),
+            'avg_rating_with_ads': ads_data['rating'].mean(),
+            'avg_rating_without_ads': no_ads_data['rating'].mean()
+        }
+        
+        ads_performance['sales_lift'] = ((ads_performance['avg_sales_with_ads'] - ads_performance['avg_sales_without_ads']) / ads_performance['avg_sales_without_ads']) * 100
+        ads_performance['orders_lift'] = ((ads_performance['avg_orders_with_ads'] - ads_performance['avg_orders_without_ads']) / ads_performance['avg_orders_without_ads']) * 100
+        
+        # Анализ по ресторанам
+        restaurant_ads_analysis = df.groupby('restaurant_name').agg({
+            'ads_on': ['sum', 'count'],
+            'roas': 'mean',
+            'total_sales': 'mean'
+        }).round(2)
+        
+        restaurant_ads_analysis.columns = ['ads_days', 'total_days', 'avg_roas', 'avg_daily_sales']
+        restaurant_ads_analysis['ads_adoption_pct'] = (restaurant_ads_analysis['ads_days'] / restaurant_ads_analysis['total_days']) * 100
+        
+        # Категории по использованию рекламы
+        heavy_advertisers = restaurant_ads_analysis[restaurant_ads_analysis['ads_adoption_pct'] > 80]
+        light_advertisers = restaurant_ads_analysis[restaurant_ads_analysis['ads_adoption_pct'] < 20]
+        moderate_advertisers = restaurant_ads_analysis[
+            (restaurant_ads_analysis['ads_adoption_pct'] >= 20) & 
+            (restaurant_ads_analysis['ads_adoption_pct'] <= 80)
+        ]
+        
+        # ROAS по дням недели
+        roas_by_weekday = ads_data.groupby('day_of_week')['roas'].mean().round(2).to_dict()
+        orders_by_weekday_ads = ads_data.groupby('day_of_week')['orders'].mean().round(2).to_dict()
+        
+        return {
+            'basic_stats': ads_stats,
+            'performance_comparison': ads_performance,
+            'advertiser_segments': {
+                'heavy_advertisers': {
+                    'count': len(heavy_advertisers),
+                    'avg_roas': heavy_advertisers['avg_roas'].mean(),
+                    'avg_daily_sales': heavy_advertisers['avg_daily_sales'].mean(),
+                    'names': heavy_advertisers.index.tolist()[:5]
+                },
+                'moderate_advertisers': {
+                    'count': len(moderate_advertisers),
+                    'avg_roas': moderate_advertisers['avg_roas'].mean(),
+                    'avg_daily_sales': moderate_advertisers['avg_daily_sales'].mean()
+                },
+                'light_advertisers': {
+                    'count': len(light_advertisers),
+                    'avg_roas': light_advertisers['avg_roas'].mean() if len(light_advertisers) > 0 else 0,
+                    'avg_daily_sales': light_advertisers['avg_daily_sales'].mean() if len(light_advertisers) > 0 else 0,
+                    'names': light_advertisers.index.tolist()[:5] if len(light_advertisers) > 0 else []
+                }
+            },
+            'temporal_patterns': {
+                'roas_by_weekday': roas_by_weekday,
+                'orders_by_weekday_with_ads': orders_by_weekday_ads,
+                'best_ads_day': max(roas_by_weekday, key=roas_by_weekday.get) if roas_by_weekday else None,
+                'worst_ads_day': min(roas_by_weekday, key=roas_by_weekday.get) if roas_by_weekday else None
+            }
+        }
+    
+    def _analyze_operational_metrics(self, df: pd.DataFrame) -> Dict:
+        """Анализ операционных метрик"""
+        
+        # Временные тренды ключевых метрик
+        monthly_trends = df.groupby(df['date'].dt.to_period('M')).agg({
+            'delivery_time': 'mean',
+            'cancel_rate': 'mean',
+            'rating': 'mean',
+            'orders': 'sum',
+            'total_sales': 'sum'
+        }).round(2)
+        
+        # Распределение времени доставки
+        delivery_distribution = {
+            'under_20min': len(df[df['delivery_time'] < 20]),
+            '20_30min': len(df[(df['delivery_time'] >= 20) & (df['delivery_time'] < 30)]),
+            '30_40min': len(df[(df['delivery_time'] >= 30) & (df['delivery_time'] < 40)]),
+            'over_40min': len(df[df['delivery_time'] >= 40])
+        }
+        
+        # Анализ отмен
+        cancel_analysis = {
+            'total_orders': df['orders'].sum(),
+            'estimated_cancellations': (df['orders'] * df['cancel_rate']).sum(),
+            'cancel_rate_distribution': {
+                'excellent_0_2pct': len(df[df['cancel_rate'] < 0.02]),
+                'good_2_5pct': len(df[(df['cancel_rate'] >= 0.02) & (df['cancel_rate'] < 0.05)]),
+                'average_5_10pct': len(df[(df['cancel_rate'] >= 0.05) & (df['cancel_rate'] < 0.10)]),
+                'poor_over_10pct': len(df[df['cancel_rate'] >= 0.10])
+            },
+            'worst_performers': df.nlargest(5, 'cancel_rate')[['restaurant_name', 'cancel_rate', 'orders']].to_dict('records')
+        }
+        
+        # Корреляция операционных метрик
+        operational_correlations = df[['delivery_time', 'cancel_rate', 'rating', 'orders', 'total_sales']].corr().round(3).to_dict()
+        
+        return {
+            'delivery_performance': {
+                'average_delivery_time': df['delivery_time'].mean(),
+                'delivery_time_std': df['delivery_time'].std(),
+                'fastest_restaurants': df.nsmallest(5, 'delivery_time')[['restaurant_name', 'delivery_time']].to_dict('records'),
+                'slowest_restaurants': df.nlargest(5, 'delivery_time')[['restaurant_name', 'delivery_time']].to_dict('records'),
+                'distribution': delivery_distribution
+            },
+            'cancellation_analysis': cancel_analysis,
+            'rating_trends': {
+                'average_rating': df['rating'].mean(),
+                'rating_std': df['rating'].std(),
+                'top_rated': df.nlargest(5, 'rating')[['restaurant_name', 'rating']].to_dict('records'),
+                'lowest_rated': df.nsmallest(5, 'rating')[['restaurant_name', 'rating']].to_dict('records')
+            },
+            'operational_correlations': operational_correlations,
+            'monthly_trends': monthly_trends.to_dict() if not monthly_trends.empty else {}
+        }
+    
+    def _analyze_temporal_patterns(self, period_df: pd.DataFrame, full_df: pd.DataFrame) -> Dict:
+        """Анализ временных паттернов и сравнение с предыдущими периодами"""
+        
+        period_start = period_df['date'].min()
+        period_end = period_df['date'].max()
+        period_days = (period_end - period_start).days + 1
+        
+        # Сравнение с тем же периодом прошлого года (YoY)
+        yoy_start = period_start - pd.DateOffset(years=1)
+        yoy_end = period_end - pd.DateOffset(years=1)
+        yoy_df = full_df[(full_df['date'] >= yoy_start) & (full_df['date'] <= yoy_end)].copy()
+        
+        # Сравнение с предыдущим кварталом (QoQ)
+        qoq_start = period_start - pd.DateOffset(months=3)
+        qoq_end = period_end - pd.DateOffset(months=3)
+        qoq_df = full_df[(full_df['date'] >= qoq_start) & (full_df['date'] <= qoq_end)].copy()
+        
+        # Метрики текущего периода
+        current_metrics = {
+            'total_sales': period_df['total_sales'].sum(),
+            'total_orders': period_df['orders'].sum(),
+            'avg_rating': period_df['rating'].mean(),
+            'avg_delivery_time': period_df['delivery_time'].mean(),
+            'avg_cancel_rate': period_df['cancel_rate'].mean(),
+            'avg_roas': period_df[period_df['ads_on'] == 1]['roas'].mean()
+        }
+        
+        temporal_analysis = {
+            'current_period': current_metrics,
+            'comparisons': {}
+        }
+        
+        # YoY сравнение
+        if len(yoy_df) > 0:
+            yoy_metrics = {
+                'total_sales': yoy_df['total_sales'].sum(),
+                'total_orders': yoy_df['orders'].sum(),
+                'avg_rating': yoy_df['rating'].mean(),
+                'avg_delivery_time': yoy_df['delivery_time'].mean(),
+                'avg_cancel_rate': yoy_df['cancel_rate'].mean(),
+                'avg_roas': yoy_df[yoy_df['ads_on'] == 1]['roas'].mean()
+            }
+            
+            yoy_changes = {}
+            for metric in current_metrics:
+                if not pd.isna(current_metrics[metric]) and not pd.isna(yoy_metrics[metric]) and yoy_metrics[metric] != 0:
+                    yoy_changes[metric] = ((current_metrics[metric] - yoy_metrics[metric]) / yoy_metrics[metric]) * 100
+                else:
+                    yoy_changes[metric] = 0
+            
+            temporal_analysis['comparisons']['year_over_year'] = {
+                'previous_period': yoy_metrics,
+                'changes_pct': yoy_changes
+            }
+        
+        # QoQ сравнение
+        if len(qoq_df) > 0:
+            qoq_metrics = {
+                'total_sales': qoq_df['total_sales'].sum(),
+                'total_orders': qoq_df['orders'].sum(),
+                'avg_rating': qoq_df['rating'].mean(),
+                'avg_delivery_time': qoq_df['delivery_time'].mean(),
+                'avg_cancel_rate': qoq_df['cancel_rate'].mean(),
+                'avg_roas': qoq_df[qoq_df['ads_on'] == 1]['roas'].mean()
+            }
+            
+            qoq_changes = {}
+            for metric in current_metrics:
+                if not pd.isna(current_metrics[metric]) and not pd.isna(qoq_metrics[metric]) and qoq_metrics[metric] != 0:
+                    qoq_changes[metric] = ((current_metrics[metric] - qoq_metrics[metric]) / qoq_metrics[metric]) * 100
+                else:
+                    qoq_changes[metric] = 0
+            
+            temporal_analysis['comparisons']['quarter_over_quarter'] = {
+                'previous_period': qoq_metrics,
+                'changes_pct': qoq_changes
+            }
+        
+        # Недельные паттерны
+        weekly_patterns = period_df.groupby('day_of_week').agg({
+            'total_sales': 'mean',
+            'orders': 'mean',
+            'rating': 'mean'
+        }).round(2).to_dict()
+        
+        temporal_analysis['weekly_patterns'] = weekly_patterns
+        
+        return temporal_analysis
+    
+    def _detect_market_anomalies(self, df: pd.DataFrame) -> Dict:
+        """Обнаружение рыночных аномалий"""
+        
+        # Аномалии по продажам
+        df['sales_zscore'] = np.abs((df['total_sales'] - df['total_sales'].mean()) / df['total_sales'].std())
+        sales_anomalies = df[df['sales_zscore'] > 2.5].nlargest(10, 'sales_zscore')
+        
+        # Аномалии по ROAS
+        roas_data = df[df['ads_on'] == 1].copy()
+        if len(roas_data) > 0:
+            roas_data['roas_zscore'] = np.abs((roas_data['roas'] - roas_data['roas'].mean()) / roas_data['roas'].std())
+            roas_anomalies = roas_data[roas_data['roas_zscore'] > 2].nlargest(10, 'roas_zscore')
+        else:
+            roas_anomalies = pd.DataFrame()
+        
+        # Аномалии по времени доставки
+        df['delivery_zscore'] = np.abs((df['delivery_time'] - df['delivery_time'].mean()) / df['delivery_time'].std())
+        delivery_anomalies = df[df['delivery_zscore'] > 2].nlargest(10, 'delivery_zscore')
+        
+        return {
+            'sales_anomalies': sales_anomalies[['restaurant_name', 'date', 'total_sales', 'sales_zscore']].to_dict('records'),
+            'roas_anomalies': roas_anomalies[['restaurant_name', 'date', 'roas', 'roas_zscore']].to_dict('records') if not roas_anomalies.empty else [],
+            'delivery_anomalies': delivery_anomalies[['restaurant_name', 'date', 'delivery_time', 'delivery_zscore']].to_dict('records'),
+            'summary': {
+                'total_sales_anomalies': len(sales_anomalies),
+                'total_roas_anomalies': len(roas_anomalies) if not roas_anomalies.empty else 0,
+                'total_delivery_anomalies': len(delivery_anomalies)
+            }
+        }
+    
+    def _generate_strategic_recommendations(self, analysis: Dict) -> List[str]:
+        """Генерация стратегических рекомендаций топ-маркетолога"""
+        recommendations = []
+        
+        # Анализ платформ
+        if 'comparison' in analysis.get('platform_analysis', {}):
+            comparison = analysis['platform_analysis']['comparison']
+            
+            # Рекомендации по платформам
+            if comparison['sales_difference_pct'] > 20:
+                leader = comparison['sales_leader']
+                recommendations.append(f"🎯 КРИТИЧНО: {leader.title()} доминирует в продажах с разрывом {comparison['sales_difference_pct']:.1f}%. Пересмотреть стратегию на отстающей платформе.")
+            
+            if comparison['roas_difference_pct'] > 30:
+                leader = comparison['roas_leader']
+                recommendations.append(f"💰 РЕКЛАМА: {leader.title()} показывает значительно лучший ROAS. Перераспределить рекламный бюджет.")
+        
+        # Анализ рекламы
+        ads_analysis = analysis.get('advertising_intelligence', {})
+        if 'performance_comparison' in ads_analysis:
+            perf = ads_analysis['performance_comparison']
+            if perf['sales_lift'] > 50:
+                recommendations.append(f"🚀 ВОЗМОЖНОСТЬ: Реклама дает {perf['sales_lift']:.1f}% прирост продаж. Увеличить рекламные бюджеты.")
+            elif perf['sales_lift'] < 10:
+                recommendations.append(f"⚠️ ПРОБЛЕМА: Реклама дает только {perf['sales_lift']:.1f}% прирост. Пересмотреть креативы и таргетинг.")
+        
+        # Анализ операций
+        ops_analysis = analysis.get('operational_insights', {})
+        if 'cancellation_analysis' in ops_analysis:
+            cancel_analysis = ops_analysis['cancellation_analysis']
+            cancel_rate = cancel_analysis['estimated_cancellations'] / cancel_analysis['total_orders'] if cancel_analysis['total_orders'] > 0 else 0
+            if cancel_rate > 0.08:
+                recommendations.append(f"🔴 СРОЧНО: Высокий уровень отмен ({cancel_rate*100:.1f}%). Проверить качество кухни и доставки.")
+        
+        # Временной анализ
+        temporal = analysis.get('temporal_analysis', {})
+        if 'comparisons' in temporal:
+            if 'year_over_year' in temporal['comparisons']:
+                yoy = temporal['comparisons']['year_over_year']['changes_pct']
+                if yoy.get('total_sales', 0) < -10:
+                    recommendations.append(f"📉 ТРЕВОГА: Продажи упали на {abs(yoy['total_sales']):.1f}% год к году. Требуется антикризисная стратегия.")
+                elif yoy.get('total_sales', 0) > 30:
+                    recommendations.append(f"📈 УСПЕХ: Рост продаж {yoy['total_sales']:.1f}% год к году. Масштабировать успешные практики.")
+        
+        # Аномалии
+        anomalies = analysis.get('market_anomalies', {})
+        if anomalies.get('summary', {}).get('total_sales_anomalies', 0) > 10:
+            recommendations.append("🔍 ВНИМАНИЕ: Обнаружено много аномалий в продажах. Провести детальное расследование.")
+        
+        return recommendations
+    
+    def _generate_expert_hypotheses(self, analysis: Dict, full_df: pd.DataFrame) -> List[str]:
+        """Генерация экспертных гипотез на основе данных"""
+        hypotheses = []
+        
+        # Гипотезы по платформам
+        platform_analysis = analysis.get('platform_analysis', {})
+        if 'comparison' in platform_analysis:
+            comp = platform_analysis['comparison']
+            if comp['delivery_time_difference'] > 5:
+                fast_platform = comp['speed_leader']
+                hypotheses.append(f"💡 ГИПОТЕЗА: {fast_platform.title()} быстрее доставляет на {comp['delivery_time_difference']:.1f} мин. Возможно, лучшая логистика или больше курьеров.")
+            
+            if comp['aov_difference_pct'] > 15:
+                efficient_platform = comp['efficiency_leader']
+                hypotheses.append(f"💰 ГИПОТЕЗА: {efficient_platform.title()} имеет выше средний чек. Возможно, лучший ассортимент или клиентская база.")
+        
+        # Гипотезы по рекламе
+        ads_intel = analysis.get('advertising_intelligence', {})
+        if 'advertiser_segments' in ads_intel:
+            heavy = ads_intel['advertiser_segments']['heavy_advertisers']
+            light = ads_intel['advertiser_segments']['light_advertisers']
+            
+            if heavy['avg_daily_sales'] > light['avg_daily_sales'] * 2:
+                hypotheses.append("📢 ГИПОТЕЗА: Активная реклама создает экспоненциальный эффект роста, а не линейный.")
+            
+            if 'temporal_patterns' in ads_intel:
+                patterns = ads_intel['temporal_patterns']
+                if patterns.get('best_ads_day') and patterns.get('worst_ads_day'):
+                    best_day = patterns['best_ads_day']
+                    worst_day = patterns['worst_ads_day']
+                    hypotheses.append(f"📅 ГИПОТЕЗА: {best_day} - лучший день для рекламы, {worst_day} - худший. Возможно, связано с поведением потребителей.")
+        
+        # Гипотезы по операциям
+        ops = analysis.get('operational_insights', {})
+        if 'operational_correlations' in ops:
+            corr = ops['operational_correlations']
+            delivery_rating_corr = corr.get('delivery_time', {}).get('rating', 0)
+            if delivery_rating_corr < -0.3:
+                hypotheses.append("⏱️ ГИПОТЕЗА: Время доставки критично влияет на рейтинг. Каждая минута задержки снижает лояльность.")
+        
+        # Гипотезы по временным трендам
+        temporal = analysis.get('temporal_analysis', {})
+        if 'weekly_patterns' in temporal:
+            weekly = temporal['weekly_patterns']
+            if 'total_sales' in weekly:
+                sales_by_day = weekly['total_sales']
+                max_day = max(sales_by_day, key=sales_by_day.get)
+                min_day = min(sales_by_day, key=sales_by_day.get)
+                difference = (sales_by_day[max_day] - sales_by_day[min_day]) / sales_by_day[min_day] * 100
+                
+                if difference > 50:
+                    weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                    hypotheses.append(f"📊 ГИПОТЕЗА: {weekdays[max_day]} превосходит {weekdays[min_day]} на {difference:.1f}%. Возможно, связано с зарплатами или досугом.")
+        
+        # Гипотезы по сезонности (если есть данные за разные месяцы)
+        current_period = analysis.get('period', '')
+        if 'апрель' in current_period.lower() or 'april' in current_period.lower():
+            hypotheses.append("🌸 ГИПОТЕЗА: Весенний период может показывать рост из-за улучшения погоды и настроения клиентов.")
+        
+        return hypotheses
+
+def generate_market_intelligence_report(start_date: str, end_date: str) -> Dict:
+    """
+    Генерирует комплексный рыночный анализ всей базы ресторанов
+    """
+    logger.info(f"Генерация рыночной аналитики за период {start_date} - {end_date}")
+    
+    try:
+        # Загружаем полную базу данных
+        full_df = load_data_for_training()
+        if full_df.empty:
+            return {"error": "Нет данных для анализа"}
+        
+        # Создаем движок рыночной аналитики
+        market_engine = MarketIntelligenceEngine()
+        
+        # Проводим комплексный анализ
+        analysis = market_engine.analyze_market_overview(full_df, start_date, end_date)
+        
+        # Добавляем метаданные
+        analysis['metadata'] = {
+            'total_data_points': len(full_df),
+            'data_period': f"{full_df['date'].min().strftime('%Y-%m-%d')} - {full_df['date'].max().strftime('%Y-%m-%d')}",
+            'analysis_period': f"{start_date} - {end_date}",
+            'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'analysis_type': 'market_intelligence'
+        }
+        
+        return analysis
+        
+    except Exception as e:
+        logger.error(f"Ошибка генерации рыночной аналитики: {e}")
+        return {"error": f"Ошибка анализа: {str(e)}"}

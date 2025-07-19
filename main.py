@@ -433,6 +433,186 @@ def print_comparative_causal_analysis(report: Dict):
                 print(f"  🚀 Главный рычаг роста: {lever_data['recommendation']}")
                 print(f"     Потенциал: +{lever_data['potential_order_increase']} заказов")
 
+def market_intelligence_command(args):
+    """Комплексный рыночный анализ всей базы ресторанов"""
+    logger.info("=== Рыночная аналитика ===")
+    
+    try:
+        from business_intelligence_system import generate_market_intelligence_report
+        
+        report = generate_market_intelligence_report(args.start_date, args.end_date)
+        
+        if 'error' not in report:
+            print_market_intelligence_report(report)
+            return True
+        else:
+            logger.error(f"Ошибка рыночной аналитики: {report['error']}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Ошибка выполнения рыночной аналитики: {e}")
+        return False
+
+def print_market_intelligence_report(report: Dict):
+    """Печать результатов комплексного рыночного анализа"""
+    
+    print(f"\n🌍 КОМПЛЕКСНЫЙ РЫНОЧНЫЙ АНАЛИЗ")
+    print(f"📅 Период анализа: {report['period']}")
+    print("=" * 80)
+    
+    # Обзор рынка
+    market = report['market_overview']
+    print(f"\n📊 ОБЗОР РЫНКА:")
+    print(f"  🏪 Ресторанов: {market['total_restaurants']}")
+    print(f"  📅 Дней проанализировано: {market['total_days_analyzed']}")
+    print(f"  💰 Общие продажи: {market['total_sales']:,.0f} IDR")
+    print(f"  📦 Общие заказы: {market['total_orders']:,}")
+    print(f"  ⭐ Средний рейтинг: {market['market_average_rating']:.2f}")
+    print(f"  🚚 Среднее время доставки: {market['market_average_delivery_time']:.1f} мин")
+    print(f"  ❌ Средний процент отмен: {market['market_cancel_rate']*100:.1f}%")
+    print(f"  📢 Использование рекламы: {market['ads_adoption_rate']:.1f}% дней")
+    print(f"  💎 Средний ROAS: {market['average_roas']:.1f}")
+    
+    # Анализ платформ
+    platform_analysis = report.get('platform_analysis', {})
+    if 'comparison' in platform_analysis:
+        comp = platform_analysis['comparison']
+        grab = platform_analysis.get('grab', {})
+        gojek = platform_analysis.get('gojek', {})
+        
+        print(f"\n🏆 СРАВНЕНИЕ ПЛАТФОРМ:")
+        print(f"  💰 Лидер по продажам: {comp['sales_leader'].title()} (разрыв: {comp['sales_difference_pct']:.1f}%)")
+        print(f"  📦 Лидер по заказам: {comp['orders_leader'].title()}")
+        print(f"  💎 Лидер по эффективности: {comp['efficiency_leader'].title()} (AOV разрыв: {comp['aov_difference_pct']:.1f}%)")
+        print(f"  ⚡ Лидер по скорости: {comp['speed_leader'].title()} (разрыв: {comp['delivery_time_difference']:.1f} мин)")
+        print(f"  📢 Лидер по рекламе: {comp['roas_leader'].title()} (ROAS разрыв: {comp['roas_difference_pct']:.1f}%)")
+        
+        print(f"\n  📈 ДЕТАЛИЗАЦИЯ ПО ПЛАТФОРМАМ:")
+        if grab:
+            print(f"    🟢 GRAB:")
+            print(f"      • Доля рынка: {grab['market_share_by_records']:.1f}%")
+            print(f"      • Продажи: {grab['total_sales']:,.0f} IDR")
+            print(f"      • AOV: {grab['average_order_value']:,.0f} IDR")
+            print(f"      • Рейтинг: {grab['average_rating']:.2f}")
+            print(f"      • Время доставки: {grab['average_delivery_time']:.1f} мин")
+            print(f"      • Отмены: {grab['cancel_rate']*100:.1f}%")
+            print(f"      • ROAS: {grab['average_roas']:.1f}")
+        
+        if gojek:
+            print(f"    🟡 GOJEK:")
+            print(f"      • Доля рынка: {gojek['market_share_by_records']:.1f}%")
+            print(f"      • Продажи: {gojek['total_sales']:,.0f} IDR")
+            print(f"      • AOV: {gojek['average_order_value']:,.0f} IDR")
+            print(f"      • Рейтинг: {gojek['average_rating']:.2f}")
+            print(f"      • Время доставки: {gojek['average_delivery_time']:.1f} мин")
+            print(f"      • Отмены: {gojek['cancel_rate']*100:.1f}%")
+            print(f"      • ROAS: {gojek['average_roas']:.1f}")
+    
+    # Топ-исполнители
+    rest_perf = report.get('restaurant_performance', {})
+    if 'top_performers' in rest_perf:
+        print(f"\n🥇 ТОП-ИСПОЛНИТЕЛИ:")
+        
+        top_sales = rest_perf['top_performers']['by_sales']
+        print(f"  💰 ПО ПРОДАЖАМ:")
+        for i, (name, data) in enumerate(list(top_sales.items())[:3], 1):
+            print(f"    {i}. {name}: {data['total_sales']:,.0f} IDR ({data['total_orders']:,} заказов)")
+        
+        top_orders = rest_perf['top_performers']['by_orders']
+        print(f"  📦 ПО ЗАКАЗАМ:")
+        for i, (name, data) in enumerate(list(top_orders.items())[:3], 1):
+            print(f"    {i}. {name}: {data['total_orders']:,} заказов ({data['total_sales']:,.0f} IDR)")
+        
+        top_efficiency = rest_perf['top_performers']['by_efficiency']
+        print(f"  💎 ПО ЭФФЕКТИВНОСТИ (AOV):")
+        for i, (name, data) in enumerate(list(top_efficiency.items())[:3], 1):
+            print(f"    {i}. {name}: {data['avg_order_value']:,.0f} IDR за заказ")
+    
+    # Рекламная аналитика
+    ads_intel = report.get('advertising_intelligence', {})
+    if 'performance_comparison' in ads_intel:
+        perf = ads_intel['performance_comparison']
+        print(f"\n📢 РЕКЛАМНАЯ АНАЛИТИКА:")
+        print(f"  🚀 Эффект рекламы: +{perf['sales_lift']:.1f}% к продажам, +{perf['orders_lift']:.1f}% к заказам")
+        print(f"  💰 Продажи с рекламой: {perf['avg_sales_with_ads']:,.0f} IDR/день")
+        print(f"  💰 Продажи без рекламы: {perf['avg_sales_without_ads']:,.0f} IDR/день")
+        
+        if 'advertiser_segments' in ads_intel:
+            segments = ads_intel['advertiser_segments']
+            print(f"\n  📊 СЕГМЕНТЫ РЕКЛАМОДАТЕЛЕЙ:")
+            print(f"    🔥 Активные (80%+ дней): {segments['heavy_advertisers']['count']} ресторанов")
+            print(f"       ROAS: {segments['heavy_advertisers']['avg_roas']:.1f}")
+            print(f"       Продажи: {segments['heavy_advertisers']['avg_daily_sales']:,.0f} IDR/день")
+            
+            print(f"    🔸 Умеренные (20-80% дней): {segments['moderate_advertisers']['count']} ресторанов")
+            print(f"       ROAS: {segments['moderate_advertisers']['avg_roas']:.1f}")
+            
+            print(f"    🔹 Слабые (<20% дней): {segments['light_advertisers']['count']} ресторанов")
+            if segments['light_advertisers']['avg_roas'] > 0:
+                print(f"       ROAS: {segments['light_advertisers']['avg_roas']:.1f}")
+        
+        if 'temporal_patterns' in ads_intel:
+            patterns = ads_intel['temporal_patterns']
+            if patterns.get('best_ads_day') and patterns.get('worst_ads_day'):
+                weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                best_day = weekdays[patterns['best_ads_day']]
+                worst_day = weekdays[patterns['worst_ads_day']]
+                best_roas = patterns['roas_by_weekday'][patterns['best_ads_day']]
+                worst_roas = patterns['roas_by_weekday'][patterns['worst_ads_day']]
+                print(f"  📅 Лучший день для рекламы: {best_day} (ROAS: {best_roas:.1f})")
+                print(f"  📅 Худший день для рекламы: {worst_day} (ROAS: {worst_roas:.1f})")
+    
+    # Временной анализ
+    temporal = report.get('temporal_analysis', {})
+    if 'comparisons' in temporal:
+        print(f"\n📈 ВРЕМЕННОЙ АНАЛИЗ:")
+        
+        if 'year_over_year' in temporal['comparisons']:
+            yoy = temporal['comparisons']['year_over_year']['changes_pct']
+            print(f"  📅 ГОД К ГОДУ:")
+            print(f"    💰 Продажи: {yoy['total_sales']:+.1f}%")
+            print(f"    📦 Заказы: {yoy['total_orders']:+.1f}%")
+            print(f"    ⭐ Рейтинг: {yoy['avg_rating']:+.1f}%")
+            print(f"    🚚 Время доставки: {yoy['avg_delivery_time']:+.1f}%")
+            print(f"    💎 ROAS: {yoy['avg_roas']:+.1f}%")
+        
+        if 'quarter_over_quarter' in temporal['comparisons']:
+            qoq = temporal['comparisons']['quarter_over_quarter']['changes_pct']
+            print(f"  📅 КВАРТАЛ К КВАРТАЛУ:")
+            print(f"    💰 Продажи: {qoq['total_sales']:+.1f}%")
+            print(f"    📦 Заказы: {qoq['total_orders']:+.1f}%")
+            print(f"    ⭐ Рейтинг: {qoq['avg_rating']:+.1f}%")
+    
+    # Аномалии
+    anomalies = report.get('market_anomalies', {})
+    if anomalies.get('summary'):
+        summary = anomalies['summary']
+        print(f"\n🚨 РЫНОЧНЫЕ АНОМАЛИИ:")
+        print(f"  📊 Аномалии продаж: {summary['total_sales_anomalies']}")
+        print(f"  📢 Аномалии ROAS: {summary['total_roas_anomalies']}")
+        print(f"  🚚 Аномалии доставки: {summary['total_delivery_anomalies']}")
+        
+        if anomalies.get('sales_anomalies'):
+            print(f"\n  🔥 ТОП-3 АНОМАЛИИ ПРОДАЖ:")
+            for i, anomaly in enumerate(anomalies['sales_anomalies'][:3], 1):
+                date_str = anomaly['date'].strftime('%Y-%m-%d') if hasattr(anomaly['date'], 'strftime') else str(anomaly['date'])[:10]
+                print(f"    {i}. {anomaly['restaurant_name']} ({date_str}): {anomaly['total_sales']:,.0f} IDR")
+    
+    # Стратегические рекомендации
+    if report.get('strategic_recommendations'):
+        print(f"\n🎯 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ:")
+        for i, rec in enumerate(report['strategic_recommendations'], 1):
+            print(f"  {i}. {rec}")
+    
+    # Экспертные гипотезы
+    if report.get('expert_hypotheses'):
+        print(f"\n💡 ЭКСПЕРТНЫЕ ГИПОТЕЗЫ:")
+        for i, hyp in enumerate(report['expert_hypotheses'], 1):
+            print(f"  {i}. {hyp}")
+    
+    print(f"\n📄 Отчет сгенерирован: {report['metadata']['generated_at']}")
+    print(f"📊 Проанализировано записей: {report['metadata']['total_data_points']:,}")
+
 def deep_analysis_command(args):
     """Глубокий анализ с поиском аномалий и корреляций"""
     logger.info("=== Глубокий анализ ===")
@@ -591,6 +771,9 @@ def main():
   python main.py causal --restaurant "Ika Canggu" --start-date "2024-04-01" --end-date "2024-06-30"
   python main.py causal --compare-all
 
+  # Комплексный рыночный анализ всей базы ресторанов
+  python main.py market --start-date "2025-04-01" --end-date "2025-06-21"
+
   # Тестирование гипотезы
   python main.py test --restaurant "Canggu Surf Cafe" --hypothesis "реклама эффективна"
 
@@ -640,6 +823,11 @@ def main():
     causal_parser.add_argument('--end-date', help='Конечная дата (YYYY-MM-DD)')
     causal_parser.add_argument('--compare-all', action='store_true', help='Сравнительный анализ всех ресторанов')
     
+    # Команда рыночной аналитики
+    market_parser = subparsers.add_parser('market', help='Комплексный рыночный анализ всей базы ресторанов')
+    market_parser.add_argument('--start-date', required=True, help='Начальная дата (YYYY-MM-DD)')
+    market_parser.add_argument('--end-date', required=True, help='Конечная дата (YYYY-MM-DD)')
+    
     # Команда обучения модели
     train_parser = subparsers.add_parser('train', help='Обучение модели')
     train_parser.add_argument('--model-type', choices=['random_forest', 'xgboost', 'linear'], 
@@ -675,6 +863,8 @@ def main():
         success = deep_analysis_command(args)
     elif args.command == 'causal':
         success = causal_analysis_command(args)
+    elif args.command == 'market':
+        success = market_intelligence_command(args)
     elif args.command == 'train':
         success = train_model_command(args)
     elif args.command == 'info':
