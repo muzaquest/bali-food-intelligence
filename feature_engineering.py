@@ -56,7 +56,10 @@ class FeatureEngineer:
         df['delta_sales_prev'] = df.groupby('restaurant_name')['total_sales'].shift(1) - df.groupby('restaurant_name')['total_sales'].shift(2)
         
         # Процентное изменение (с лагом для избежания data leakage)
-        df['pct_change_sales'] = df.groupby('restaurant_name')['total_sales'].shift(1).pct_change()
+        df['pct_change_sales'] = df.groupby('restaurant_name')['total_sales'].shift(1).pct_change(fill_method=None)
+        
+        # Заменяем infinity на NaN, затем заполняем нулями
+        df['pct_change_sales'] = df['pct_change_sales'].replace([np.inf, -np.inf], np.nan).fillna(0)
         
         # Тренд продаж (сравнение с недельным средним, без data leakage)
         df['sales_vs_week_avg'] = df['lag_1_sales'] / (df['rolling_mean_7'] + 1e-8)
@@ -186,11 +189,11 @@ class FeatureEngineer:
         df['target'] = df.groupby('restaurant_name')['total_sales'].diff()
         
         # Альтернативный вариант - процентное изменение
-        df['target_pct'] = df.groupby('restaurant_name')['total_sales'].pct_change()
+        df['target_pct'] = df.groupby('restaurant_name')['total_sales'].pct_change(fill_method=None)
         
-        # Заполняем пропущенные значения
+        # Заполняем пропущенные значения и убираем infinity
         df['target'] = df['target'].fillna(0)
-        df['target_pct'] = df['target_pct'].fillna(0)
+        df['target_pct'] = df['target_pct'].replace([np.inf, -np.inf], np.nan).fillna(0)
         
         logger.info("Целевая переменная создана")
         return df
@@ -243,8 +246,9 @@ class FeatureEngineer:
         restaurant_features = [col for col in df.columns if col.startswith('restaurant_')]
         feature_candidates.extend(restaurant_features)
         
-        # Фильтруем только существующие признаки
-        available_features = [f for f in feature_candidates if f in df.columns]
+        # Фильтруем только существующие признаки и исключаем категориальные
+        exclude_columns = ['restaurant_name', 'date', 'target']
+        available_features = [f for f in feature_candidates if f in df.columns and f not in exclude_columns]
         self.feature_names = available_features
         
         logger.info(f"Подготовлено {len(available_features)} признаков")

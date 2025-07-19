@@ -26,6 +26,8 @@ def main():
         
         # Обучаем модель с оптимизацией гиперпараметров
         predictor = train_sales_model(
+            start_date=None,
+            end_date=None,
             model_type='random_forest',
             optimize_hyperparams=True,
             save_model=True

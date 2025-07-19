@@ -323,7 +323,7 @@ def train_sales_model(start_date=None, end_date=None, model_type='random_forest'
     logger.info("Начинаю обучение модели анализа продаж")
     
     # Загружаем данные
-    df = load_data_for_training(start_date, end_date)
+    df = load_data_for_training()
     if df is None:
         logger.error("Не удалось загрузить данные")
         return None
