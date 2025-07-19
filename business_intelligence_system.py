@@ -826,6 +826,543 @@ class AdvancedAnalyticsEngine:
         
         return trends
 
+class CausalAnalysisEngine:
+    """
+    Причинно-следственный анализ драйверов роста заказов
+    
+    Цель: Найти управляемые факторы, которые увеличивают количество заказов
+    """
+    
+    def __init__(self):
+        self.order_drivers = [
+            'rating', 'delivery_time', 'cancel_rate', 'ads_on', 
+            'roas', 'temp_c', 'rain_mm', 'is_holiday', 'day_of_week'
+        ]
+        self.platforms = ['gojek', 'grab']  # Будем определять по данным
+        
+    def analyze_order_drivers_per_restaurant(self, df: pd.DataFrame, restaurant_name: str) -> Dict:
+        """Анализ драйверов заказов для конкретного ресторана"""
+        analysis = {
+            'restaurant_name': restaurant_name,
+            'order_correlations': {},
+            'period_comparisons': {},
+            'actionable_insights': [],
+            'growth_levers': {}
+        }
+        
+        # 1. Корреляция факторов с количеством заказов
+        order_correlations = {}
+        for driver in self.order_drivers:
+            if driver in df.columns:
+                correlation = df['orders'].corr(df[driver])
+                if abs(correlation) > 0.2:  # Значимые корреляции
+                    order_correlations[driver] = {
+                        'correlation': correlation,
+                        'strength': self._get_correlation_strength(abs(correlation)),
+                        'impact_interpretation': self._interpret_order_impact(driver, correlation)
+                    }
+        
+        analysis['order_correlations'] = order_correlations
+        
+        # 2. Анализ периодов: до/после изменений
+        period_analysis = self._analyze_before_after_periods(df)
+        analysis['period_comparisons'] = period_analysis
+        
+        # 3. Определение платформенных эффектов (если можно определить)
+        platform_effect = self._analyze_platform_effect(df)
+        if platform_effect:
+            analysis['platform_effect'] = platform_effect
+        
+        # 4. Генерация управляемых рекомендаций
+        growth_levers = self._identify_growth_levers(df, order_correlations)
+        analysis['growth_levers'] = growth_levers
+        
+        # 5. Конкретные инсайты
+        actionable_insights = self._generate_actionable_insights(df, order_correlations, growth_levers)
+        analysis['actionable_insights'] = actionable_insights
+        
+        return analysis
+    
+    def compare_restaurants_performance(self, restaurants_data: Dict) -> Dict:
+        """Сравнительный анализ ресторанов для выявления факторов успеха"""
+        comparison = {
+            'top_performers': {},
+            'underperformers': {},
+            'success_factors': {},
+            'differentiation_insights': []
+        }
+        
+        # Сортируем рестораны по среднему количеству заказов
+        restaurant_performance = {}
+        for name, df in restaurants_data.items():
+            avg_orders = df['orders'].mean()
+            order_growth = self._calculate_order_growth(df)
+            restaurant_performance[name] = {
+                'avg_orders': avg_orders,
+                'order_growth': order_growth,
+                'avg_rating': df['rating'].mean(),
+                'avg_delivery_time': df['delivery_time'].mean(),
+                'avg_cancel_rate': df['cancel_rate'].mean(),
+                'ads_usage_percent': (df['ads_on'].sum() / len(df)) * 100
+            }
+        
+        # Определяем топ и аутсайдеров
+        sorted_performance = sorted(restaurant_performance.items(), 
+                                  key=lambda x: x[1]['avg_orders'], reverse=True)
+        
+        top_3 = dict(sorted_performance[:3])
+        bottom_3 = dict(sorted_performance[-3:])
+        
+        comparison['top_performers'] = top_3
+        comparison['underperformers'] = bottom_3
+        
+        # Анализируем факторы успеха
+        success_factors = self._analyze_success_factors(top_3, bottom_3)
+        comparison['success_factors'] = success_factors
+        
+        # Генерируем инсайты дифференциации
+        differentiation_insights = self._generate_differentiation_insights(top_3, bottom_3)
+        comparison['differentiation_insights'] = differentiation_insights
+        
+        return comparison
+    
+    def _analyze_before_after_periods(self, df: pd.DataFrame) -> Dict:
+        """Анализ периодов до/после изменений ключевых метрик"""
+        period_analysis = {}
+        
+        # Анализ изменения рейтинга
+        rating_analysis = self._analyze_rating_periods(df)
+        if rating_analysis:
+            period_analysis['rating_change'] = rating_analysis
+        
+        # Анализ изменения рекламы
+        ads_analysis = self._analyze_ads_periods(df)
+        if ads_analysis:
+            period_analysis['ads_change'] = ads_analysis
+        
+        # Анализ изменения отмен
+        cancellation_analysis = self._analyze_cancellation_periods(df)
+        if cancellation_analysis:
+            period_analysis['cancellation_change'] = cancellation_analysis
+        
+        return period_analysis
+    
+    def _analyze_rating_periods(self, df: pd.DataFrame) -> Dict:
+        """Анализ влияния изменения рейтинга на заказы"""
+        df_sorted = df.sort_values('date')
+        
+        # Находим значительные изменения рейтинга
+        df_sorted['rating_change'] = df_sorted['rating'].diff()
+        significant_changes = df_sorted[abs(df_sorted['rating_change']) > 0.2]
+        
+        if len(significant_changes) == 0:
+            return None
+        
+        # Берем самое значительное изменение
+        max_change = significant_changes.loc[abs(significant_changes['rating_change']).idxmax()]
+        change_date = max_change['date']
+        
+        # Сравниваем периоды до и после (30 дней)
+        before_period = df_sorted[
+            (df_sorted['date'] >= change_date - timedelta(days=30)) & 
+            (df_sorted['date'] < change_date)
+        ]
+        after_period = df_sorted[
+            (df_sorted['date'] >= change_date) & 
+            (df_sorted['date'] <= change_date + timedelta(days=30))
+        ]
+        
+        if len(before_period) < 10 or len(after_period) < 10:
+            return None
+        
+        return {
+            'change_date': change_date.strftime('%Y-%m-%d'),
+            'rating_change': max_change['rating_change'],
+            'before_avg_orders': before_period['orders'].mean(),
+            'after_avg_orders': after_period['orders'].mean(),
+            'orders_change_percent': ((after_period['orders'].mean() - before_period['orders'].mean()) / before_period['orders'].mean()) * 100,
+            'interpretation': f"Изменение рейтинга на {max_change['rating_change']:+.2f} привело к изменению заказов на {((after_period['orders'].mean() - before_period['orders'].mean()) / before_period['orders'].mean()) * 100:+.1f}%"
+        }
+    
+    def _analyze_ads_periods(self, df: pd.DataFrame) -> Dict:
+        """Анализ влияния включения/выключения рекламы на заказы"""
+        df_sorted = df.sort_values('date')
+        
+        # Находим переходы в рекламной активности
+        df_sorted['ads_change'] = df_sorted['ads_on'].diff()
+        ads_toggles = df_sorted[abs(df_sorted['ads_change']) > 0.5]
+        
+        if len(ads_toggles) == 0:
+            return None
+        
+        # Анализируем включение рекламы (переход с 0 на 1)
+        ads_turn_on = ads_toggles[ads_toggles['ads_change'] > 0.5]
+        if len(ads_turn_on) == 0:
+            return None
+        
+        # Берем первое включение рекламы
+        toggle_date = ads_turn_on.iloc[0]['date']
+        
+        # Сравниваем периоды
+        before_period = df_sorted[
+            (df_sorted['date'] >= toggle_date - timedelta(days=30)) & 
+            (df_sorted['date'] < toggle_date)
+        ]
+        after_period = df_sorted[
+            (df_sorted['date'] >= toggle_date) & 
+            (df_sorted['date'] <= toggle_date + timedelta(days=30))
+        ]
+        
+        if len(before_period) < 10 or len(after_period) < 10:
+            return None
+        
+        return {
+            'change_date': toggle_date.strftime('%Y-%m-%d'),
+            'change_type': 'ads_turned_on',
+            'before_avg_orders': before_period['orders'].mean(),
+            'after_avg_orders': after_period['orders'].mean(),
+            'orders_change_percent': ((after_period['orders'].mean() - before_period['orders'].mean()) / before_period['orders'].mean()) * 100,
+            'interpretation': f"Включение рекламы привело к изменению заказов на {((after_period['orders'].mean() - before_period['orders'].mean()) / before_period['orders'].mean()) * 100:+.1f}%"
+        }
+    
+    def _analyze_cancellation_periods(self, df: pd.DataFrame) -> Dict:
+        """Анализ влияния изменения уровня отмен на заказы"""
+        df_sorted = df.sort_values('date')
+        
+        # Находим значительные изменения в отменах
+        df_sorted['cancel_change'] = df_sorted['cancel_rate'].diff()
+        significant_changes = df_sorted[abs(df_sorted['cancel_change']) > 0.05]  # 5% изменение
+        
+        if len(significant_changes) == 0:
+            return None
+        
+        # Берем самое значительное изменение
+        max_change = significant_changes.loc[abs(significant_changes['cancel_change']).idxmax()]
+        change_date = max_change['date']
+        
+        # Сравниваем периоды
+        before_period = df_sorted[
+            (df_sorted['date'] >= change_date - timedelta(days=30)) & 
+            (df_sorted['date'] < change_date)
+        ]
+        after_period = df_sorted[
+            (df_sorted['date'] >= change_date) & 
+            (df_sorted['date'] <= change_date + timedelta(days=30))
+        ]
+        
+        if len(before_period) < 10 or len(after_period) < 10:
+            return None
+        
+        return {
+            'change_date': change_date.strftime('%Y-%m-%d'),
+            'cancel_rate_change': max_change['cancel_change'],
+            'before_avg_orders': before_period['orders'].mean(),
+            'after_avg_orders': after_period['orders'].mean(),
+            'orders_change_percent': ((after_period['orders'].mean() - before_period['orders'].mean()) / before_period['orders'].mean()) * 100,
+            'interpretation': f"Изменение уровня отмен на {max_change['cancel_change']:+.2%} привело к изменению заказов на {((after_period['orders'].mean() - before_period['orders'].mean()) / before_period['orders'].mean()) * 100:+.1f}%"
+        }
+    
+    def _analyze_platform_effect(self, df: pd.DataFrame) -> Dict:
+        """Анализ эффекта платформы (если можно определить)"""
+        # Пока используем эвристику: если delivery_time < 25, то gojek, иначе grab
+        if 'delivery_time' in df.columns:
+            df['platform_estimate'] = df['delivery_time'].apply(lambda x: 'gojek' if x < 25 else 'grab')
+            
+            platform_stats = df.groupby('platform_estimate').agg({
+                'orders': 'mean',
+                'total_sales': 'mean',
+                'rating': 'mean',
+                'cancel_rate': 'mean'
+            }).round(2)
+            
+            if len(platform_stats) > 1:
+                gojek_orders = platform_stats.loc['gojek', 'orders'] if 'gojek' in platform_stats.index else 0
+                grab_orders = platform_stats.loc['grab', 'orders'] if 'grab' in platform_stats.index else 0
+                
+                if gojek_orders > 0 and grab_orders > 0:
+                    better_platform = 'gojek' if gojek_orders > grab_orders else 'grab'
+                    difference = abs(gojek_orders - grab_orders) / min(gojek_orders, grab_orders) * 100
+                    
+                    return {
+                        'gojek_avg_orders': gojek_orders,
+                        'grab_avg_orders': grab_orders,
+                        'better_platform': better_platform,
+                        'difference_percent': difference,
+                        'interpretation': f"Платформа {better_platform} показывает на {difference:.1f}% больше заказов"
+                    }
+        
+        return None
+    
+    def _identify_growth_levers(self, df: pd.DataFrame, correlations: Dict) -> Dict:
+        """Определение управляемых рычагов роста"""
+        levers = {}
+        
+        # Анализируем каждый фактор на предмет возможности улучшения
+        current_metrics = {
+            'rating': df['rating'].mean(),
+            'delivery_time': df['delivery_time'].mean(),
+            'cancel_rate': df['cancel_rate'].mean(),
+            'ads_usage': (df['ads_on'].sum() / len(df)) * 100
+        }
+        
+        # Потенциал улучшения рейтинга
+        if 'rating' in correlations and correlations['rating']['correlation'] > 0:
+            current_rating = current_metrics['rating']
+            if current_rating < 4.8:
+                potential_improvement = (4.8 - current_rating) / current_rating * 100
+                order_impact = correlations['rating']['correlation'] * potential_improvement
+                levers['rating_improvement'] = {
+                    'current_value': current_rating,
+                    'target_value': 4.8,
+                    'potential_order_increase': f"{order_impact:.1f}%",
+                    'actionability': 'high',
+                    'recommendation': f"Повысить рейтинг с {current_rating:.2f} до 4.8+ для увеличения заказов"
+                }
+        
+        # Потенциал сокращения времени доставки
+        if 'delivery_time' in correlations and correlations['delivery_time']['correlation'] < 0:
+            current_time = current_metrics['delivery_time']
+            if current_time > 20:
+                target_time = max(15, current_time * 0.8)
+                improvement_percent = (current_time - target_time) / current_time * 100
+                order_impact = abs(correlations['delivery_time']['correlation']) * improvement_percent
+                levers['delivery_improvement'] = {
+                    'current_value': current_time,
+                    'target_value': target_time,
+                    'potential_order_increase': f"{order_impact:.1f}%",
+                    'actionability': 'medium',
+                    'recommendation': f"Сократить время доставки с {current_time:.0f} до {target_time:.0f} минут"
+                }
+        
+        # Потенциал снижения отмен
+        if 'cancel_rate' in correlations and correlations['cancel_rate']['correlation'] < 0:
+            current_cancels = current_metrics['cancel_rate']
+            if current_cancels > 0.03:
+                target_cancels = max(0.02, current_cancels * 0.5)
+                improvement_percent = (current_cancels - target_cancels) / current_cancels * 100
+                order_impact = abs(correlations['cancel_rate']['correlation']) * improvement_percent
+                levers['cancellation_reduction'] = {
+                    'current_value': current_cancels * 100,
+                    'target_value': target_cancels * 100,
+                    'potential_order_increase': f"{order_impact:.1f}%",
+                    'actionability': 'high',
+                    'recommendation': f"Снизить отмены с {current_cancels*100:.1f}% до {target_cancels*100:.1f}%"
+                }
+        
+        # Потенциал увеличения рекламы
+        if 'ads_on' in correlations and correlations['ads_on']['correlation'] > 0:
+            current_ads = current_metrics['ads_usage']
+            if current_ads < 80:
+                target_ads = min(90, current_ads + 20)
+                improvement_percent = (target_ads - current_ads) / max(current_ads, 1)
+                order_impact = correlations['ads_on']['correlation'] * improvement_percent * 10
+                levers['advertising_increase'] = {
+                    'current_value': current_ads,
+                    'target_value': target_ads,
+                    'potential_order_increase': f"{order_impact:.1f}%",
+                    'actionability': 'high',
+                    'recommendation': f"Увеличить рекламную активность с {current_ads:.0f}% до {target_ads:.0f}% дней"
+                }
+        
+        return levers
+    
+    def _generate_actionable_insights(self, df: pd.DataFrame, correlations: Dict, levers: Dict) -> List[str]:
+        """Генерация конкретных рекомендаций"""
+        insights = []
+        
+        # Топ-3 приоритета по воздействию на заказы
+        if levers:
+            sorted_levers = sorted(levers.items(), 
+                                 key=lambda x: float(x[1]['potential_order_increase'].replace('%', '')), 
+                                 reverse=True)
+            
+            insights.append("🎯 ПРИОРИТЕТНЫЕ ДЕЙСТВИЯ ДЛЯ РОСТА ЗАКАЗОВ:")
+            
+            for i, (lever_name, lever_data) in enumerate(sorted_levers[:3], 1):
+                actionability_emoji = {"high": "🟢", "medium": "🟡", "low": "🔴"}
+                emoji = actionability_emoji.get(lever_data['actionability'], "⚪")
+                
+                insights.append(f"{i}. {emoji} {lever_data['recommendation']} "
+                              f"(потенциал: +{lever_data['potential_order_increase']} заказов)")
+        
+        # Специфические инсайты
+        avg_orders = df['orders'].mean()
+        if avg_orders < 10:
+            insights.append("⚠️ КРИТИЧНО: Очень низкое количество заказов - требуется комплексная работа")
+        elif avg_orders < 20:
+            insights.append("📊 ПОТЕНЦИАЛ: Среднее количество заказов - есть место для роста")
+        else:
+            insights.append("✅ ХОРОШО: Высокое количество заказов - фокус на удержании")
+        
+        return insights
+    
+    def _calculate_order_growth(self, df: pd.DataFrame) -> float:
+        """Расчет роста заказов за период"""
+        df_sorted = df.sort_values('date')
+        if len(df_sorted) < 60:  # Меньше 2 месяцев данных
+            return 0
+        
+        first_month = df_sorted.head(30)['orders'].mean()
+        last_month = df_sorted.tail(30)['orders'].mean()
+        
+        if first_month > 0:
+            return ((last_month - first_month) / first_month) * 100
+        return 0
+    
+    def _analyze_success_factors(self, top_performers: Dict, underperformers: Dict) -> Dict:
+        """Анализ факторов успеха"""
+        success_factors = {}
+        
+        # Средние значения для топ и аутсайдеров
+        top_avg = {
+            'rating': np.mean([data['avg_rating'] for data in top_performers.values()]),
+            'delivery_time': np.mean([data['avg_delivery_time'] for data in top_performers.values()]),
+            'cancel_rate': np.mean([data['avg_cancel_rate'] for data in top_performers.values()]),
+            'ads_usage': np.mean([data['ads_usage_percent'] for data in top_performers.values()])
+        }
+        
+        bottom_avg = {
+            'rating': np.mean([data['avg_rating'] for data in underperformers.values()]),
+            'delivery_time': np.mean([data['avg_delivery_time'] for data in underperformers.values()]),
+            'cancel_rate': np.mean([data['avg_cancel_rate'] for data in underperformers.values()]),
+            'ads_usage': np.mean([data['ads_usage_percent'] for data in underperformers.values()])
+        }
+        
+        # Определяем ключевые различия
+        for factor in top_avg.keys():
+            difference = abs(top_avg[factor] - bottom_avg[factor])
+            relative_difference = difference / max(abs(bottom_avg[factor]), 0.001) * 100
+            
+            if relative_difference > 10:  # Значимое различие
+                success_factors[factor] = {
+                    'top_avg': top_avg[factor],
+                    'bottom_avg': bottom_avg[factor],
+                    'difference_percent': relative_difference,
+                    'is_success_factor': top_avg[factor] > bottom_avg[factor] if factor != 'cancel_rate' and factor != 'delivery_time' else top_avg[factor] < bottom_avg[factor]
+                }
+        
+        return success_factors
+    
+    def _generate_differentiation_insights(self, top_performers: Dict, underperformers: Dict) -> List[str]:
+        """Генерация инсайтов дифференциации"""
+        insights = []
+        
+        # Сравнение средних показателей
+        top_avg_orders = np.mean([data['avg_orders'] for data in top_performers.values()])
+        bottom_avg_orders = np.mean([data['avg_orders'] for data in underperformers.values()])
+        
+        difference = ((top_avg_orders - bottom_avg_orders) / bottom_avg_orders) * 100
+        
+        insights.append(f"📊 Топ-рестораны получают на {difference:.1f}% больше заказов в среднем")
+        
+        # Конкретные различия
+        top_rating = np.mean([data['avg_rating'] for data in top_performers.values()])
+        bottom_rating = np.mean([data['avg_rating'] for data in underperformers.values()])
+        
+        if (top_rating - bottom_rating) > 0.2:
+            insights.append(f"⭐ Рейтинг: топ-рестораны {top_rating:.2f} vs аутсайдеры {bottom_rating:.2f}")
+        
+        top_ads = np.mean([data['ads_usage_percent'] for data in top_performers.values()])
+        bottom_ads = np.mean([data['ads_usage_percent'] for data in underperformers.values()])
+        
+        if abs(top_ads - bottom_ads) > 15:
+            insights.append(f"📢 Реклама: топ-рестораны используют {top_ads:.0f}% дней vs {bottom_ads:.0f}% у аутсайдеров")
+        
+        return insights
+    
+    def _interpret_order_impact(self, factor: str, correlation: float) -> str:
+        """Интерпретация влияния фактора на заказы"""
+        impact_map = {
+            'rating': f"Рейтинг {'положительно' if correlation > 0 else 'отрицательно'} влияет на количество заказов",
+            'delivery_time': f"Время доставки {'увеличивает' if correlation > 0 else 'снижает'} количество заказов",
+            'cancel_rate': f"Отмены {'увеличивают' if correlation > 0 else 'снижают'} количество заказов",
+            'ads_on': f"Реклама {'увеличивает' if correlation > 0 else 'снижает'} количество заказов",
+            'temp_c': f"Температура {'увеличивает' if correlation > 0 else 'снижает'} количество заказов",
+            'rain_mm': f"Дождь {'увеличивает' if correlation > 0 else 'снижает'} количество заказов"
+        }
+        
+        return impact_map.get(factor, f"Фактор {factor} влияет на заказы")
+    
+    def _get_correlation_strength(self, corr_value: float) -> str:
+        """Определяет силу корреляции"""
+        if corr_value > 0.7:
+            return "очень сильная"
+        elif corr_value > 0.5:
+            return "сильная"
+        elif corr_value > 0.3:
+            return "умеренная"
+        else:
+            return "слабая"
+
+def generate_causal_analysis_report(restaurant_name: str = None, start_date: str = None, end_date: str = None) -> Dict:
+    """
+    Генерирует причинно-следственный анализ драйверов роста заказов
+    """
+    causal_engine = CausalAnalysisEngine()
+    
+    try:
+        if restaurant_name:
+            # Анализ конкретного ресторана
+            df = get_restaurant_data(restaurant_name)
+            if df is None:
+                return {"error": f"Нет данных для ресторана {restaurant_name}"}
+            
+            df['date'] = pd.to_datetime(df['date'])
+            
+            if start_date and end_date:
+                df = df[(df['date'] >= start_date) & (df['date'] <= end_date)].copy()
+            
+            if df.empty:
+                return {"error": "Нет данных за указанный период"}
+            
+            # Анализ драйверов для конкретного ресторана
+            restaurant_analysis = causal_engine.analyze_order_drivers_per_restaurant(df, restaurant_name)
+            
+            return {
+                'type': 'single_restaurant',
+                'restaurant_analysis': restaurant_analysis,
+                'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+        
+        else:
+            # Сравнительный анализ всех ресторанов
+            all_data = load_data_for_training()
+            if all_data.empty:
+                return {"error": "Нет данных для анализа"}
+            
+            # Группируем по ресторанам
+            restaurants_data = {}
+            for restaurant in all_data['restaurant_name'].unique():
+                if pd.notna(restaurant):
+                    restaurant_df = all_data[all_data['restaurant_name'] == restaurant].copy()
+                    if len(restaurant_df) > 30:  # Минимум данных для анализа
+                        restaurants_data[restaurant] = restaurant_df
+            
+            if len(restaurants_data) < 3:
+                return {"error": "Недостаточно данных для сравнительного анализа"}
+            
+            # Сравнительный анализ
+            comparison_analysis = causal_engine.compare_restaurants_performance(restaurants_data)
+            
+            # Индивидуальный анализ топ-3 ресторанов
+            individual_analyses = {}
+            for restaurant in list(comparison_analysis['top_performers'].keys())[:3]:
+                individual_analyses[restaurant] = causal_engine.analyze_order_drivers_per_restaurant(
+                    restaurants_data[restaurant], restaurant
+                )
+            
+            return {
+                'type': 'comparative',
+                'comparison_analysis': comparison_analysis,
+                'individual_analyses': individual_analyses,
+                'total_restaurants_analyzed': len(restaurants_data),
+                'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+    
+    except Exception as e:
+        logger.error(f"Ошибка причинно-следственного анализа: {e}")
+        return {"error": f"Ошибка анализа: {str(e)}"}
+
 def generate_deep_analytics_report(restaurant_name: str, start_date: str, end_date: str) -> Dict:
     """
     Генерирует глубокий аналитический отчет с поиском аномалий и корреляций

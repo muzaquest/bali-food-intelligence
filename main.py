@@ -5,6 +5,7 @@ import argparse
 import logging
 import sys
 from datetime import datetime, timedelta
+from typing import Dict
 import json
 import os
 
@@ -274,6 +275,164 @@ def test_hypothesis_command(args):
         logger.error(f"Ошибка тестирования гипотезы: {e}")
         return False
 
+def causal_analysis_command(args):
+    """Причинно-следственный анализ драйверов роста заказов"""
+    logger.info("=== Причинно-следственный анализ ===")
+    
+    try:
+        from business_intelligence_system import generate_causal_analysis_report
+        
+        if args.compare_all:
+            # Сравнительный анализ всех ресторанов
+            report = generate_causal_analysis_report()
+        else:
+            # Анализ конкретного ресторана
+            report = generate_causal_analysis_report(args.restaurant, args.start_date, args.end_date)
+        
+        if 'error' not in report:
+            if report['type'] == 'single_restaurant':
+                print_single_restaurant_causal_analysis(report)
+            else:
+                print_comparative_causal_analysis(report)
+            return True
+        else:
+            logger.error(f"Ошибка причинно-следственного анализа: {report['error']}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Ошибка выполнения причинно-следственного анализа: {e}")
+        return False
+
+def print_single_restaurant_causal_analysis(report: Dict):
+    """Печать результатов анализа конкретного ресторана"""
+    analysis = report['restaurant_analysis']
+    
+    print(f"\n🎯 ПРИЧИННО-СЛЕДСТВЕННЫЙ АНАЛИЗ: {analysis['restaurant_name']}")
+    print("=" * 70)
+    
+    # Драйверы заказов
+    if analysis['order_correlations']:
+        print(f"\n📈 ДРАЙВЕРЫ КОЛИЧЕСТВА ЗАКАЗОВ:")
+        for driver, data in analysis['order_correlations'].items():
+            strength_emoji = {"очень сильная": "🔥", "сильная": "💪", "умеренная": "📊", "слабая": "📉"}
+            emoji = strength_emoji.get(data['strength'], "📊")
+            
+            print(f"  {emoji} {data['impact_interpretation']}")
+            print(f"     Корреляция: {data['correlation']:+.3f} ({data['strength']})")
+    
+    # Анализ периодов до/после
+    if analysis['period_comparisons']:
+        print(f"\n⏱️ АНАЛИЗ ИЗМЕНЕНИЙ ПО ПЕРИОДАМ:")
+        
+        for change_type, change_data in analysis['period_comparisons'].items():
+            print(f"\n  📅 {change_data['interpretation']}")
+            print(f"     Дата изменения: {change_data['change_date']}")
+            print(f"     До: {change_data['before_avg_orders']:.1f} заказов/день")
+            print(f"     После: {change_data['after_avg_orders']:.1f} заказов/день")
+    
+    # Платформенный эффект
+    if 'platform_effect' in analysis:
+        platform = analysis['platform_effect']
+        print(f"\n📱 ПЛАТФОРМЕННЫЙ ЭФФЕКТ:")
+        print(f"  {platform['interpretation']}")
+        print(f"  Gojek: {platform['gojek_avg_orders']:.1f} заказов/день")
+        print(f"  Grab: {platform['grab_avg_orders']:.1f} заказов/день")
+    
+    # Рычаги роста
+    if analysis['growth_levers']:
+        print(f"\n🚀 УПРАВЛЯЕМЫЕ РЫЧАГИ РОСТА:")
+        
+        sorted_levers = sorted(analysis['growth_levers'].items(), 
+                             key=lambda x: float(x[1]['potential_order_increase'].replace('%', '')), 
+                             reverse=True)
+        
+        for i, (lever_name, lever_data) in enumerate(sorted_levers, 1):
+            actionability_emoji = {"high": "🟢", "medium": "🟡", "low": "🔴"}
+            emoji = actionability_emoji.get(lever_data['actionability'], "⚪")
+            
+            print(f"  {i}. {emoji} {lever_data['recommendation']}")
+            print(f"     Потенциал: +{lever_data['potential_order_increase']} заказов")
+            print(f"     Текущее значение: {lever_data['current_value']:.1f}")
+            print(f"     Целевое значение: {lever_data['target_value']:.1f}")
+            print()
+    
+    # Конкретные рекомендации
+    if analysis['actionable_insights']:
+        print(f"\n💡 КОНКРЕТНЫЕ РЕКОМЕНДАЦИИ:")
+        for insight in analysis['actionable_insights']:
+            print(f"  {insight}")
+
+def print_comparative_causal_analysis(report: Dict):
+    """Печать результатов сравнительного анализа"""
+    comparison = report['comparison_analysis']
+    
+    print(f"\n🏆 СРАВНИТЕЛЬНЫЙ АНАЛИЗ РЕСТОРАНОВ")
+    print(f"Проанализировано ресторанов: {report['total_restaurants_analyzed']}")
+    print("=" * 70)
+    
+    # Топ-исполнители
+    print(f"\n🥇 ТОП-ИСПОЛНИТЕЛИ:")
+    for i, (name, data) in enumerate(comparison['top_performers'].items(), 1):
+        print(f"  {i}. {name}")
+        print(f"     Заказов в день: {data['avg_orders']:.1f}")
+        print(f"     Рост заказов: {data['order_growth']:+.1f}%")
+        print(f"     Рейтинг: {data['avg_rating']:.2f}")
+        print(f"     Время доставки: {data['avg_delivery_time']:.1f} мин")
+        print(f"     Отмены: {data['avg_cancel_rate']*100:.1f}%")
+        print(f"     Реклама: {data['ads_usage_percent']:.0f}% дней")
+        print()
+    
+    # Аутсайдеры
+    print(f"\n📉 АУТСАЙДЕРЫ:")
+    for i, (name, data) in enumerate(comparison['underperformers'].items(), 1):
+        print(f"  {i}. {name}")
+        print(f"     Заказов в день: {data['avg_orders']:.1f}")
+        print(f"     Рост заказов: {data['order_growth']:+.1f}%")
+        print(f"     Рейтинг: {data['avg_rating']:.2f}")
+        print(f"     Время доставки: {data['avg_delivery_time']:.1f} мин")
+        print(f"     Отмены: {data['avg_cancel_rate']*100:.1f}%")
+        print(f"     Реклама: {data['ads_usage_percent']:.0f}% дней")
+        print()
+    
+    # Факторы успеха
+    if comparison['success_factors']:
+        print(f"\n🎯 КЛЮЧЕВЫЕ ФАКТОРЫ УСПЕХА:")
+        for factor, data in comparison['success_factors'].items():
+            if data['is_success_factor']:
+                factor_names = {
+                    'rating': 'Рейтинг',
+                    'delivery_time': 'Время доставки',
+                    'cancel_rate': 'Уровень отмен',
+                    'ads_usage': 'Использование рекламы'
+                }
+                
+                factor_name = factor_names.get(factor, factor)
+                print(f"  🔑 {factor_name}:")
+                print(f"     Топ: {data['top_avg']:.2f}")
+                print(f"     Аутсайдеры: {data['bottom_avg']:.2f}")
+                print(f"     Различие: {data['difference_percent']:.1f}%")
+    
+    # Инсайты дифференциации
+    if comparison['differentiation_insights']:
+        print(f"\n💡 ИНСАЙТЫ ДИФФЕРЕНЦИАЦИИ:")
+        for insight in comparison['differentiation_insights']:
+            print(f"  {insight}")
+    
+    # Индивидуальный анализ топ-ресторанов
+    if 'individual_analyses' in report:
+        print(f"\n🔍 ДЕТАЛЬНЫЙ АНАЛИЗ ТОП-РЕСТОРАНОВ:")
+        for restaurant, analysis in report['individual_analyses'].items():
+            print(f"\n📍 {restaurant}:")
+            
+            if analysis['growth_levers']:
+                top_lever = sorted(analysis['growth_levers'].items(), 
+                                 key=lambda x: float(x[1]['potential_order_increase'].replace('%', '')), 
+                                 reverse=True)[0]
+                
+                lever_data = top_lever[1]
+                print(f"  🚀 Главный рычаг роста: {lever_data['recommendation']}")
+                print(f"     Потенциал: +{lever_data['potential_order_increase']} заказов")
+
 def deep_analysis_command(args):
     """Глубокий анализ с поиском аномалий и корреляций"""
     logger.info("=== Глубокий анализ ===")
@@ -428,6 +587,10 @@ def main():
   # Глубокий анализ с аномалиями и корреляциями
   python main.py deep --restaurant "Ika Canggu" --start-date "2024-04-01" --end-date "2024-06-30"
 
+  # Причинно-следственный анализ драйверов роста заказов
+  python main.py causal --restaurant "Ika Canggu" --start-date "2024-04-01" --end-date "2024-06-30"
+  python main.py causal --compare-all
+
   # Тестирование гипотезы
   python main.py test --restaurant "Canggu Surf Cafe" --hypothesis "реклама эффективна"
 
@@ -470,6 +633,13 @@ def main():
     deep_parser.add_argument('--start-date', required=True, help='Начальная дата (YYYY-MM-DD)')
     deep_parser.add_argument('--end-date', required=True, help='Конечная дата (YYYY-MM-DD)')
     
+    # Команда причинно-следственного анализа
+    causal_parser = subparsers.add_parser('causal', help='Причинно-следственный анализ драйверов роста заказов')
+    causal_parser.add_argument('--restaurant', help='Название ресторана (опционально для индивидуального анализа)')
+    causal_parser.add_argument('--start-date', help='Начальная дата (YYYY-MM-DD)')
+    causal_parser.add_argument('--end-date', help='Конечная дата (YYYY-MM-DD)')
+    causal_parser.add_argument('--compare-all', action='store_true', help='Сравнительный анализ всех ресторанов')
+    
     # Команда обучения модели
     train_parser = subparsers.add_parser('train', help='Обучение модели')
     train_parser.add_argument('--model-type', choices=['random_forest', 'xgboost', 'linear'], 
@@ -503,6 +673,8 @@ def main():
         success = test_hypothesis_command(args)
     elif args.command == 'deep':
         success = deep_analysis_command(args)
+    elif args.command == 'causal':
+        success = causal_analysis_command(args)
     elif args.command == 'train':
         success = train_model_command(args)
     elif args.command == 'info':
