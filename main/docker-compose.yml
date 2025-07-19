@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  muzaquest-app:
+    build: .
+    container_name: muzaquest-mini-app
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=production
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models:ro
+      - ./results:/app/results
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+    networks:
+      - muzaquest-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: muzaquest-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - muzaquest-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: postgres:15-alpine
+    container_name: muzaquest-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: muzaquest
+      POSTGRES_USER: muzaquest
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-muzaquest_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - muzaquest-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U muzaquest -d muzaquest"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    container_name: muzaquest-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - muzaquest-app
+    networks:
+      - muzaquest-network
+
+  monitoring:
+    image: prom/prometheus:latest
+    container_name: muzaquest-monitoring
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - muzaquest-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+
+networks:
+  muzaquest-network:
+    driver: bridge
