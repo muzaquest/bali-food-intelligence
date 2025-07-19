@@ -20,7 +20,7 @@ def load_grab_stats(db_path: str) -> pd.DataFrame:
         restaurants_query = "SELECT id, name FROM restaurants ORDER BY name"
         restaurants_df = pd.read_sql_query(restaurants_query, conn)
         
-        # Загружаем статистику с правильными названиями колонок
+        # Загружаем статистику с ПОЛНЫМ набором данных для глубокого анализа
         query = """
         SELECT 
             g.restaurant_id,
@@ -30,11 +30,36 @@ def load_grab_stats(db_path: str) -> pd.DataFrame:
             g.sales / NULLIF(g.orders, 0) as avg_order_value,
             g.ads_sales,
             CASE WHEN g.ads_spend > 0 THEN 1 ELSE 0 END as ads_on,
+            g.ads_spend,
+            g.ads_orders,
             g.rating,
-            30 as delivery_time,
+            COALESCE(g.cancelation_rate, 0.05) as cancel_rate,
+            g.cancelled_orders,
             CASE WHEN g.ads_spend > 0 THEN g.ads_sales / g.ads_spend ELSE 0 END as roas,
-            1 as position,
-            COALESCE(g.cancelation_rate, 0.05) as cancel_rate
+            -- Дополнительные операционные метрики
+            g.offline_rate,
+            g.store_is_closed,
+            g.store_is_busy,
+            g.store_is_closing_soon,
+            g.out_of_stock,
+            -- Рекламная аналитика
+            g.ads_ctr,
+            g.impressions,
+            g.unique_impressions_reach,
+            g.unique_menu_visits,
+            g.unique_add_to_carts,
+            g.unique_conversion_reach,
+            -- Клиентская аналитика
+            g.new_customers,
+            g.earned_new_customers,
+            g.repeated_customers,
+            g.earned_repeated_customers,
+            g.reactivated_customers,
+            g.earned_reactivated_customers,
+            g.total_customers,
+            -- Фиксированные значения для совместимости
+            30 as delivery_time,
+            1 as position
         FROM grab_stats g
         WHERE g.sales > 0 AND g.restaurant_id IS NOT NULL
         ORDER BY g.restaurant_id, g.stat_date
@@ -87,7 +112,7 @@ def load_gojek_stats(db_path: str) -> pd.DataFrame:
         restaurants_query = "SELECT id, name FROM restaurants ORDER BY name"
         restaurants_df = pd.read_sql_query(restaurants_query, conn)
         
-        # Загружаем данные из gojek_stats (структура может отличаться)
+        # Загружаем данные из gojek_stats с ПОЛНЫМ набором данных
         query = """
         SELECT 
             g.restaurant_id,
@@ -97,9 +122,40 @@ def load_gojek_stats(db_path: str) -> pd.DataFrame:
             g.sales / NULLIF(g.orders, 0) as avg_order_value,
             COALESCE(g.ads_sales, 0) as ads_sales,
             CASE WHEN COALESCE(g.ads_spend, 0) > 0 THEN 1 ELSE 0 END as ads_on,
+            COALESCE(g.ads_spend, 0) as ads_spend,
+            COALESCE(g.ads_orders, 0) as ads_orders,
             COALESCE(g.rating, 4.5) as rating,
-            30 as delivery_time,
             CASE WHEN COALESCE(g.ads_spend, 0) > 0 THEN COALESCE(g.ads_sales, 0) / g.ads_spend ELSE 0 END as roas,
+            -- Операционные метрики времени
+            g.accepting_time,
+            g.preparation_time,
+            g.delivery_time as real_delivery_time,
+            -- Заказы и операции
+            g.lost_orders,
+            g.realized_orders_percentage,
+            g.accepted_orders,
+            g.incoming_orders,
+            g.marked_ready,
+            g.cancelled_orders,
+            g.acceptance_timeout,
+            g.out_of_stock,
+            g.store_is_busy,
+            g.store_is_closed,
+            g.close_time,
+            g.driver_waiting,
+            -- Детализация рейтингов
+            g.one_star_ratings,
+            g.two_star_ratings,
+            g.three_star_ratings,
+            g.four_star_ratings,
+            g.five_star_ratings,
+            -- Клиентская аналитика
+            g.new_client,
+            g.active_client,
+            g.returned_client,
+            g.potential_lost,
+            -- Фиксированные значения для совместимости
+            30 as delivery_time,
             1 as position,
             0.05 as cancel_rate
         FROM gojek_stats g

@@ -572,6 +572,256 @@ class BusinessIntelligenceSystem:
         else:
             return "КРИТИЧНО - Значительное падение продаж"
 
+class AdvancedAnalyticsEngine:
+    """
+    Продвинутый аналитический движок для поиска скрытых взаимосвязей и аномалий
+    
+    Цель: Заменить ручной анализ клиента автоматическим поиском инсайтов
+    """
+    
+    def __init__(self):
+        self.correlation_threshold = 0.3
+        self.anomaly_threshold = 2.0  # Z-score для определения аномалий
+        
+    def find_sales_anomalies(self, df: pd.DataFrame, restaurant_name: str) -> List[Dict]:
+        """Поиск аномалий в продажах с анализом причин"""
+        anomalies = []
+        
+        # Вычисляем Z-score для продаж
+        df['sales_zscore'] = np.abs((df['total_sales'] - df['total_sales'].mean()) / df['total_sales'].std())
+        
+        # Находим аномальные дни
+        anomaly_days = df[df['sales_zscore'] > self.anomaly_threshold].copy()
+        
+        for _, day in anomaly_days.iterrows():
+            anomaly = {
+                'date': day['date'].strftime('%Y-%m-%d'),
+                'sales': day['total_sales'],
+                'deviation': f"{((day['total_sales'] - df['total_sales'].mean()) / df['total_sales'].mean()) * 100:+.1f}%",
+                'possible_causes': []
+            }
+            
+            # Анализируем возможные причины
+            
+            # 1. Погодные условия
+            if day['rain_mm'] > 20:
+                anomaly['possible_causes'].append(f"Сильный дождь ({day['rain_mm']:.1f}мм) - могли отменить заказы")
+            elif day['temp_c'] > 32:
+                anomaly['possible_causes'].append(f"Очень жарко ({day['temp_c']:.1f}°C) - люди реже заказывают")
+            elif day['temp_c'] < 26:
+                anomaly['possible_causes'].append(f"Прохладно ({day['temp_c']:.1f}°C) - могли заказывать больше горячего")
+            
+            # 2. Праздники
+            if day['is_holiday']:
+                holiday_name = day.get('holiday_name', 'Праздник')
+                if day['total_sales'] > df['total_sales'].mean():
+                    anomaly['possible_causes'].append(f"Праздник ({holiday_name}) - увеличенный спрос")
+                else:
+                    anomaly['possible_causes'].append(f"Праздник ({holiday_name}) - возможно закрыты или мало водителей")
+            
+            # 3. День недели
+            weekday_avg = df[df['day_of_week'] == day['day_of_week']]['total_sales'].mean()
+            if abs(day['total_sales'] - weekday_avg) > weekday_avg * 0.3:
+                weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                day_name = weekdays[int(day['day_of_week'])]
+                anomaly['possible_causes'].append(f"Нетипично для {day_name} (обычно {weekday_avg:,.0f} IDR)")
+            
+            # 4. Рейтинг
+            if day['rating'] < 4.5:
+                anomaly['possible_causes'].append(f"Низкий рейтинг ({day['rating']:.2f}) - могли потерять клиентов")
+            
+            # 5. Реклама
+            if day['ads_on'] == 0:
+                anomaly['possible_causes'].append("Реклама была отключена")
+            elif day['roas'] < 5:
+                anomaly['possible_causes'].append(f"Низкий ROAS ({day['roas']:.1f}) - неэффективная реклама")
+            
+            # 6. Отмены заказов
+            if day['cancel_rate'] > 0.1:
+                anomaly['possible_causes'].append(f"Высокий процент отмен ({day['cancel_rate']*100:.1f}%) - проблемы с кухней/доставкой")
+            
+            anomalies.append(anomaly)
+        
+        return sorted(anomalies, key=lambda x: abs(float(x['deviation'].replace('%', '').replace('+', ''))), reverse=True)
+    
+    def find_correlations(self, df: pd.DataFrame) -> Dict[str, List[Dict]]:
+        """Поиск скрытых корреляций между факторами"""
+        correlations = {
+            'strong_positive': [],
+            'strong_negative': [],
+            'interesting_patterns': []
+        }
+        
+        # Основные числовые колонки для анализа корреляций
+        numeric_cols = ['total_sales', 'orders', 'rating', 'temp_c', 'rain_mm', 
+                       'ads_on', 'roas', 'cancel_rate', 'day_of_week']
+        
+        # Вычисляем корреляционную матрицу
+        correlation_matrix = df[numeric_cols].corr()
+        
+        # Анализируем сильные корреляции
+        for i, col1 in enumerate(numeric_cols):
+            for j, col2 in enumerate(numeric_cols):
+                if i < j:  # Избегаем дублирования
+                    corr_value = correlation_matrix.loc[col1, col2]
+                    
+                    if abs(corr_value) > self.correlation_threshold:
+                        correlation_info = {
+                            'factor1': col1,
+                            'factor2': col2,
+                            'correlation': corr_value,
+                            'strength': self._get_correlation_strength(abs(corr_value)),
+                            'interpretation': self._interpret_correlation(col1, col2, corr_value)
+                        }
+                        
+                        if corr_value > self.correlation_threshold:
+                            correlations['strong_positive'].append(correlation_info)
+                        elif corr_value < -self.correlation_threshold:
+                            correlations['strong_negative'].append(correlation_info)
+        
+        # Ищем интересные паттерны
+        patterns = self._find_interesting_patterns(df)
+        correlations['interesting_patterns'] = patterns
+        
+        return correlations
+    
+    def _get_correlation_strength(self, corr_value: float) -> str:
+        """Определяет силу корреляции"""
+        if corr_value > 0.7:
+            return "очень сильная"
+        elif corr_value > 0.5:
+            return "сильная"
+        elif corr_value > 0.3:
+            return "умеренная"
+        else:
+            return "слабая"
+    
+    def _interpret_correlation(self, factor1: str, factor2: str, corr_value: float) -> str:
+        """Интерпретирует корреляцию в понятных терминах"""
+        interpretations = {
+            ('total_sales', 'orders'): "Больше заказов = больше продаж",
+            ('total_sales', 'rating'): "Высокий рейтинг привлекает клиентов",
+            ('total_sales', 'rain_mm'): "Дождь влияет на заказы",
+            ('total_sales', 'temp_c'): "Температура влияет на аппетит",
+            ('total_sales', 'ads_on'): "Реклама влияет на продажи",
+            ('rating', 'cancel_rate'): "Отмены снижают рейтинг",
+            ('orders', 'day_of_week'): "Есть любимые дни для заказов",
+            ('rain_mm', 'orders'): "Дождь меняет поведение клиентов"
+        }
+        
+        key1 = (factor1, factor2)
+        key2 = (factor2, factor1)
+        
+        base_interpretation = interpretations.get(key1) or interpretations.get(key2) or f"Связь между {factor1} и {factor2}"
+        
+        if corr_value > 0:
+            return f"{base_interpretation} (положительная связь)"
+        else:
+            return f"{base_interpretation} (обратная связь)"
+    
+    def _find_interesting_patterns(self, df: pd.DataFrame) -> List[Dict]:
+        """Поиск интересных паттернов в данных"""
+        patterns = []
+        
+        # 1. Анализ эффективности рекламы по дням недели
+        ads_effectiveness = df[df['ads_on'] == 1].groupby('day_of_week').agg({
+            'total_sales': 'mean',
+            'roas': 'mean'
+        }).round(2)
+        
+        best_day = ads_effectiveness['roas'].idxmax()
+        worst_day = ads_effectiveness['roas'].idxmin()
+        weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+        
+        patterns.append({
+            'type': 'advertising_pattern',
+            'description': f"Реклама наиболее эффективна в {weekdays[best_day]} (ROAS: {ads_effectiveness.loc[best_day, 'roas']:.1f}), наименее - в {weekdays[worst_day]} (ROAS: {ads_effectiveness.loc[worst_day, 'roas']:.1f})"
+        })
+        
+        # 2. Анализ влияния погоды на продажи
+        rainy_days = df[df['rain_mm'] > 10]['total_sales'].mean()
+        sunny_days = df[df['rain_mm'] == 0]['total_sales'].mean()
+        
+        if rainy_days > sunny_days:
+            weather_effect = f"В дождливые дни продажи выше на {((rainy_days - sunny_days) / sunny_days * 100):+.1f}% - люди не хотят выходить"
+        else:
+            weather_effect = f"В дождливые дни продажи ниже на {((sunny_days - rainy_days) / sunny_days * 100):+.1f}% - проблемы с доставкой"
+        
+        patterns.append({
+            'type': 'weather_pattern',
+            'description': weather_effect
+        })
+        
+        # 3. Анализ влияния рейтинга на продажи
+        high_rating_days = df[df['rating'] >= 4.7]['total_sales'].mean()
+        low_rating_days = df[df['rating'] < 4.5]['total_sales'].mean()
+        
+        if high_rating_days > low_rating_days:
+            rating_impact = ((high_rating_days - low_rating_days) / low_rating_days * 100)
+            patterns.append({
+                'type': 'rating_impact',
+                'description': f"Высокий рейтинг (4.7+) увеличивает продажи на {rating_impact:+.1f}% по сравнению с низким (<4.5)"
+            })
+        
+        # 4. Анализ праздничных дней
+        holiday_sales = df[df['is_holiday'] == True]['total_sales'].mean()
+        regular_sales = df[df['is_holiday'] == False]['total_sales'].mean()
+        
+        if holiday_sales != regular_sales:
+            holiday_effect = ((holiday_sales - regular_sales) / regular_sales * 100)
+            if holiday_effect > 0:
+                patterns.append({
+                    'type': 'holiday_effect',
+                    'description': f"Праздники увеличивают продажи на {holiday_effect:+.1f}% - люди заказывают больше еды"
+                })
+            else:
+                patterns.append({
+                    'type': 'holiday_effect',
+                    'description': f"Праздники снижают продажи на {abs(holiday_effect):+.1f}% - возможно, меньше водителей или закрыты кухни"
+                })
+        
+        return patterns
+    
+    def analyze_trends(self, df: pd.DataFrame, restaurant_name: str) -> Dict:
+        """Анализ трендов и изменений за разные периоды"""
+        trends = {}
+        
+        # Анализ по месяцам
+        df['month'] = df['date'].dt.month
+        monthly_stats = df.groupby('month').agg({
+            'total_sales': 'mean',
+            'orders': 'mean',
+            'rating': 'mean',
+            'roas': 'mean'
+        }).round(2)
+        
+        trends['monthly'] = {
+            'best_month': monthly_stats['total_sales'].idxmax(),
+            'worst_month': monthly_stats['total_sales'].idxmin(),
+            'best_sales': monthly_stats['total_sales'].max(),
+            'worst_sales': monthly_stats['total_sales'].min()
+        }
+        
+        # Анализ ROAS за последние 3-6 месяцев
+        recent_data = df[df['date'] >= df['date'].max() - timedelta(days=180)]
+        if len(recent_data) > 0:
+            recent_roas = recent_data[recent_data['ads_on'] == 1]['roas']
+            older_data = df[(df['date'] < df['date'].max() - timedelta(days=180)) & (df['ads_on'] == 1)]
+            
+            if len(recent_roas) > 0 and len(older_data) > 0:
+                recent_avg_roas = recent_roas.mean()
+                older_avg_roas = older_data['roas'].mean()
+                roas_change = ((recent_avg_roas - older_avg_roas) / older_avg_roas * 100)
+                
+                trends['roas_trend'] = {
+                    'recent_roas': recent_avg_roas,
+                    'older_roas': older_avg_roas,
+                    'change_percent': roas_change,
+                    'interpretation': f"ROAS за последние 6 месяцев {'просел' if roas_change < 0 else 'вырос'} на {abs(roas_change):.1f}%"
+                }
+        
+        return trends
+
 # Функции для удобного использования
 
 def analyze_restaurant_performance(restaurant_name: str, date: str = None) -> Dict:
@@ -783,3 +1033,60 @@ def generate_client_report(restaurant_name: str, start_date: str, end_date: str)
     except Exception as e:
         logger.error(f"Ошибка генерации клиентского отчета: {e}")
         return {"error": f"Ошибка генерации отчета: {str(e)}"}
+
+def generate_deep_analytics_report(restaurant_name: str, start_date: str, end_date: str) -> Dict:
+    """
+    Генерирует глубокий аналитический отчет с поиском аномалий и корреляций
+    """
+    logger.info(f"Генерация глубокого анализа для {restaurant_name} за период {start_date} - {end_date}")
+    
+    try:
+        # Загружаем данные
+        df = get_restaurant_data(restaurant_name)
+        if df is None:
+            return {"error": f"Нет данных для ресторана {restaurant_name}"}
+        
+        df['date'] = pd.to_datetime(df['date'])
+        period_df = df[(df['date'] >= start_date) & (df['date'] <= end_date)].copy()
+        
+        if period_df.empty:
+            return {"error": f"Нет данных за период {start_date} - {end_date}"}
+        
+        # Создаем продвинутый аналитический движок
+        analytics_engine = AdvancedAnalyticsEngine()
+        
+        # Базовая статистика
+        base_stats = {
+            'total_sales': period_df['total_sales'].sum(),
+            'avg_daily_sales': period_df['total_sales'].mean(),
+            'total_orders': period_df['orders'].sum(),
+            'avg_rating': period_df['rating'].mean(),
+            'days_analyzed': len(period_df)
+        }
+        
+        # Поиск аномалий
+        anomalies = analytics_engine.find_sales_anomalies(period_df, restaurant_name)
+        
+        # Поиск корреляций
+        correlations = analytics_engine.find_correlations(period_df)
+        
+        # Анализ трендов
+        trends = analytics_engine.analyze_trends(period_df, restaurant_name)
+        
+        # Формируем итоговый отчет
+        report = {
+            'restaurant_name': restaurant_name,
+            'period': f"{start_date} - {end_date}",
+            'base_statistics': base_stats,
+            'anomalies': anomalies[:10],  # Топ-10 аномалий
+            'correlations': correlations,
+            'trends': trends,
+            'insights_count': len(anomalies) + len(correlations['strong_positive']) + len(correlations['strong_negative']) + len(correlations['interesting_patterns']),
+            'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        return report
+        
+    except Exception as e:
+        logger.error(f"Ошибка генерации глубокого анализа: {e}")
+        return {"error": f"Ошибка анализа: {str(e)}"}
