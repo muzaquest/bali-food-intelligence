@@ -636,6 +636,35 @@ def deep_analysis_command(args):
             print(f"  • Средний рейтинг: {stats['avg_rating']:.2f}")
             print(f"  • Дней проанализировано: {stats['days_analyzed']}")
             
+            # YoY сравнения
+            if 'temporal_analysis' in report and 'comparisons' in report['temporal_analysis']:
+                temporal = report['temporal_analysis']
+                if 'year_over_year' in temporal['comparisons']:
+                    yoy = temporal['comparisons']['year_over_year']['changes_pct']
+                    print(f"\n📈 ИЗМЕНЕНИЯ ГОД К ГОДУ (vs 2024):")
+                    if 'total_sales' in yoy:
+                        change = yoy['total_sales']
+                        arrow = "↑" if change > 0 else "↓"
+                        print(f"  • Продажи: {arrow}{abs(change):.1f}%")
+                    if 'total_orders' in yoy:
+                        change = yoy['total_orders']
+                        arrow = "↑" if change > 0 else "↓"
+                        print(f"  • Заказы: {arrow}{abs(change):.1f}%")
+                    if 'avg_rating' in yoy:
+                        change = yoy['avg_rating']
+                        arrow = "↑" if change > 0 else "↓"
+                        print(f"  • Рейтинг: {arrow}{abs(change):.1f}%")
+            
+            # Конкурентный анализ
+            if 'competitor_analysis' in report and report['competitor_analysis']['top_performers']:
+                competitors = report['competitor_analysis']
+                print(f"\n🏆 КОНКУРЕНТНОЕ СРАВНЕНИЕ (ТОП-5 ПО ЗАКАЗАМ):")
+                for i, comp in enumerate(competitors['top_performers'], 1):
+                    print(f"  {i}. {comp['restaurant_name']}: {comp['avg_orders_per_day']:.1f} заказов/день")
+                
+                if competitors['current_restaurant_rank']:
+                    print(f"\n📊 Позиция {report['restaurant_name']}: #{competitors['current_restaurant_rank']} место")
+            
             # Аномалии
             if report['anomalies']:
                 print(f"\n🚨 АНОМАЛИИ И ОТКЛОНЕНИЯ (топ-5):")
@@ -680,6 +709,24 @@ def deep_analysis_command(args):
                 if 'roas_trend' in trends:
                     roas_trend = trends['roas_trend']
                     print(f"  • {roas_trend['interpretation']}")
+            
+            # Критические рекомендации на основе YoY анализа
+            if 'temporal_analysis' in report and 'comparisons' in report['temporal_analysis']:
+                temporal = report['temporal_analysis']
+                if 'year_over_year' in temporal['comparisons']:
+                    yoy = temporal['comparisons']['year_over_year']['changes_pct']
+                    print(f"\n🚨 КРИТИЧЕСКИЕ РЕКОМЕНДАЦИИ:")
+                    
+                    if yoy.get('total_sales', 0) < -10:
+                        print(f"  🔴 ТРЕВОГА: Продажи упали на {abs(yoy['total_sales']):.1f}% год к году!")
+                        print(f"     Требуется антикризисная стратегия и немедленные действия")
+                    elif yoy.get('total_sales', 0) > 30:
+                        print(f"  🟢 УСПЕХ: Рост продаж {yoy['total_sales']:.1f}% год к году!")
+                        print(f"     Масштабировать успешные практики")
+                    
+                    if yoy.get('total_orders', 0) < -20:
+                        print(f"  🔴 КРИТИЧНО: Заказы упали на {abs(yoy['total_orders']):.1f}% год к году!")
+                        print(f"     Проблемы с привлечением клиентов, усилить маркетинг")
             
             print(f"\n🎉 ИТОГО НАЙДЕНО ИНСАЙТОВ: {report['insights_count']}")
             print(f"📅 Отчет сгенерирован: {report['generated_at']}")
