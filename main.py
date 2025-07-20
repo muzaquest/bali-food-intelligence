@@ -399,6 +399,10 @@ def check_api_status():
     print("=" * 60)
     
     import os
+    from dotenv import load_dotenv
+    
+    # Загружаем переменные из .env файла
+    load_dotenv()
     
     # Проверяем переменные окружения
     apis = {
