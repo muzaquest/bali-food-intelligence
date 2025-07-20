@@ -104,9 +104,9 @@ class UnifiedRestaurantAnalyzer:
         
         # Агрегируем основные метрики
         total_sales = data['total_sales'].sum()
-        total_orders = data['orders_count'].sum()
+        total_orders = data['total_orders'].sum()
         avg_rating = data['avg_rating'].mean()
-        avg_delivery_time = data['delivery_time_min'].mean()
+        avg_delivery_time = data['avg_delivery_time'].mean()
         
         # Среднедневные показатели
         days_count = len(data)
@@ -119,7 +119,7 @@ class UnifiedRestaurantAnalyzer:
         second_half = data.iloc[mid_point:]
         
         sales_trend = "↗️" if second_half['total_sales'].mean() > first_half['total_sales'].mean() else "↘️"
-        orders_trend = "↗️" if second_half['orders_count'].mean() > first_half['orders_count'].mean() else "↘️"
+        orders_trend = "↗️" if second_half['total_orders'].mean() > first_half['total_orders'].mean() else "↘️"
         rating_trend = "↗️" if second_half['avg_rating'].mean() > first_half['avg_rating'].mean() else "↘️"
         
         return f"""
