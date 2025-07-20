@@ -18,7 +18,7 @@ def list_restaurants():
     
     try:
         # Используем реальную базу данных
-        conn = sqlite3.connect('database.sqlite')
+        conn = sqlite3.connect('data/database.sqlite')
         cursor = conn.cursor()
         
         cursor.execute('''

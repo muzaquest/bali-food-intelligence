@@ -67,7 +67,7 @@ class UnifiedRestaurantAnalyzer:
         """Загружает данные ресторана за период"""
         
         try:
-            conn = sqlite3.connect('database.sqlite')
+            conn = sqlite3.connect('data/database.sqlite')
             
             query = """
                 SELECT *
@@ -338,7 +338,7 @@ class UnifiedRestaurantAnalyzer:
         
         try:
             # Получаем данные конкурентов из той же области
-            conn = sqlite3.connect('database.sqlite')
+            conn = sqlite3.connect('data/database.sqlite')
             
             # Берем последний месяц данных для сравнения
             end_date = data['date'].max()
