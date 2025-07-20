@@ -1391,8 +1391,8 @@ def analyze_market(start_date=None, end_date=None):
         ),
         daily_data AS (
             SELECT 
-                COALESCE(g.name, gj.name) as name,
-                COALESCE(g.stat_date, gj.stat_date) as stat_date,
+                g.name,
+                g.stat_date,
                 COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) as total_sales,
                 COALESCE(g.grab_orders, 0) + COALESCE(gj.gojek_orders, 0) as total_orders,
                 COALESCE(g.grab_rating, gj.gojek_rating, 0) as avg_rating,
@@ -1400,8 +1400,23 @@ def analyze_market(start_date=None, end_date=None):
                 COALESCE(g.grab_marketing_sales, 0) + COALESCE(gj.gojek_marketing_sales, 0) as marketing_sales,
                 COALESCE(g.grab_new_customers, 0) + COALESCE(gj.gojek_new_customers, 0) as new_customers
             FROM grab_data g
-            FULL OUTER JOIN gojek_data gj ON g.name = gj.name AND g.stat_date = gj.stat_date
-            WHERE COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) > 0
+            LEFT JOIN gojek_data gj ON g.name = gj.name AND g.stat_date = gj.stat_date
+            WHERE g.stat_date IS NOT NULL AND (COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) > 0)
+            
+            UNION
+            
+            SELECT 
+                gj.name,
+                gj.stat_date,
+                COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) as total_sales,
+                COALESCE(g.grab_orders, 0) + COALESCE(gj.gojek_orders, 0) as total_orders,
+                COALESCE(g.grab_rating, gj.gojek_rating, 0) as avg_rating,
+                COALESCE(g.grab_marketing_spend, 0) + COALESCE(gj.gojek_marketing_spend, 0) as marketing_spend,
+                COALESCE(g.grab_marketing_sales, 0) + COALESCE(gj.gojek_marketing_sales, 0) as marketing_sales,
+                COALESCE(g.grab_new_customers, 0) + COALESCE(gj.gojek_new_customers, 0) as new_customers
+            FROM gojek_data gj
+            LEFT JOIN grab_data g ON g.name = gj.name AND g.stat_date = gj.stat_date
+            WHERE gj.stat_date IS NOT NULL AND g.stat_date IS NULL AND COALESCE(gj.gojek_sales, 0) > 0
         ),
         market_data AS (
             SELECT name,
@@ -1481,8 +1496,8 @@ def analyze_market(start_date=None, end_date=None):
         ),
         daily_data AS (
             SELECT 
-                COALESCE(g.name, gj.name) as name,
-                COALESCE(g.stat_date, gj.stat_date) as stat_date,
+                g.name,
+                g.stat_date,
                 COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) as total_sales,
                 COALESCE(g.grab_orders, 0) + COALESCE(gj.gojek_orders, 0) as total_orders,
                 COALESCE(g.grab_rating, gj.gojek_rating, 0) as avg_rating,
@@ -1490,8 +1505,23 @@ def analyze_market(start_date=None, end_date=None):
                 COALESCE(g.grab_marketing_sales, 0) + COALESCE(gj.gojek_marketing_sales, 0) as marketing_sales,
                 COALESCE(g.grab_new_customers, 0) + COALESCE(gj.gojek_new_customers, 0) as new_customers
             FROM grab_data g
-            FULL OUTER JOIN gojek_data gj ON g.name = gj.name AND g.stat_date = gj.stat_date
-            WHERE COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) > 0
+            LEFT JOIN gojek_data gj ON g.name = gj.name AND g.stat_date = gj.stat_date
+            WHERE g.stat_date IS NOT NULL AND (COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) > 0)
+            
+            UNION
+            
+            SELECT 
+                gj.name,
+                gj.stat_date,
+                COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) as total_sales,
+                COALESCE(g.grab_orders, 0) + COALESCE(gj.gojek_orders, 0) as total_orders,
+                COALESCE(g.grab_rating, gj.gojek_rating, 0) as avg_rating,
+                COALESCE(g.grab_marketing_spend, 0) + COALESCE(gj.gojek_marketing_spend, 0) as marketing_spend,
+                COALESCE(g.grab_marketing_sales, 0) + COALESCE(gj.gojek_marketing_sales, 0) as marketing_sales,
+                COALESCE(g.grab_new_customers, 0) + COALESCE(gj.gojek_new_customers, 0) as new_customers
+            FROM gojek_data gj
+            LEFT JOIN grab_data g ON g.name = gj.name AND g.stat_date = gj.stat_date
+            WHERE gj.stat_date IS NOT NULL AND g.stat_date IS NULL AND COALESCE(gj.gojek_sales, 0) > 0
         )
         SELECT name,
                SUM(total_sales) as total_sales,
