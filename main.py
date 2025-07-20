@@ -22,18 +22,15 @@ def list_restaurants():
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT r.name,
-                   COUNT(DISTINCT COALESCE(g.stat_date, gj.stat_date)) as days_data,
-                   MIN(COALESCE(g.stat_date, gj.stat_date)) as first_date,
-                   MAX(COALESCE(g.stat_date, gj.stat_date)) as last_date,
-                   COUNT(g.id) as grab_records,
-                   COUNT(gj.id) as gojek_records
-            FROM restaurants r
-            LEFT JOIN grab_stats g ON r.id = g.restaurant_id
-            LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id
-            WHERE g.id IS NOT NULL OR gj.id IS NOT NULL
-            GROUP BY r.id, r.name
-            ORDER BY r.name
+            SELECT restaurant_name,
+                   COUNT(DISTINCT date) as days_data,
+                   MIN(date) as first_date,
+                   MAX(date) as last_date,
+                   SUM(CASE WHEN platform = 'grab' THEN 1 ELSE 0 END) as grab_records,
+                   SUM(CASE WHEN platform = 'gojek' THEN 1 ELSE 0 END) as gojek_records
+            FROM restaurant_data
+            GROUP BY restaurant_name
+            ORDER BY restaurant_name
         ''')
         
         restaurants = cursor.fetchall()

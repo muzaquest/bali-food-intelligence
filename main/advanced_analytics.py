@@ -23,10 +23,8 @@ class AdvancedRestaurantAnalytics:
     def load_data(self):
         """Загружает и подготавливает все данные"""
         query = '''
-            SELECT rd.*, r.name as restaurant_name, r.location, r.cuisine_type
-            FROM restaurant_data rd
-            JOIN restaurants r ON rd.restaurant_id = r.id
-            ORDER BY rd.date, rd.restaurant_id, rd.platform
+            SELECT * FROM restaurant_data
+            ORDER BY date, restaurant_name, platform
         '''
         
         self.data = pd.read_sql_query(query, self.conn)
