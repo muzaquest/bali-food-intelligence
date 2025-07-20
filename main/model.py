@@ -12,8 +12,14 @@ from datetime import datetime
 import os
 
 from config import MODEL_PARAMS, MODEL_PATH, SCALER_PATH, CV_FOLDS, MIN_R2_SCORE, RANDOM_STATE
-from data_integration import load_data_with_all_features
-from data_integration import prepare_features_with_all_enhancements
+try:
+    from main.data_integration import load_data_with_all_features
+except ImportError:
+    from data_integration import load_data_with_all_features
+try:
+    from main.data_integration import prepare_features_with_all_enhancements
+except ImportError:
+    from data_integration import prepare_features_with_all_enhancements
 
 logger = logging.getLogger(__name__)
 

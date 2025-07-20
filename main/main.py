@@ -9,17 +9,43 @@ from typing import Dict
 import json
 import os
 
-from model import train_sales_model, load_trained_model
-from business_intelligence_system import (
-    BusinessIntelligenceSystem,
-    analyze_restaurant_performance,
-    get_weekly_report,
-    get_executive_summary,
-    test_business_hypothesis
-)
-from data_loader import load_data_for_training, get_restaurants_list
-from utils import setup_logging, validate_date, format_currency
-from config import MODEL_PATH, RESULTS_PATH
+try:
+    from main.model import train_sales_model, load_trained_model
+except ImportError:
+    from model import train_sales_model, load_trained_model
+
+try:
+    from main.business_intelligence_system import (
+        BusinessIntelligenceSystem,
+        analyze_restaurant_performance,
+        get_weekly_report,
+        get_executive_summary,
+        test_business_hypothesis
+    )
+except ImportError:
+    from business_intelligence_system import (
+        BusinessIntelligenceSystem,
+        analyze_restaurant_performance,
+        get_weekly_report,
+        get_executive_summary,
+        test_business_hypothesis
+    )
+
+try:
+    from main.data_loader import load_data_for_training, get_restaurants_list
+except ImportError:
+    from data_loader import load_data_for_training, get_restaurants_list
+
+try:
+    from main.utils import setup_logging, validate_date, format_currency
+except ImportError:
+    from utils import setup_logging, validate_date, format_currency
+
+try:
+    from config import MODEL_PATH, RESULTS_PATH
+except ImportError:
+    MODEL_PATH = "models/client_sales_model.joblib"
+    RESULTS_PATH = "results/"
 
 # Настройка логирования
 setup_logging()

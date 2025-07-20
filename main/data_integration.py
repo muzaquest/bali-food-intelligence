@@ -7,7 +7,10 @@
 import pandas as pd
 import logging
 from typing import Optional
-from main.field_compatibility import ensure_field_compatibility
+try:
+    from main.field_compatibility import ensure_field_compatibility
+except ImportError:
+    from field_compatibility import ensure_field_compatibility
 
 logger = logging.getLogger(__name__)
 
