@@ -484,3 +484,7 @@ class WeatherCalendarAPI:
             'best_weather': weather_impact.idxmax()[('total_sales', 'mean')],
             'worst_weather': weather_impact.idxmin()[('total_sales', 'mean')]
         }
+    
+    def close(self):
+        """Закрывает соединения (заглушка для совместимости)"""
+        pass

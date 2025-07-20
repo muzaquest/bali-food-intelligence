@@ -122,11 +122,47 @@ def generate_full_report(restaurant_name: str, period_start: str = None, period_
         print(f"❌ Ошибка при генерации отчета: {e}")
 
 def generate_market_overview():
-    """Генерирует обзор рынка"""
-    print("📊 ГЕНЕРАЦИЯ ОБЗОРА РЫНКА РЕСТОРАНОВ")
+    """Генерирует полный обзор рынка с глубокой аналитикой"""
+    print("🏢 ПОЛНЫЙ АНАЛИЗ РЫНКА")
     print("=" * 50)
+    print("💡 Включает: аномалии, погоду, праздники, сегменты, конкурентов, тренды, ИИ-рекомендации")
+    print()
     
     try:
+        # Пробуем использовать новый полноценный анализатор
+        try:
+            from main.unified_market_analyzer import UnifiedMarketAnalyzer
+            analyzer = UnifiedMarketAnalyzer()
+            
+            # Устанавливаем даты по умолчанию (последние 90 дней)
+            end_date = datetime.now().strftime('%Y-%m-%d')
+            start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+            
+            # Генерируем полный рыночный отчет
+            full_report = analyzer.generate_full_market_report(start_date, end_date)
+            
+            # Выводим отчет
+            print(full_report)
+            
+            # Сохраняем в файл
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"reports/full_market_analysis_{timestamp}.txt"
+            
+            import os
+            os.makedirs("reports", exist_ok=True)
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(full_report)
+            
+            print(f"\n💾 Полный рыночный анализ сохранен в файл: {filename}")
+            
+            analyzer.close()
+            return
+            
+        except ImportError as e:
+            print(f"⚠️ Новый рыночный анализатор недоступен: {e}")
+            print("🔄 Переключаемся на базовую систему...")
+        
+        # Fallback к старой системе
         report = generate_market_report()
         print(report)
         
