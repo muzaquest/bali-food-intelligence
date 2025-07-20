@@ -570,7 +570,7 @@ def main():
         """
     )
     
-    parser.add_argument('command', choices=['list', 'report', 'restaurant', 'quick', 'market', 'compare', 'validate', 'test', 'update-weather', 'check-apis'],
+    parser.add_argument('command', choices=['list', 'report', 'restaurant', 'quick', 'market', 'compare', 'intelligent', 'validate', 'test', 'update-weather', 'check-apis'],
                        help='Команда для выполнения')
     parser.add_argument('restaurant', nargs='?', help='Название ресторана')
     parser.add_argument('--start', help='Дата начала периода (YYYY-MM-DD)')
@@ -658,6 +658,50 @@ def main():
                 
             except Exception as e:
                 print(f"⚠️ Не удалось сохранить отчет в файл: {e}")
+            
+        elif args.command == 'intelligent':
+            # Интеллектуальный анализ аномалий
+            start_date = args.start or '2025-04-01'
+            end_date = args.end or '2025-06-22'
+            
+            try:
+                from main.intelligent_anomaly_detector import IntelligentAnomalyDetector
+                
+                detector = IntelligentAnomalyDetector()
+                
+                print("🧠 ИНТЕЛЛЕКТУАЛЬНАЯ СИСТЕМА ПОИСКА АНОМАЛИЙ")
+                print("=" * 60)
+                print("🎯 Система автоматически находит ВСЁ интересное без указания конкретных метрик!")
+                print()
+                
+                # Запускаем полный интеллектуальный анализ
+                findings = detector.analyze_everything(start_date, end_date)
+                
+                # Генерируем полный отчет
+                report = detector.generate_intelligent_report(findings)
+                print(report)
+                
+                # Сохраняем отчет
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"reports/intelligent_analysis_{timestamp}.txt"
+                
+                try:
+                    import os
+                    os.makedirs('reports', exist_ok=True)
+                    
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        f.write(report)
+                    
+                    print(f"\n💾 Интеллектуальный анализ сохранен в файл: {filename}")
+                    
+                except Exception as e:
+                    print(f"⚠️ Не удалось сохранить отчет в файл: {e}")
+                    
+            except ImportError:
+                print("❌ Для интеллектуального анализа требуются дополнительные библиотеки:")
+                print("   pip install scikit-learn scipy")
+            except Exception as e:
+                print(f"❌ Ошибка интеллектуального анализа: {e}")
             
         elif args.command == 'validate':
             validate_system()
