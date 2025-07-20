@@ -343,6 +343,56 @@ def test_system():
         print(f"\n⚠️ НЕКОТОРЫЕ ФУНКЦИИ ТРЕБУЮТ ИСПРАВЛЕНИЯ")
         return False
 
+def update_weather_data(start_date: str = None, end_date: str = None):
+    """Обновляет данные о погоде и праздниках в базе данных"""
+    print("🌤️ ОБНОВЛЕНИЕ ДАННЫХ О ПОГОДЕ И ПРАЗДНИКАХ")
+    print("=" * 60)
+    
+    try:
+        from main.weather_calendar_api import WeatherCalendarAPI
+        
+        # Устанавливаем даты по умолчанию
+        if not start_date:
+            start_date = "2025-01-01"
+        if not end_date:
+            end_date = "2025-06-30"
+        
+        print(f"📅 Период обновления: {start_date} - {end_date}")
+        
+        # Создаем API клиент
+        weather_api = WeatherCalendarAPI()
+        
+        # Проверяем наличие API ключей
+        if not weather_api.weather_api_key and not weather_api.calendar_api_key:
+            print("⚠️ API ключи не настроены - используются улучшенные симулированные данные")
+            print("🔧 Для получения реальных данных добавьте:")
+            print("   - WEATHER_API_KEY (OpenWeatherMap)")
+            print("   - CALENDAR_API_KEY (Calendarific)")
+        
+        # Обновляем данные
+        updated_count = weather_api.update_database_with_real_data(start_date, end_date)
+        
+        print(f"✅ Обновление завершено: {updated_count} записей")
+        
+        # Анализируем влияние погоды на примере
+        print("\n🔍 АНАЛИЗ ВЛИЯНИЯ ПОГОДЫ (пример - Ika Canggu):")
+        impact = weather_api.analyze_weather_impact("Ika Canggu")
+        
+        if impact:
+            print(f"🌧️ Влияние дождя: {impact.get('rain_impact_percent', 0):.1f}%")
+            print(f"🌡️ Влияние температуры: {impact.get('temperature_impact_percent', 0):.1f}%")
+            print(f"☀️ Лучшая погода: {impact.get('best_weather', 'N/A')}")
+            print(f"🌧️ Худшая погода: {impact.get('worst_weather', 'N/A')}")
+        
+        print("\n💡 Теперь отчеты будут содержать более точные причины аномалий!")
+        
+    except ImportError:
+        print("❌ Модуль weather_calendar_api не найден")
+    except Exception as e:
+        print(f"❌ Ошибка при обновлении: {e}")
+        import traceback
+        traceback.print_exc()
+
 def main():
     """Главная функция CLI"""
     parser = argparse.ArgumentParser(
@@ -360,7 +410,7 @@ def main():
         """
     )
     
-    parser.add_argument('command', choices=['list', 'report', 'quick', 'market', 'validate', 'test'],
+    parser.add_argument('command', choices=['list', 'report', 'quick', 'market', 'validate', 'test', 'update-weather'],
                        help='Команда для выполнения')
     parser.add_argument('restaurant', nargs='?', help='Название ресторана')
     parser.add_argument('--start', help='Дата начала периода (YYYY-MM-DD)')
@@ -402,6 +452,9 @@ def main():
             
         elif args.command == 'test':
             test_system()
+            
+        elif args.command == 'update-weather':
+            update_weather_data(args.start, args.end)
             
     except KeyboardInterrupt:
         print("\n\n⚠️ Операция прервана пользователем")
