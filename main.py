@@ -1361,23 +1361,59 @@ def analyze_market(start_date=None, end_date=None):
         print("📊 1. ОБЗОР РЫНКА")
         print("-" * 40)
         
-        # Общая статистика рынка
+        # Общая статистика рынка (ИСПРАВЛЕННАЯ ЛОГИКА)
         market_query = """
-        WITH market_data AS (
+        WITH grab_data AS (
             SELECT r.name,
-                   SUM(COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) as total_sales,
-                   SUM(COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders,
-                   AVG(COALESCE(g.rating, gj.rating)) as avg_rating,
-                   SUM(COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0)) as marketing_spend,
-                   SUM(COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0)) as marketing_sales,
-                   SUM(COALESCE(g.new_customers, 0) + COALESCE(gj.new_client, 0)) as new_customers,
-                   COUNT(DISTINCT COALESCE(g.stat_date, gj.stat_date)) as active_days
+                   g.stat_date,
+                   COALESCE(g.sales, 0) as grab_sales,
+                   COALESCE(g.orders, 0) as grab_orders,
+                   g.rating as grab_rating,
+                   COALESCE(g.ads_spend, 0) as grab_marketing_spend,
+                   COALESCE(g.ads_sales, 0) as grab_marketing_sales,
+                   COALESCE(g.new_customers, 0) as grab_new_customers
             FROM restaurants r
             LEFT JOIN grab_stats g ON r.id = g.restaurant_id 
                 AND g.stat_date BETWEEN ? AND ?
+        ),
+        gojek_data AS (
+            SELECT r.name,
+                   gj.stat_date,
+                   COALESCE(gj.sales, 0) as gojek_sales,
+                   COALESCE(gj.orders, 0) as gojek_orders,
+                   gj.rating as gojek_rating,
+                   COALESCE(gj.ads_spend, 0) as gojek_marketing_spend,
+                   COALESCE(gj.ads_sales, 0) as gojek_marketing_sales,
+                   COALESCE(gj.new_client, 0) as gojek_new_customers
+            FROM restaurants r
             LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id 
                 AND gj.stat_date BETWEEN ? AND ?
-            GROUP BY r.name
+        ),
+        daily_data AS (
+            SELECT 
+                COALESCE(g.name, gj.name) as name,
+                COALESCE(g.stat_date, gj.stat_date) as stat_date,
+                COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) as total_sales,
+                COALESCE(g.grab_orders, 0) + COALESCE(gj.gojek_orders, 0) as total_orders,
+                COALESCE(g.grab_rating, gj.gojek_rating, 0) as avg_rating,
+                COALESCE(g.grab_marketing_spend, 0) + COALESCE(gj.gojek_marketing_spend, 0) as marketing_spend,
+                COALESCE(g.grab_marketing_sales, 0) + COALESCE(gj.gojek_marketing_sales, 0) as marketing_sales,
+                COALESCE(g.grab_new_customers, 0) + COALESCE(gj.gojek_new_customers, 0) as new_customers
+            FROM grab_data g
+            FULL OUTER JOIN gojek_data gj ON g.name = gj.name AND g.stat_date = gj.stat_date
+            WHERE COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) > 0
+        ),
+        market_data AS (
+            SELECT name,
+                   SUM(total_sales) as total_sales,
+                   SUM(total_orders) as total_orders,
+                   AVG(avg_rating) as avg_rating,
+                   SUM(marketing_spend) as marketing_spend,
+                   SUM(marketing_sales) as marketing_sales,
+                   SUM(new_customers) as new_customers,
+                   COUNT(DISTINCT stat_date) as active_days
+            FROM daily_data
+            GROUP BY name
             HAVING total_sales > 0
         )
         SELECT 
@@ -1417,20 +1453,56 @@ def analyze_market(start_date=None, end_date=None):
         print("-" * 40)
         
         leaders_query = """
-        SELECT r.name,
-               SUM(COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) as total_sales,
-               SUM(COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders,
-               AVG(COALESCE(g.rating, gj.rating)) as avg_rating,
-               SUM(COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0)) as marketing_spend,
-               SUM(COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0)) as marketing_sales,
-               SUM(COALESCE(g.new_customers, 0) + COALESCE(gj.new_client, 0)) as new_customers,
-               COUNT(DISTINCT COALESCE(g.stat_date, gj.stat_date)) as active_days
-        FROM restaurants r
-        LEFT JOIN grab_stats g ON r.id = g.restaurant_id 
-            AND g.stat_date BETWEEN ? AND ?
-        LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id 
-            AND gj.stat_date BETWEEN ? AND ?
-        GROUP BY r.name
+        WITH grab_data AS (
+            SELECT r.name,
+                   g.stat_date,
+                   COALESCE(g.sales, 0) as grab_sales,
+                   COALESCE(g.orders, 0) as grab_orders,
+                   g.rating as grab_rating,
+                   COALESCE(g.ads_spend, 0) as grab_marketing_spend,
+                   COALESCE(g.ads_sales, 0) as grab_marketing_sales,
+                   COALESCE(g.new_customers, 0) as grab_new_customers
+            FROM restaurants r
+            LEFT JOIN grab_stats g ON r.id = g.restaurant_id 
+                AND g.stat_date BETWEEN ? AND ?
+        ),
+        gojek_data AS (
+            SELECT r.name,
+                   gj.stat_date,
+                   COALESCE(gj.sales, 0) as gojek_sales,
+                   COALESCE(gj.orders, 0) as gojek_orders,
+                   gj.rating as gojek_rating,
+                   COALESCE(gj.ads_spend, 0) as gojek_marketing_spend,
+                   COALESCE(gj.ads_sales, 0) as gojek_marketing_sales,
+                   COALESCE(gj.new_client, 0) as gojek_new_customers
+            FROM restaurants r
+            LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id 
+                AND gj.stat_date BETWEEN ? AND ?
+        ),
+        daily_data AS (
+            SELECT 
+                COALESCE(g.name, gj.name) as name,
+                COALESCE(g.stat_date, gj.stat_date) as stat_date,
+                COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) as total_sales,
+                COALESCE(g.grab_orders, 0) + COALESCE(gj.gojek_orders, 0) as total_orders,
+                COALESCE(g.grab_rating, gj.gojek_rating, 0) as avg_rating,
+                COALESCE(g.grab_marketing_spend, 0) + COALESCE(gj.gojek_marketing_spend, 0) as marketing_spend,
+                COALESCE(g.grab_marketing_sales, 0) + COALESCE(gj.gojek_marketing_sales, 0) as marketing_sales,
+                COALESCE(g.grab_new_customers, 0) + COALESCE(gj.gojek_new_customers, 0) as new_customers
+            FROM grab_data g
+            FULL OUTER JOIN gojek_data gj ON g.name = gj.name AND g.stat_date = gj.stat_date
+            WHERE COALESCE(g.grab_sales, 0) + COALESCE(gj.gojek_sales, 0) > 0
+        )
+        SELECT name,
+               SUM(total_sales) as total_sales,
+               SUM(total_orders) as total_orders,
+               AVG(avg_rating) as avg_rating,
+               SUM(marketing_spend) as marketing_spend,
+               SUM(marketing_sales) as marketing_sales,
+               SUM(new_customers) as new_customers,
+               COUNT(DISTINCT stat_date) as active_days
+        FROM daily_data
+        GROUP BY name
         HAVING total_sales > 0
         ORDER BY total_sales DESC
         LIMIT 15
