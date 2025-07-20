@@ -49,8 +49,32 @@ def list_restaurants():
     except Exception as e:
         print(f"❌ Ошибка при получении списка ресторанов: {e}")
 
+def generate_unified_restaurant_report(restaurant_name: str, period_start: str = None, period_end: str = None):
+    """🎯 НОВАЯ ФУНКЦИЯ: Генерирует ПОЛНЫЙ унифицированный отчет - ВСЁ В ОДНОМ!"""
+    
+    try:
+        from main.unified_restaurant_analyzer import UnifiedRestaurantAnalyzer
+        
+        print(f"🏪 ПОЛНЫЙ АНАЛИЗ РЕСТОРАНА: {restaurant_name.upper()}")
+        print("=" * 80)
+        print("💡 Включает: аномалии, погоду, праздники, конкурентов, ИИ-рекомендации")
+        print()
+        
+        analyzer = UnifiedRestaurantAnalyzer()
+        report = analyzer.generate_full_report(restaurant_name, period_start, period_end)
+        
+        print(report)
+        analyzer.close()
+        
+    except ImportError as e:
+        print(f"⚠️ Новый анализатор недоступен: {e}")
+        print("🔄 Переключаемся на стандартную систему...")
+        generate_full_report(restaurant_name, period_start, period_end)
+    except Exception as e:
+        print(f"❌ Ошибка при генерации полного отчета: {e}")
+
 def generate_full_report(restaurant_name: str, period_start: str = None, period_end: str = None):
-    """Генерирует полный отчет для ресторана"""
+    """Генерирует полный отчет для ресторана (старая версия)"""
     print(f"🔬 ГЕНЕРАЦИЯ ДЕТАЛЬНОГО АНАЛИЗА ДЛЯ: {restaurant_name.upper()}")
     print("=" * 80)
     
@@ -497,18 +521,20 @@ def main():
         description='🔬 Продвинутая система аналитики ресторанов с глубоким анализом 2.5 лет данных',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Примеры использования:
+🎯 НОВЫЕ УПРОЩЕННЫЕ КОМАНДЫ:
+  python main.py restaurant "Ika Canggu"                 # 🏪 ПОЛНЫЙ анализ ресторана (ВСЁ В ОДНОМ!)
+  python main.py market                                  # 🌍 ПОЛНЫЙ анализ всего рынка
+
+📋 Остальные команды:
   python main.py list                                    # Список ресторанов
-  python main.py report "Ika Canggu"                     # Полный отчет
-  python main.py report "Ika Canggu" --start 2024-01-01 --end 2024-06-30
+  python main.py report "Ika Canggu" --start 2024-01-01 # Старый формат отчета
   python main.py quick "Prana Restaurant"                # Быстрый анализ
-  python main.py market                                  # Обзор рынка
   python main.py validate                                # Проверка системы
-  python main.py test                                    # Тестирование
+  python main.py check-apis                              # Статус API
         """
     )
     
-    parser.add_argument('command', choices=['list', 'report', 'quick', 'market', 'validate', 'test', 'update-weather', 'check-apis'],
+    parser.add_argument('command', choices=['list', 'report', 'restaurant', 'quick', 'market', 'validate', 'test', 'update-weather', 'check-apis'],
                        help='Команда для выполнения')
     parser.add_argument('restaurant', nargs='?', help='Название ресторана')
     parser.add_argument('--start', help='Дата начала периода (YYYY-MM-DD)')
@@ -534,6 +560,13 @@ def main():
                 parser.print_help()
                 return
             generate_full_report(args.restaurant, args.start, args.end)
+            
+        elif args.command == 'restaurant':
+            if not args.restaurant:
+                print("❌ Укажите название ресторана для полного анализа")
+                parser.print_help()
+                return
+            generate_unified_restaurant_report(args.restaurant, args.start, args.end)
             
         elif args.command == 'quick':
             if not args.restaurant:
