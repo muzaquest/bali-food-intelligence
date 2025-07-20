@@ -54,10 +54,15 @@ class WeatherCalendarAPI:
             dt = datetime.strptime(date, '%Y-%m-%d')
             timestamp = int(dt.timestamp())
             
-            # Если дата в пределах последних 5 дней - используем текущий API
+            # Приоритет 1: Пробуем бесплатный Open-Meteo для всех исторических данных
+            weather_data = self._get_open_meteo_data(date)
+            if weather_data:
+                return weather_data
+            
+            # Приоритет 2: Если дата в пределах последних 5 дней - используем OpenWeatherMap
             days_ago = (datetime.now() - dt).days
             
-            if days_ago <= 5:
+            if days_ago <= 5 and self.weather_api_key:
                 # Используем текущий API для недавних дат
                 url = f"http://api.openweathermap.org/data/2.5/weather"
                 params = {
@@ -66,22 +71,19 @@ class WeatherCalendarAPI:
                     'appid': self.weather_api_key,
                     'units': 'metric'
                 }
-            else:
-                # Для старых дат - вызываем fallback сразу
-                return self._get_simulated_weather(date)
-            
-            response = requests.get(url, params=params, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                weather = self._parse_weather_data(data)
                 
-                # Сохраняем в кэш
-                self.weather_cache[cache_key] = weather
-                return weather
-            else:
-                print(f"⚠️ Ошибка API погоды: {response.status_code}")
-                return self._get_simulated_weather(date)
+                response = requests.get(url, params=params, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    weather = self._parse_weather_data(data)
+                    weather['data_source'] = 'openweathermap'
+                    return weather
+                else:
+                    print(f"⚠️ Ошибка API погоды: {response.status_code}")
+            
+            # Приоритет 3: Fallback на симуляции
+            return self._get_simulated_weather(date)
                 
         except Exception as e:
             print(f"⚠️ Ошибка получения погоды: {e}")
@@ -161,6 +163,77 @@ class WeatherCalendarAPI:
             }
         
         return weather_data
+    
+    def _get_open_meteo_data(self, date: str) -> Optional[Dict[str, Any]]:
+        """
+        Получает исторические данные о погоде из Open-Meteo API (бесплатно!)
+        """
+        
+        try:
+            # Open-Meteo Historical API
+            url = 'https://archive-api.open-meteo.com/v1/archive'
+            params = {
+                'latitude': self.bali_coords['lat'],
+                'longitude': self.bali_coords['lon'],
+                'start_date': date,
+                'end_date': date,
+                'daily': 'temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,windspeed_10m_max',
+                'timezone': 'Asia/Jakarta'
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get('daily') and len(data['daily']['time']) > 0:
+                    daily = data['daily']
+                    
+                    # Берем первый (и единственный) день
+                    temp_max = daily['temperature_2m_max'][0] if daily['temperature_2m_max'][0] else 30
+                    temp_min = daily['temperature_2m_min'][0] if daily['temperature_2m_min'][0] else 25
+                    temp_mean = daily['temperature_2m_mean'][0] if daily['temperature_2m_mean'][0] else (temp_max + temp_min) / 2
+                    precipitation = daily['precipitation_sum'][0] if daily['precipitation_sum'][0] else 0
+                    wind_speed = daily['windspeed_10m_max'][0] if daily['windspeed_10m_max'][0] else 10
+                    
+                    # Рассчитываем влажность на основе осадков и температуры (приблизительно)
+                    if precipitation > 10:
+                        humidity = 85 + min(precipitation / 2, 10)  # 85-95% при дожде
+                    elif temp_mean < 25:
+                        humidity = 80  # Высокая влажность при низких температурах
+                    else:
+                        humidity = 70  # Средняя влажность
+                    
+                    # Определяем погодные условия
+                    if precipitation > 10:
+                        condition = 'Rainy'
+                    elif precipitation > 2:
+                        condition = 'Partly Cloudy'
+                    elif temp_mean > 32:
+                        condition = 'Sunny'
+                    elif humidity > 85:
+                        condition = 'Cloudy'
+                    else:
+                        condition = 'Partly Cloudy'
+                    
+                    return {
+                        'temperature_celsius': temp_mean,
+                        'humidity_percent': humidity,
+                        'precipitation_mm': precipitation,
+                        'weather_condition': condition,
+                        'wind_speed_kmh': wind_speed,
+                        'visibility_km': 15.0 if precipitation < 5 else 8.0,
+                        'pressure_hpa': 1013.0,  # Среднее для уровня моря
+                        'temp_max': temp_max,
+                        'temp_min': temp_min,
+                        'data_source': 'open_meteo'
+                    }
+            
+            return None
+            
+        except Exception as e:
+            print(f"⚠️ Ошибка Open-Meteo: {e}")
+            return None
     
     def _parse_holiday_data(self, data: Dict) -> List[Dict[str, Any]]:
         """Парсит данные праздников из API ответа"""
