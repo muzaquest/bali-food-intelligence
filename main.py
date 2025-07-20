@@ -51,10 +51,30 @@ def list_restaurants():
 
 def generate_full_report(restaurant_name: str, period_start: str = None, period_end: str = None):
     """Генерирует полный отчет для ресторана"""
-    print(f"🔬 ГЕНЕРАЦИЯ ГЛУБОКОГО АНАЛИЗА ДЛЯ: {restaurant_name.upper()}")
+    print(f"🔬 ГЕНЕРАЦИЯ ДЕТАЛЬНОГО АНАЛИЗА ДЛЯ: {restaurant_name.upper()}")
     print("=" * 80)
     
     try:
+        # Пробуем использовать улучшенный генератор отчетов
+        try:
+            from main.enhanced_report_generator import EnhancedReportGenerator
+            enhanced_gen = EnhancedReportGenerator()
+            
+            # Устанавливаем даты по умолчанию если не указаны
+            start_date = period_start or '2024-01-01'
+            end_date = period_end or '2025-06-30'
+            
+            report = enhanced_gen.generate_detailed_report(restaurant_name, start_date, end_date)
+            print(report)
+            
+            enhanced_gen.close()
+            return
+            
+        except ImportError as e:
+            print(f"⚠️ Улучшенная аналитика недоступна: {e}")
+            print("🔄 Переключаемся на стандартную систему...")
+        
+        # Fallback к старой системе
         report = generate_restaurant_report(restaurant_name, period_start, period_end)
         print(report)
         
