@@ -88,19 +88,55 @@ class EnhancedAnalytics:
             if row['is_weekend'] == 1:
                 reasons.append("выходной день")
             
-            # Погода
+            # Детальный анализ погоды
             if row['weather_condition'] == 'Rainy':
-                reasons.append("дождливая погода")
-            elif row['weather_condition'] == 'Sunny' and row['temperature_celsius'] > 30:
-                reasons.append("жаркая солнечная погода")
+                if row.get('precipitation_mm', 0) > 10:
+                    reasons.append(f"сильный дождь ({row.get('precipitation_mm', 0):.1f}мм)")
+                else:
+                    reasons.append("дождливая погода")
+            elif row['weather_condition'] == 'Stormy':
+                reasons.append("шторм/гроза - мало водителей")
+            elif row['weather_condition'] == 'Sunny':
+                if row.get('temperature_celsius', 28) > 33:
+                    reasons.append(f"очень жарко ({row.get('temperature_celsius', 28):.1f}°C)")
+                elif row.get('temperature_celsius', 28) > 30:
+                    reasons.append("жаркая солнечная погода")
+                else:
+                    reasons.append("хорошая погода")
             
-            # Праздники
+            # Специфические праздники
             if row['is_holiday'] == 1:
-                reasons.append("праздничный день")
+                # Проверяем дату для определения праздника
+                date_str = row['date'].strftime('%m-%d') if hasattr(row['date'], 'strftime') else str(row['date'])[5:]
+                
+                if date_str in ['03-14', '03-25']:  # Nyepi
+                    reasons.append("Nyepi (день тишины) - полный запрет деятельности")
+                elif date_str in ['01-01']:
+                    reasons.append("Новый год")
+                elif date_str in ['04-10', '04-11']:  # Eid al-Fitr
+                    reasons.append("Ураза-байрам - семейные празднования")
+                elif date_str in ['08-17']:
+                    reasons.append("День независимости Индонезии")
+                elif date_str in ['12-25']:
+                    reasons.append("Рождество")
+                else:
+                    reasons.append("праздничный день")
             
-            # Туристический сезон
+            # Туристический сезон (высокий/низкий)
             if row['is_tourist_high_season'] == 1:
-                reasons.append("туристический сезон")
+                reasons.append("пиковый туристический сезон")
+            
+            # Дополнительные факторы
+            month = row['date'].month if hasattr(row['date'], 'month') else int(str(row['date'])[5:7])
+            
+            # Сезон дождей на Бали
+            if month in [12, 1, 2, 3]:
+                if row['weather_condition'] != 'Rainy':
+                    reasons.append("сухой день в сезон дождей")
+            
+            # Рамадан (примерно март-апрель)
+            if month in [3, 4] and not row.get('is_holiday', 0):
+                reasons.append("период Рамадана - изменение режима питания")
             
             return ", ".join(reasons) if reasons else "стандартные условия"
         
