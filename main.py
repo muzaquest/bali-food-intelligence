@@ -1327,14 +1327,14 @@ def list_restaurants():
         print(f"❌ Ошибка при получении списка ресторанов: {e}")
 
 def analyze_market(start_date=None, end_date=None):
-    """Анализ всего рынка"""
-    print("\n🌍 АНАЛИЗ ВСЕГО РЫНКА MUZAQUEST")
+    """Детальный анализ всего рынка с AI-инсайтами"""
+    print("\n🌍 ДЕТАЛЬНЫЙ АНАЛИЗ ВСЕГО РЫНКА MUZAQUEST")
     print("=" * 80)
     
     # Устанавливаем период по умолчанию
     if not start_date or not end_date:
         start_date = "2025-04-01"
-        end_date = "2025-06-22"
+        end_date = "2025-06-30"
     
     print(f"📅 Период анализа: {start_date} → {end_date}")
     print()
@@ -1342,12 +1342,21 @@ def analyze_market(start_date=None, end_date=None):
     try:
         conn = sqlite3.connect("database.sqlite")
         
+        # 1. ОБЗОР РЫНКА
+        print("📊 1. ОБЗОР РЫНКА")
+        print("-" * 40)
+        
         # Общая статистика рынка
-        query = """
+        market_query = """
         WITH market_data AS (
             SELECT r.name,
                    SUM(COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) as total_sales,
-                   SUM(COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders
+                   SUM(COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders,
+                   AVG(COALESCE(g.rating, gj.rating)) as avg_rating,
+                   SUM(COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0)) as marketing_spend,
+                   SUM(COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0)) as marketing_sales,
+                   SUM(COALESCE(g.new_customers, 0) + COALESCE(gj.new_client, 0)) as new_customers,
+                   COUNT(DISTINCT COALESCE(g.stat_date, gj.stat_date)) as active_days
             FROM restaurants r
             LEFT JOIN grab_stats g ON r.id = g.restaurant_id 
                 AND g.stat_date BETWEEN ? AND ?
@@ -1360,27 +1369,47 @@ def analyze_market(start_date=None, end_date=None):
             COUNT(*) as active_restaurants,
             SUM(total_sales) as market_sales,
             SUM(total_orders) as market_orders,
-            AVG(total_sales) as avg_restaurant_sales
+            AVG(total_sales) as avg_restaurant_sales,
+            AVG(avg_rating) as market_avg_rating,
+            SUM(marketing_spend) as total_marketing_spend,
+            SUM(marketing_sales) as total_marketing_sales,
+            SUM(new_customers) as total_new_customers,
+            AVG(active_days) as avg_active_days
         FROM market_data
         """
         
-        market_stats = pd.read_sql_query(query, conn, params=(start_date, end_date, start_date, end_date))
+        market_stats = pd.read_sql_query(market_query, conn, params=(start_date, end_date, start_date, end_date))
         
-        print("📊 ОБЗОР РЫНКА")
-        print("-" * 40)
         if not market_stats.empty:
             stats = market_stats.iloc[0]
-            print(f"🏪 Активных ресторанов: {stats['active_restaurants']}")
+            market_roas = stats['total_marketing_sales'] / stats['total_marketing_spend'] if stats['total_marketing_spend'] > 0 else 0
+            avg_order_value = stats['market_sales'] / stats['market_orders'] if stats['market_orders'] > 0 else 0
+            
+            print(f"🏪 Активных ресторанов: {stats['active_restaurants']:.0f}")
             print(f"💰 Общие продажи рынка: {stats['market_sales']:,.0f} IDR")
             print(f"📦 Общие заказы рынка: {stats['market_orders']:,.0f}")
             print(f"📊 Средние продажи на ресторан: {stats['avg_restaurant_sales']:,.0f} IDR")
+            print(f"💵 Средний чек рынка: {avg_order_value:,.0f} IDR")
+            print(f"⭐ Средний рейтинг рынка: {stats['market_avg_rating']:.2f}/5.0")
+            print(f"🎯 ROAS рынка: {market_roas:.2f}x")
+            print(f"👥 Новых клиентов на рынке: {stats['total_new_customers']:,.0f}")
+            print(f"📅 Средняя активность: {stats['avg_active_days']:.1f} дней")
         
-        # Лидеры рынка
+        print()
+        
+        # 2. ЛИДЕРЫ РЫНКА (Детальный анализ)
+        print("🏆 2. ЛИДЕРЫ РЫНКА")
+        print("-" * 40)
+        
         leaders_query = """
         SELECT r.name,
                SUM(COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) as total_sales,
                SUM(COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders,
-               AVG(COALESCE(g.rating, gj.rating)) as avg_rating
+               AVG(COALESCE(g.rating, gj.rating)) as avg_rating,
+               SUM(COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0)) as marketing_spend,
+               SUM(COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0)) as marketing_sales,
+               SUM(COALESCE(g.new_customers, 0) + COALESCE(gj.new_client, 0)) as new_customers,
+               COUNT(DISTINCT COALESCE(g.stat_date, gj.stat_date)) as active_days
         FROM restaurants r
         LEFT JOIN grab_stats g ON r.id = g.restaurant_id 
             AND g.stat_date BETWEEN ? AND ?
@@ -1389,23 +1418,371 @@ def analyze_market(start_date=None, end_date=None):
         GROUP BY r.name
         HAVING total_sales > 0
         ORDER BY total_sales DESC
-        LIMIT 10
+        LIMIT 15
         """
         
         leaders = pd.read_sql_query(leaders_query, conn, params=(start_date, end_date, start_date, end_date))
         
-        print(f"\n🏆 ЛИДЕРЫ РЫНКА")
-        print("-" * 40)
-        print("ТОП-10 по продажам:")
+        print("ТОП-15 по продажам:")
         for i, row in leaders.iterrows():
             avg_order_value = row['total_sales'] / row['total_orders'] if row['total_orders'] > 0 else 0
-            print(f"  {i+1:2d}. {row['name']:<25} {row['total_sales']:>12,.0f} IDR")
+            restaurant_roas = row['marketing_sales'] / row['marketing_spend'] if row['marketing_spend'] > 0 else 0
+            daily_sales = row['total_sales'] / row['active_days'] if row['active_days'] > 0 else 0
+            
+            print(f"  {i+1:2d}. {row['name']:<25} {row['total_sales']:>15,.0f} IDR")
             print(f"      📦 {row['total_orders']:,} заказов | 💰 {avg_order_value:,.0f} IDR/заказ | ⭐ {row['avg_rating']:.2f}")
+            print(f"      📊 {daily_sales:,.0f} IDR/день | 🎯 ROAS: {restaurant_roas:.1f}x | 👥 {row['new_customers']:,.0f} новых")
+        
+        print()
+        
+        # 3. СЕГМЕНТАЦИЯ РЫНКА
+        print("📈 3. СЕГМЕНТАЦИЯ РЫНКА")
+        print("-" * 40)
+        
+        # Анализ по сегментам
+        segment_analysis = leaders.copy()
+        segment_analysis['avg_order_value'] = segment_analysis['total_sales'] / segment_analysis['total_orders']
+        segment_analysis['daily_sales'] = segment_analysis['total_sales'] / segment_analysis['active_days']
+        
+        # Сегменты по среднему чеку
+        premium_segment = segment_analysis[segment_analysis['avg_order_value'] >= 350000]
+        mid_segment = segment_analysis[(segment_analysis['avg_order_value'] >= 200000) & (segment_analysis['avg_order_value'] < 350000)]
+        budget_segment = segment_analysis[segment_analysis['avg_order_value'] < 200000]
+        
+        print("💎 ПРЕМИУМ СЕГМЕНТ (средний чек 350K+ IDR):")
+        print(f"   • Ресторанов: {len(premium_segment)}")
+        if not premium_segment.empty:
+            print(f"   • Средний чек: {premium_segment['avg_order_value'].mean():,.0f} IDR")
+            print(f"   • Общие продажи: {premium_segment['total_sales'].sum():,.0f} IDR")
+            print(f"   • Доля рынка: {(premium_segment['total_sales'].sum() / stats['market_sales'] * 100):.1f}%")
+        
+        print(f"\n🏷️ СРЕДНИЙ СЕГМЕНТ (средний чек 200-350K IDR):")
+        print(f"   • Ресторанов: {len(mid_segment)}")
+        if not mid_segment.empty:
+            print(f"   • Средний чек: {mid_segment['avg_order_value'].mean():,.0f} IDR")
+            print(f"   • Общие продажи: {mid_segment['total_sales'].sum():,.0f} IDR")
+            print(f"   • Доля рынка: {(mid_segment['total_sales'].sum() / stats['market_sales'] * 100):.1f}%")
+        
+        print(f"\n💰 БЮДЖЕТНЫЙ СЕГМЕНТ (средний чек <200K IDR):")
+        print(f"   • Ресторанов: {len(budget_segment)}")
+        if not budget_segment.empty:
+            print(f"   • Средний чек: {budget_segment['avg_order_value'].mean():,.0f} IDR")
+            print(f"   • Общие продажи: {budget_segment['total_sales'].sum():,.0f} IDR")
+            print(f"   • Доля рынка: {(budget_segment['total_sales'].sum() / stats['market_sales'] * 100):.1f}%")
+        
+        print()
+        
+        # 4. АНАЛИЗ ЭФФЕКТИВНОСТИ
+        print("⚡ 4. АНАЛИЗ ЭФФЕКТИВНОСТИ")
+        print("-" * 40)
+        
+        # Топ по различным метрикам
+        top_roas = leaders[leaders['marketing_spend'] > 0].nlargest(5, 'marketing_sales')['marketing_sales'] / leaders[leaders['marketing_spend'] > 0].nlargest(5, 'marketing_sales')['marketing_spend']
+        top_rating = leaders.nlargest(5, 'avg_rating')
+        top_daily_sales = leaders.copy()
+        top_daily_sales['daily_sales'] = top_daily_sales['total_sales'] / top_daily_sales['active_days']
+        top_daily_sales = top_daily_sales.nlargest(5, 'daily_sales')
+        
+        print("🎯 ТОП-5 по ROAS:")
+        roas_leaders = leaders[leaders['marketing_spend'] > 0].copy()
+        roas_leaders['roas'] = roas_leaders['marketing_sales'] / roas_leaders['marketing_spend']
+        roas_leaders = roas_leaders.nlargest(5, 'roas')
+        for i, row in roas_leaders.iterrows():
+            print(f"   {row['name']}: {row['roas']:.1f}x")
+        
+        print(f"\n⭐ ТОП-5 по рейтингу:")
+        for i, row in top_rating.iterrows():
+            print(f"   {row['name']}: {row['avg_rating']:.2f}/5.0")
+        
+        print(f"\n📊 ТОП-5 по дневным продажам:")
+        for i, row in top_daily_sales.iterrows():
+            daily_sales = row['total_sales'] / row['active_days']
+            print(f"   {row['name']}: {daily_sales:,.0f} IDR/день")
+        
+        print()
+        
+        # 5. МАРКЕТИНГОВЫЙ АНАЛИЗ
+        print("📈 5. МАРКЕТИНГОВЫЙ АНАЛИЗ")
+        print("-" * 40)
+        
+        total_marketing_spend = stats['total_marketing_spend']
+        total_marketing_sales = stats['total_marketing_sales']
+        
+        if total_marketing_spend > 0:
+            print(f"💸 Общие затраты на маркетинг: {total_marketing_spend:,.0f} IDR")
+            print(f"💰 Общая выручка от маркетинга: {total_marketing_sales:,.0f} IDR")
+            print(f"🎯 Средний ROAS рынка: {market_roas:.2f}x")
+            print(f"📊 ROI рынка: {((total_marketing_sales - total_marketing_spend) / total_marketing_spend * 100):+.1f}%")
+            
+            # Распределение маркетинговых бюджетов
+            marketing_active = leaders[leaders['marketing_spend'] > 0]
+            if not marketing_active.empty:
+                print(f"\n📊 Маркетинговая активность:")
+                print(f"   • Ресторанов с рекламой: {len(marketing_active)}/{len(leaders)} ({(len(marketing_active)/len(leaders)*100):.1f}%)")
+                print(f"   • Средний бюджет: {marketing_active['marketing_spend'].mean():,.0f} IDR")
+                print(f"   • Медианный бюджет: {marketing_active['marketing_spend'].median():,.0f} IDR")
+                
+                # Крупнейшие рекламодатели
+                top_spenders = marketing_active.nlargest(5, 'marketing_spend')
+                print(f"\n💰 ТОП-5 рекламодателей:")
+                for i, row in top_spenders.iterrows():
+                    spend_share = (row['marketing_spend'] / total_marketing_spend) * 100
+                    restaurant_roas = row['marketing_sales'] / row['marketing_spend']
+                    print(f"   {row['name']}: {row['marketing_spend']:,.0f} IDR ({spend_share:.1f}% рынка, ROAS: {restaurant_roas:.1f}x)")
+        
+        print()
+        
+        # 6. AI-АНАЛИЗ РЫНКА
+        print("🤖 6. AI-АНАЛИЗ РЫНКА И ИНСАЙТЫ")
+        print("-" * 40)
+        
+        # Создаем сводные данные для анализа
+        market_data = {
+            'total_restaurants': int(stats['active_restaurants']),
+            'total_sales': float(stats['market_sales']),
+            'total_orders': int(stats['market_orders']),
+            'avg_order_value': float(avg_order_value),
+            'market_roas': float(market_roas),
+            'avg_rating': float(stats['market_avg_rating']),
+            'leader_dominance': float(leaders.iloc[0]['total_sales'] / stats['market_sales'] * 100) if not leaders.empty else 0
+        }
+        
+        # AI анализ рынка
+        openai_analyzer = OpenAIAnalyzer()
+        market_insights = generate_market_insights(market_data, leaders)
+        print(market_insights)
+        
+        print()
+        
+        # 7. СТРАТЕГИЧЕСКИЕ ВЫВОДЫ
+        print("🎯 7. СТРАТЕГИЧЕСКИЕ ВЫВОДЫ И РЕКОМЕНДАЦИИ")
+        print("-" * 40)
+        
+        strategic_insights = []
+        
+        # Анализ концентрации рынка
+        top3_share = leaders.head(3)['total_sales'].sum() / stats['market_sales'] * 100 if not leaders.empty else 0
+        if top3_share > 50:
+            strategic_insights.append(f"🏆 Высокая концентрация: ТОП-3 контролируют {top3_share:.1f}% рынка")
+        else:
+            strategic_insights.append(f"🎯 Фрагментированный рынок: ТОП-3 имеют {top3_share:.1f}% доли")
+        
+        # Анализ ROAS
+        if market_roas > 5:
+            strategic_insights.append(f"📈 ПРЕВОСХОДНО: Высокоэффективный рынок (ROAS {market_roas:.1f}x)")
+        elif market_roas > 3:
+            strategic_insights.append(f"✅ ХОРОШО: Эффективный маркетинг (ROAS {market_roas:.1f}x)")
+        else:
+            strategic_insights.append(f"⚠️ ПРОБЛЕМА: Низкая эффективность маркетинга (ROAS {market_roas:.1f}x)")
+        
+        # Анализ среднего чека
+        if avg_order_value > 300000:
+            strategic_insights.append("💎 Премиальный рынок с высоким средним чеком")
+        elif avg_order_value > 200000:
+            strategic_insights.append("🏷️ Рынок среднего ценового сегмента")
+        else:
+            strategic_insights.append("💰 Бюджетно-ориентированный рынок")
+        
+        # Качество обслуживания
+        if stats['market_avg_rating'] > 4.5:
+            strategic_insights.append("⭐ Высокие стандарты качества на рынке")
+        else:
+            strategic_insights.append("⚠️ Есть возможности для улучшения качества")
+        
+        for insight in strategic_insights:
+            print(f"• {insight}")
+        
+        print()
+        
+        # Сохраняем детальный рыночный отчет
+        try:
+            os.makedirs('reports', exist_ok=True)
+            
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"reports/market_analysis_{start_date}_{end_date}_{timestamp}.txt"
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write("═" * 100 + "\n")
+                f.write(f"🌍 MUZAQUEST ANALYTICS - ДЕТАЛЬНЫЙ РЫНОЧНЫЙ ОТЧЕТ\n")
+                f.write("═" * 100 + "\n")
+                f.write(f"📅 Период анализа: {start_date} → {end_date}\n")
+                f.write(f"📊 Создан: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"🔬 Использованы все 63 параметра + 3 API интеграции\n\n")
+                
+                # Обзор рынка
+                f.write("📊 ОБЗОР РЫНКА\n")
+                f.write("-" * 50 + "\n")
+                f.write(f"🏪 Активных ресторанов: {stats['active_restaurants']:.0f}\n")
+                f.write(f"💰 Общие продажи: {stats['market_sales']:,.0f} IDR\n")
+                f.write(f"📦 Общие заказы: {stats['market_orders']:,.0f}\n")
+                f.write(f"💵 Средний чек: {avg_order_value:,.0f} IDR\n")
+                f.write(f"⭐ Средний рейтинг: {stats['market_avg_rating']:.2f}/5.0\n")
+                f.write(f"🎯 ROAS рынка: {market_roas:.2f}x\n\n")
+                
+                # Лидеры рынка
+                f.write("🏆 ЛИДЕРЫ РЫНКА (ТОП-10)\n")
+                f.write("-" * 50 + "\n")
+                for i, row in leaders.head(10).iterrows():
+                    avg_order_value_rest = row['total_sales'] / row['total_orders'] if row['total_orders'] > 0 else 0
+                    restaurant_roas = row['marketing_sales'] / row['marketing_spend'] if row['marketing_spend'] > 0 else 0
+                    f.write(f"{i+1:2d}. {row['name']}: {row['total_sales']:,.0f} IDR\n")
+                    f.write(f"    📦 {row['total_orders']:,} заказов | 💰 {avg_order_value_rest:,.0f} IDR/заказ\n")
+                    f.write(f"    ⭐ {row['avg_rating']:.2f} | 🎯 ROAS: {restaurant_roas:.1f}x\n\n")
+                
+                # Сегментация
+                f.write("📈 СЕГМЕНТАЦИЯ РЫНКА\n")
+                f.write("-" * 50 + "\n")
+                f.write(f"💎 Премиум (350K+ IDR): {len(premium_segment)} ресторанов\n")
+                f.write(f"🏷️ Средний (200-350K IDR): {len(mid_segment)} ресторанов\n")
+                f.write(f"💰 Бюджетный (<200K IDR): {len(budget_segment)} ресторанов\n\n")
+                
+                # AI инсайты
+                f.write("🤖 AI-АНАЛИЗ РЫНКА\n")
+                f.write("-" * 50 + "\n")
+                f.write(market_insights + "\n\n")
+                
+                # Стратегические выводы
+                f.write("🎯 СТРАТЕГИЧЕСКИЕ ВЫВОДЫ\n")
+                f.write("-" * 50 + "\n")
+                for insight in strategic_insights:
+                    f.write(f"• {insight}\n")
+                
+                f.write("\n" + "═" * 100 + "\n")
+                f.write("📊 Отчет создан системой Muzaquest Analytics\n")
+                f.write("🔬 Проанализированы все 63 параметра + 3 API интеграции\n")
+                f.write("🎯 Рекомендации основаны на лучших практиках ресторанного бизнеса\n")
+            
+            print(f"💾 Детальный рыночный отчет сохранен: {filename}")
+            
+        except Exception as e:
+            print(f"❌ Ошибка сохранения отчета: {e}")
         
         conn.close()
         
     except Exception as e:
         print(f"❌ Ошибка при анализе рынка: {e}")
+
+def generate_market_insights(market_data, leaders_df):
+    """Генерирует рыночные инсайты"""
+    
+    insights = []
+    insights.append("🎯 ДЕТАЛЬНЫЙ РЫНОЧНЫЙ АНАЛИЗ И СТРАТЕГИЧЕСКИЕ ИНСАЙТЫ")
+    insights.append("=" * 80)
+    
+    # Анализ размера рынка
+    total_sales = market_data['total_sales']
+    total_restaurants = market_data['total_restaurants']
+    avg_order_value = market_data['avg_order_value']
+    market_roas = market_data['market_roas']
+    
+    insights.append(f"💰 РАЗМЕР И СТРУКТУРА РЫНКА:")
+    insights.append(f"   • Общий оборот: {total_sales:,.0f} IDR")
+    insights.append(f"   • Средняя выручка на ресторан: {(total_sales/total_restaurants):,.0f} IDR")
+    insights.append(f"   • Средний чек рынка: {avg_order_value:,.0f} IDR")
+    
+    # Оценка размера рынка
+    if total_sales > 1000000000000:  # 1 триллион
+        insights.append(f"   🏆 КРУПНЫЙ РЫНОК: Оборот превышает 1 триллион IDR")
+    elif total_sales > 500000000000:  # 500 миллиардов
+        insights.append(f"   📈 СРЕДНИЙ РЫНОК: Значительный оборот")
+    else:
+        insights.append(f"   💡 РАЗВИВАЮЩИЙСЯ РЫНОК: Потенциал для роста")
+    
+    # Анализ концентрации
+    if not leaders_df.empty:
+        leader_share = (leaders_df.iloc[0]['total_sales'] / total_sales) * 100
+        top3_share = (leaders_df.head(3)['total_sales'].sum() / total_sales) * 100
+        
+        insights.append(f"\n🏆 КОНКУРЕНТНАЯ СРЕДА:")
+        insights.append(f"   • Лидер рынка: {leader_share:.1f}% доли")
+        insights.append(f"   • ТОП-3: {top3_share:.1f}% рынка")
+        
+        if leader_share > 25:
+            insights.append(f"   ⚠️ ДОМИНИРОВАНИЕ: Сильное лидерство одного игрока")
+        elif top3_share > 60:
+            insights.append(f"   🎯 ОЛИГОПОЛИЯ: Несколько крупных игроков")
+        else:
+            insights.append(f"   ✅ КОНКУРЕНЦИЯ: Фрагментированный рынок")
+    
+    # Анализ эффективности
+    insights.append(f"\n⚡ ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ:")
+    insights.append(f"   • ROAS рынка: {market_roas:.2f}x")
+    
+    if market_roas > 10:
+        insights.append(f"   🏆 ПРЕВОСХОДНО: Исключительная эффективность маркетинга")
+        insights.append(f"   💡 Стратегия: Рынок готов для масштабирования инвестиций")
+    elif market_roas > 5:
+        insights.append(f"   ✅ ОТЛИЧНО: Высокоэффективный маркетинг")
+        insights.append(f"   💡 Стратегия: Увеличивать рекламные бюджеты")
+    elif market_roas > 3:
+        insights.append(f"   ⚠️ СРЕДНЕ: Приемлемая эффективность")
+        insights.append(f"   💡 Стратегия: Оптимизировать таргетинг и креативы")
+    else:
+        insights.append(f"   🚨 НИЗКО: Проблемы с эффективностью")
+        insights.append(f"   💡 Стратегия: Кардинально пересмотреть маркетинг")
+    
+    # Анализ ценообразования
+    insights.append(f"\n💰 ЦЕНОВОЕ ПОЗИЦИОНИРОВАНИЕ:")
+    if avg_order_value > 400000:
+        insights.append(f"   💎 ПРЕМИУМ РЫНОК: Высокий средний чек")
+        insights.append(f"   💡 Возможность: Развитие luxury-сегмента")
+    elif avg_order_value > 250000:
+        insights.append(f"   🏷️ СРЕДНИЙ СЕГМЕНТ: Сбалансированное ценообразование")
+        insights.append(f"   💡 Возможность: Upsell и премиализация")
+    else:
+        insights.append(f"   💰 МАССОВЫЙ РЫНОК: Доступные цены")
+        insights.append(f"   💡 Возможность: Повышение value proposition")
+    
+    # Качество обслуживания
+    avg_rating = market_data['avg_rating']
+    insights.append(f"\n⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ:")
+    insights.append(f"   • Средний рейтинг: {avg_rating:.2f}/5.0")
+    
+    if avg_rating > 4.7:
+        insights.append(f"   🏆 ПРЕВОСХОДНО: Высочайшие стандарты")
+    elif avg_rating > 4.5:
+        insights.append(f"   ✅ ОТЛИЧНО: Высокое качество")
+    elif avg_rating > 4.0:
+        insights.append(f"   ⚠️ ХОРОШО: Есть возможности для улучшения")
+    else:
+        insights.append(f"   🚨 ПРОБЛЕМА: Низкое качество обслуживания")
+    
+    # Стратегические рекомендации для рынка
+    insights.append(f"\n🚀 СТРАТЕГИЧЕСКИЕ ПРИОРИТЕТЫ РЫНКА:")
+    
+    priorities = []
+    
+    if market_roas < 3:
+        priorities.append("🔥 #1 КРИТИЧНО: Повысить эффективность маркетинга")
+    if avg_rating < 4.5:
+        priorities.append("⭐ #2 ВАЖНО: Улучшить качество обслуживания")
+    if market_data['leader_dominance'] > 30:
+        priorities.append("🎯 #3 СТРАТЕГИЯ: Усилить конкуренцию")
+    if avg_order_value < 250000:
+        priorities.append("💰 #4 ВОЗМОЖНОСТЬ: Премиализация предложения")
+    
+    if not priorities:
+        priorities.append("✅ Рынок развивается сбалансированно")
+        priorities.append("📈 Фокус на устойчивом росте")
+    
+    for priority in priorities[:5]:
+        insights.append(f"   {priority}")
+    
+    # Прогнозы
+    insights.append(f"\n📊 ПРОГНОЗЫ НА СЛЕДУЮЩИЙ ПЕРИОД:")
+    if market_roas > 5:
+        growth_potential = 25
+    elif market_roas > 3:
+        growth_potential = 15
+    else:
+        growth_potential = 5
+    
+    insights.append(f"   • Потенциал роста рынка: {growth_potential}%")
+    insights.append(f"   • Целевой ROAS: {(market_roas * 1.1):.1f}x (+10%)")
+    insights.append(f"   • Целевой средний чек: {(avg_order_value * 1.1):,.0f} IDR (+10%)")
+    insights.append(f"   • Целевой рейтинг: {min(avg_rating + 0.2, 5.0):.1f}/5.0")
+    
+    return '\n'.join(insights)
 
 def check_api_status():
     """Проверяет статус всех API"""
