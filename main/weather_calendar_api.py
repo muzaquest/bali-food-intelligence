@@ -54,15 +54,21 @@ class WeatherCalendarAPI:
             dt = datetime.strptime(date, '%Y-%m-%d')
             timestamp = int(dt.timestamp())
             
-            # Запрос к OpenWeatherMap Historical API
-            url = f"http://api.openweathermap.org/data/2.5/onecall/timemachine"
-            params = {
-                'lat': self.bali_coords['lat'],
-                'lon': self.bali_coords['lon'],
-                'dt': timestamp,
-                'appid': self.weather_api_key,
-                'units': 'metric'
-            }
+            # Если дата в пределах последних 5 дней - используем текущий API
+            days_ago = (datetime.now() - dt).days
+            
+            if days_ago <= 5:
+                # Используем текущий API для недавних дат
+                url = f"http://api.openweathermap.org/data/2.5/weather"
+                params = {
+                    'lat': self.bali_coords['lat'],
+                    'lon': self.bali_coords['lon'],
+                    'appid': self.weather_api_key,
+                    'units': 'metric'
+                }
+            else:
+                # Для старых дат - вызываем fallback сразу
+                return self._get_simulated_weather(date)
             
             response = requests.get(url, params=params, timeout=10)
             
@@ -124,17 +130,37 @@ class WeatherCalendarAPI:
     def _parse_weather_data(self, data: Dict) -> Dict[str, Any]:
         """Парсит данные погоды из API ответа"""
         
-        current = data.get('current', {})
+        # Для текущего API структура отличается
+        if 'current' in data:
+            # Historical API format
+            current = data.get('current', {})
+            weather_data = {
+                'temperature_celsius': current.get('temp', 28.0),
+                'humidity_percent': current.get('humidity', 75.0),
+                'precipitation_mm': current.get('rain', {}).get('1h', 0.0),
+                'weather_condition': self._translate_weather_condition(current.get('weather', [{}])[0].get('main', 'Clear')),
+                'wind_speed_kmh': current.get('wind_speed', 0) * 3.6,
+                'visibility_km': current.get('visibility', 10000) / 1000,
+                'pressure_hpa': current.get('pressure', 1013)
+            }
+        else:
+            # Current weather API format
+            main = data.get('main', {})
+            weather = data.get('weather', [{}])[0]
+            wind = data.get('wind', {})
+            rain = data.get('rain', {})
+            
+            weather_data = {
+                'temperature_celsius': main.get('temp', 28.0),
+                'humidity_percent': main.get('humidity', 75.0),
+                'precipitation_mm': rain.get('1h', 0.0),
+                'weather_condition': self._translate_weather_condition(weather.get('main', 'Clear')),
+                'wind_speed_kmh': wind.get('speed', 0) * 3.6,  # м/с в км/ч
+                'visibility_km': data.get('visibility', 10000) / 1000,  # м в км
+                'pressure_hpa': main.get('pressure', 1013)
+            }
         
-        return {
-            'temperature_celsius': current.get('temp', 28.0),
-            'humidity_percent': current.get('humidity', 75.0),
-            'precipitation_mm': current.get('rain', {}).get('1h', 0.0),
-            'weather_condition': self._translate_weather_condition(current.get('weather', [{}])[0].get('main', 'Clear')),
-            'wind_speed_kmh': current.get('wind_speed', 0) * 3.6,  # м/с в км/ч
-            'visibility_km': current.get('visibility', 10000) / 1000,  # м в км
-            'pressure_hpa': current.get('pressure', 1013)
-        }
+        return weather_data
     
     def _parse_holiday_data(self, data: Dict) -> List[Dict[str, Any]]:
         """Парсит данные праздников из API ответа"""
