@@ -570,11 +570,15 @@ def main():
         """
     )
     
-    parser.add_argument('command', choices=['list', 'report', 'restaurant', 'quick', 'market', 'validate', 'test', 'update-weather', 'check-apis'],
+    parser.add_argument('command', choices=['list', 'report', 'restaurant', 'quick', 'market', 'compare', 'validate', 'test', 'update-weather', 'check-apis'],
                        help='Команда для выполнения')
     parser.add_argument('restaurant', nargs='?', help='Название ресторана')
     parser.add_argument('--start', help='Дата начала периода (YYYY-MM-DD)')
     parser.add_argument('--end', help='Дата окончания периода (YYYY-MM-DD)')
+    parser.add_argument('--period1-start', help='Начало первого периода для сравнения (YYYY-MM-DD)')
+    parser.add_argument('--period1-end', help='Конец первого периода для сравнения (YYYY-MM-DD)')
+    parser.add_argument('--period2-start', help='Начало второго периода для сравнения (YYYY-MM-DD)')
+    parser.add_argument('--period2-end', help='Конец второго периода для сравнения (YYYY-MM-DD)')
     
     if len(sys.argv) == 1:
         parser.print_help()
@@ -613,6 +617,47 @@ def main():
             
         elif args.command == 'market':
             generate_market_overview()
+            
+        elif args.command == 'compare':
+            # Сравнение двух периодов
+            period1_start = getattr(args, 'period1_start', None)
+            period1_end = getattr(args, 'period1_end', None)
+            period2_start = getattr(args, 'period2_start', None)
+            period2_end = getattr(args, 'period2_end', None)
+            
+            if not period1_start or not period1_end or not period2_start or not period2_end:
+                print("❌ Для сравнения необходимо указать все даты:")
+                print("   python3 main.py compare --period1-start YYYY-MM-DD --period1-end YYYY-MM-DD --period2-start YYYY-MM-DD --period2-end YYYY-MM-DD")
+                return
+            
+            from main.period_comparison_analyzer import PeriodComparisonAnalyzer
+            analyzer = PeriodComparisonAnalyzer()
+            
+            print("🔬 СИСТЕМА СРАВНИТЕЛЬНОГО АНАЛИЗА ПЕРИОДОВ")
+            print("=" * 50)
+            
+            report = analyzer.compare_periods(
+                period1_start, period1_end,
+                period2_start, period2_end
+            )
+            
+            print(report)
+            
+            # Сохраняем отчет
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"reports/period_comparison_{timestamp}.txt"
+            
+            try:
+                import os
+                os.makedirs('reports', exist_ok=True)
+                
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(report)
+                
+                print(f"💾 Сравнительный анализ сохранен в файл: {filename}")
+                
+            except Exception as e:
+                print(f"⚠️ Не удалось сохранить отчет в файл: {e}")
             
         elif args.command == 'validate':
             validate_system()
