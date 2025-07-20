@@ -138,6 +138,11 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # mypy
 .mypy_cache/
 .dmypy.json
