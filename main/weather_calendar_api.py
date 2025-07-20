@@ -18,6 +18,11 @@ class WeatherCalendarAPI:
     def __init__(self):
         # API ключи из переменных окружения
         import os
+        from dotenv import load_dotenv
+        
+        # Загружаем переменные из .env файла
+        load_dotenv()
+        
         self.weather_api_key = os.getenv('WEATHER_API_KEY')
         self.calendar_api_key = os.getenv('CALENDAR_API_KEY')
         

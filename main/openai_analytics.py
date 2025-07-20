@@ -19,11 +19,15 @@ class OpenAIAnalytics:
     """Интеграция с OpenAI для углубленного анализа ресторанов"""
     
     def __init__(self):
+        # Загружаем переменные из .env файла
+        from dotenv import load_dotenv
+        load_dotenv()
+        
         self.api_key = os.getenv('OPENAI_API_KEY')
         self.model = "gpt-4"  # Можно изменить на gpt-3.5-turbo для экономии
         
         if self.api_key and HAS_OPENAI:
-            openai.api_key = self.api_key
+            self.client = openai.OpenAI(api_key=self.api_key)
             self.enabled = True
         else:
             self.enabled = False
@@ -41,7 +45,7 @@ class OpenAIAnalytics:
             prompt = self._prepare_analysis_prompt(restaurant_data)
             
             # Запрос к OpenAI
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
@@ -93,7 +97,7 @@ class OpenAIAnalytics:
             4. Стратегии обгона лидеров
             """
             
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
@@ -141,7 +145,7 @@ class OpenAIAnalytics:
             4. Ожидаемый результат
             """
             
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
@@ -191,7 +195,7 @@ class OpenAIAnalytics:
             4. Рекомендации по подготовке
             """
             
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {
