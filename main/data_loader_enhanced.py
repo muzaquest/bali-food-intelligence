@@ -12,7 +12,10 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import requests
 import json
-from config import DATABASE_PATH
+try:
+    from config import DATABASE_PATH
+except ImportError:
+    DATABASE_PATH = "data/database.sqlite"
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +25,7 @@ GRAB_FIELD_MAPPING = {
     'stat_date': 'date',
     'sales': 'total_sales',
     'orders': 'orders',
-    'rating': 'rating',
+    'customer_rating': 'rating',
     
     # Реклама и маркетинг
     'ads_sales': 'ads_sales',
@@ -63,7 +66,7 @@ GOJEK_FIELD_MAPPING = {
     'stat_date': 'date',
     'sales': 'total_sales',
     'orders': 'orders',
-    'rating': 'rating',
+    'customer_rating': 'rating',
     
     # Временные метрики
     'accepting_time': 'accepting_time_minutes',

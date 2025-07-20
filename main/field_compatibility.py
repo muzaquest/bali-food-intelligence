@@ -16,7 +16,7 @@ FIELD_COMPATIBILITY_MAP = {
     'restaurant_name': 'restaurant_name',
     'total_sales': 'total_sales',
     'orders': 'orders',
-    'rating': 'rating',
+    'rating': 'customer_rating',
     'platform': 'platform',
     
     # Временные поля gojek
@@ -93,11 +93,21 @@ def ensure_field_compatibility(df: pd.DataFrame) -> pd.DataFrame:
             elif new_field not in df_copy.columns and old_field in df_copy.columns:
                 df_copy[new_field] = df_copy[old_field]
         
-        # 5. Создаем базовые поля если их нет
+        # 5. Создаем поле rating из customer_rating если нужно
+        if 'rating' not in df_copy.columns and 'customer_rating' in df_copy.columns:
+            df_copy['rating'] = df_copy['customer_rating']
+            logger.info("✅ Создано поле 'rating' из 'customer_rating'")
+        elif 'customer_rating' not in df_copy.columns and 'rating' in df_copy.columns:
+            df_copy['customer_rating'] = df_copy['rating']
+            logger.info("✅ Создано поле 'customer_rating' из 'rating'")
+        
+        # 6. Создаем базовые поля если их нет
         essential_fields = {
             'cancel_rate': 0.05,  # 5% по умолчанию
             'ads_on': 0,          # Реклама выключена по умолчанию
             'roas': 0,            # Нет возврата от рекламы
+            'rating': 4.0,        # Средний рейтинг по умолчанию
+            'customer_rating': 4.0,  # Средний рейтинг по умолчанию
             'avg_order_value': lambda df: df['total_sales'] / (df['orders'] + 1e-8) if 'total_sales' in df.columns and 'orders' in df.columns else 50000
         }
         
@@ -109,7 +119,7 @@ def ensure_field_compatibility(df: pd.DataFrame) -> pd.DataFrame:
                     df_copy[field] = default_value
                 logger.info(f"✅ Создано поле '{field}' со значением по умолчанию")
         
-        # 6. Погодные поля (если нет, создаем нейтральные)
+        # 7. Погодные поля (если нет, создаем нейтральные)
         weather_defaults = {
             'temperature_celsius': 29,     # Средняя температура в Бали
             'humidity_percent': 75,        # Средняя влажность

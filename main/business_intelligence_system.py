@@ -11,8 +11,8 @@ import json
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from data_integration import load_data_with_all_features, prepare_features_with_all_enhancements
-from data_loader import get_restaurant_data
+from main.data_integration import load_data_with_all_features, prepare_features_with_all_enhancements
+from main.data_loader import get_restaurant_data
 
 logger = logging.getLogger(__name__)
 

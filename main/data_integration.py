@@ -7,7 +7,7 @@
 import pandas as pd
 import logging
 from typing import Optional
-from field_compatibility import ensure_field_compatibility
+from main.field_compatibility import ensure_field_compatibility
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def load_data_with_all_features(db_path: str = None) -> pd.DataFrame:
     
     # Попытка использовать улучшенную систему
     try:
-        from data_loader_enhanced import load_data_enhanced
+        from main.data_loader_enhanced import load_data_enhanced
         logger.info("🚀 ИСПОЛЬЗУЕМ УЛУЧШЕННУЮ СИСТЕМУ (все поля + погода + календарь)")
         
         enhanced_df = load_data_enhanced(db_path)
@@ -40,7 +40,7 @@ def load_data_with_all_features(db_path: str = None) -> pd.DataFrame:
     
     # Резерв: базовая система
     try:
-        from data_loader import load_data_for_training
+        from main.data_loader import load_data_for_training
         logger.info("🔄 Используем базовую систему как резерв")
         
         basic_df = load_data_for_training(db_path)
@@ -73,7 +73,7 @@ def prepare_features_with_all_enhancements(df: pd.DataFrame) -> pd.DataFrame:
     
     # Попытка использовать улучшенную систему feature engineering
     try:
-        from feature_engineering_enhanced import prepare_features_enhanced
+        from main.feature_engineering_enhanced import prepare_features_enhanced
         logger.info("🚀 ИСПОЛЬЗУЕМ УЛУЧШЕННЫЙ FEATURE ENGINEERING")
         
         enhanced_df = prepare_features_enhanced(df)
@@ -92,7 +92,7 @@ def prepare_features_with_all_enhancements(df: pd.DataFrame) -> pd.DataFrame:
     
     # Резерв: базовая система
     try:
-        from feature_engineering import prepare_features
+        from main.feature_engineering import prepare_features
         logger.info("🔄 Используем базовую систему feature engineering как резерв")
         
         basic_df = prepare_features(df)
@@ -124,28 +124,28 @@ def get_system_status() -> dict:
     
     # Проверка улучшенного загрузчика
     try:
-        from data_loader_enhanced import load_data_enhanced
+        from main.data_loader_enhanced import load_data_enhanced
         status['enhanced_loader_available'] = True
     except ImportError:
         pass
     
     # Проверка улучшенного feature engineering
     try:
-        from feature_engineering_enhanced import prepare_features_enhanced
+        from main.feature_engineering_enhanced import prepare_features_enhanced
         status['enhanced_features_available'] = True
     except ImportError:
         pass
     
     # Проверка базового загрузчика
     try:
-        from data_loader import load_data_for_training
+        from main.data_loader import load_data_for_training
         status['basic_loader_available'] = True
     except ImportError:
         pass
     
     # Проверка базового feature engineering
     try:
-        from feature_engineering import prepare_features
+        from main.feature_engineering import prepare_features
         status['basic_features_available'] = True
     except ImportError:
         pass

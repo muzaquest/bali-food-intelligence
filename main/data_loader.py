@@ -7,7 +7,10 @@ import numpy as np
 from datetime import datetime, timedelta
 import logging
 from typing import Optional, Tuple, List
-from config import DATABASE_PATH
+try:
+    from config import DATABASE_PATH
+except ImportError:
+    DATABASE_PATH = "data/database.sqlite"
 
 logger = logging.getLogger(__name__)
 
