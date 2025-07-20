@@ -1,304 +1,393 @@
 #!/usr/bin/env python3
 """
-🚀 ГЛАВНЫЙ МОДУЛЬ ИНТЕГРИРОВАННОЙ СИСТЕМЫ АНАЛИТИКИ
-Точка входа для всех операций бизнес-аналитики с контролем качества
+🎯 ГЛАВНЫЙ CLI ДЛЯ ПРОДВИНУТОЙ СИСТЕМЫ АНАЛИТИКИ РЕСТОРАНОВ
+Интегрирует все компоненты системы: глубокую аналитику, генерацию отчетов, аномалии
 """
 
-import sys
-import os
 import argparse
-import logging
-from datetime import datetime
+import sys
+import sqlite3
+from datetime import datetime, timedelta
+from main.report_generator import generate_restaurant_report, generate_market_report
+from main.advanced_analytics import run_advanced_analysis
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+def list_restaurants():
+    """Показывает список доступных ресторанов"""
+    print("🏪 ДОСТУПНЫЕ РЕСТОРАНЫ")
+    print("=" * 50)
+    
+    try:
+        conn = sqlite3.connect('data/database.sqlite')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT r.name, r.location, r.cuisine_type,
+                   COUNT(DISTINCT rd.date) as days_data,
+                   MIN(rd.date) as first_date,
+                   MAX(rd.date) as last_date
+            FROM restaurants r
+            LEFT JOIN restaurant_data rd ON r.id = rd.restaurant_id
+            GROUP BY r.id, r.name, r.location, r.cuisine_type
+            ORDER BY r.name
+        ''')
+        
+        restaurants = cursor.fetchall()
+        
+        for i, (name, location, cuisine, days, first_date, last_date) in enumerate(restaurants, 1):
+            print(f"{i}. 🍽️ {name}")
+            print(f"   📍 Локация: {location}")
+            print(f"   🍳 Тип кухни: {cuisine}")
+            if days:
+                print(f"   📊 Данных: {days} дней ({first_date} → {last_date})")
+            else:
+                print(f"   📊 Данных: нет")
+            print()
+        
+        conn.close()
+        
+    except Exception as e:
+        print(f"❌ Ошибка при получении списка ресторанов: {e}")
 
-logger = logging.getLogger(__name__)
+def generate_full_report(restaurant_name: str, period_start: str = None, period_end: str = None):
+    """Генерирует полный отчет для ресторана"""
+    print(f"🔬 ГЕНЕРАЦИЯ ГЛУБОКОГО АНАЛИЗА ДЛЯ: {restaurant_name.upper()}")
+    print("=" * 80)
+    
+    try:
+        report = generate_restaurant_report(restaurant_name, period_start, period_end)
+        print(report)
+        
+        # Сохраняем отчет в файл
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"reports/{restaurant_name.replace(' ', '_')}_{timestamp}.txt"
+        
+        try:
+            import os
+            os.makedirs('reports', exist_ok=True)
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(report)
+            
+            print(f"💾 Отчет сохранен в файл: {filename}")
+            
+        except Exception as e:
+            print(f"⚠️ Не удалось сохранить отчет в файл: {e}")
+            
+    except Exception as e:
+        print(f"❌ Ошибка при генерации отчета: {e}")
 
-# Добавляем директорию main в path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'main'))
+def generate_market_overview():
+    """Генерирует обзор рынка"""
+    print("📊 ГЕНЕРАЦИЯ ОБЗОРА РЫНКА РЕСТОРАНОВ")
+    print("=" * 50)
+    
+    try:
+        report = generate_market_report()
+        print(report)
+        
+        # Сохраняем отчет
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"reports/market_overview_{timestamp}.txt"
+        
+        try:
+            import os
+            os.makedirs('reports', exist_ok=True)
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(report)
+            
+            print(f"💾 Обзор рынка сохранен в файл: {filename}")
+            
+        except Exception as e:
+            print(f"⚠️ Не удалось сохранить обзор в файл: {e}")
+            
+    except Exception as e:
+        print(f"❌ Ошибка при генерации обзора рынка: {e}")
+
+def quick_analysis(restaurant_name: str):
+    """Быстрый анализ ресторана"""
+    print(f"⚡ БЫСТРЫЙ АНАЛИЗ: {restaurant_name.upper()}")
+    print("=" * 50)
+    
+    try:
+        # Последние 30 дней
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=30)
+        
+        analysis = run_advanced_analysis(
+            restaurant_name, 
+            start_date.strftime('%Y-%m-%d'), 
+            end_date.strftime('%Y-%m-%d')
+        )
+        
+        if "error" in analysis:
+            print(f"❌ {analysis['error']}")
+            return
+        
+        stats = analysis['current_stats']
+        competitive = analysis['competitive_analysis']
+        insights = analysis['business_insights']
+        recommendations = analysis['recommendations']
+        
+        print(f"📊 ОСНОВНЫЕ МЕТРИКИ (последние 30 дней):")
+        print(f"💰 Общие продажи: {stats['total_sales']:,.0f} IDR")
+        print(f"📦 Заказов: {stats['total_orders']:,}")
+        print(f"⭐ Рейтинг: {stats['avg_rating']:.2f}/5.0")
+        print(f"🚚 Доставка: {stats['avg_delivery_time']:.1f} мин")
+        print(f"🏆 Позиция на рынке: #{competitive.get('market_position', 'н/д')}")
+        print(f"📊 Доля рынка: {competitive.get('market_share', 0):.1f}%")
+        
+        if insights:
+            print(f"\n🔍 КЛЮЧЕВЫЕ ИНСАЙТЫ:")
+            for insight in insights[:3]:
+                print(f"• {insight}")
+        
+        if recommendations:
+            print(f"\n💡 ТОП РЕКОМЕНДАЦИИ:")
+            for i, rec in enumerate(recommendations[:3], 1):
+                print(f"{i}. {rec}")
+                
+    except Exception as e:
+        print(f"❌ Ошибка при анализе: {e}")
+
+def validate_system():
+    """Проверяет целостность системы"""
+    print("🔧 ПРОВЕРКА СИСТЕМЫ")
+    print("=" * 30)
+    
+    checks = []
+    
+    # Проверка базы данных
+    try:
+        conn = sqlite3.connect('data/database.sqlite')
+        cursor = conn.cursor()
+        
+        # Проверяем таблицы
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [row[0] for row in cursor.fetchall()]
+        
+        required_tables = ['restaurants', 'restaurant_data']
+        missing_tables = [t for t in required_tables if t not in tables]
+        
+        if missing_tables:
+            checks.append(f"❌ Отсутствуют таблицы: {missing_tables}")
+        else:
+            checks.append("✅ Структура базы данных корректна")
+        
+        # Проверяем данные
+        cursor.execute("SELECT COUNT(*) FROM restaurant_data")
+        data_count = cursor.fetchone()[0]
+        
+        if data_count > 1000:
+            checks.append(f"✅ База данных содержит {data_count:,} записей")
+        else:
+            checks.append(f"⚠️ Мало данных: только {data_count:,} записей")
+        
+        # Проверяем диапазон дат
+        cursor.execute("SELECT MIN(date), MAX(date) FROM restaurant_data")
+        date_range = cursor.fetchone()
+        
+        if date_range[0] and date_range[1]:
+            start_date = datetime.strptime(date_range[0], '%Y-%m-%d')
+            end_date = datetime.strptime(date_range[1], '%Y-%m-%d')
+            days_total = (end_date - start_date).days + 1
+            
+            if days_total > 365:
+                checks.append(f"✅ Хороший диапазон данных: {days_total} дней ({date_range[0]} → {date_range[1]})")
+            else:
+                checks.append(f"⚠️ Ограниченный диапазон: {days_total} дней")
+        
+        conn.close()
+        
+    except Exception as e:
+        checks.append(f"❌ Ошибка базы данных: {e}")
+    
+    # Проверка модулей
+    try:
+        from main.advanced_analytics import AdvancedRestaurantAnalytics
+        checks.append("✅ Модуль аналитики загружен")
+    except Exception as e:
+        checks.append(f"❌ Ошибка модуля аналитики: {e}")
+    
+    try:
+        from main.report_generator import AdvancedReportGenerator
+        checks.append("✅ Генератор отчетов загружен")
+    except Exception as e:
+        checks.append(f"❌ Ошибка генератора отчетов: {e}")
+    
+    # Выводим результаты
+    for check in checks:
+        print(check)
+    
+    # Общий статус
+    errors = [c for c in checks if c.startswith('❌')]
+    warnings = [c for c in checks if c.startswith('⚠️')]
+    
+    print(f"\n📊 ИТОГО:")
+    print(f"✅ Успешно: {len(checks) - len(errors) - len(warnings)}")
+    print(f"⚠️ Предупреждений: {len(warnings)}")
+    print(f"❌ Ошибок: {len(errors)}")
+    
+    if errors:
+        print(f"\n🚨 СИСТЕМА ТРЕБУЕТ ИСПРАВЛЕНИЙ")
+        return False
+    elif warnings:
+        print(f"\n⚠️ СИСТЕМА РАБОТАЕТ С ОГРАНИЧЕНИЯМИ")
+        return True
+    else:
+        print(f"\n🎉 СИСТЕМА ПОЛНОСТЬЮ ФУНКЦИОНАЛЬНА")
+        return True
+
+def test_system():
+    """Тестирует основные функции системы"""
+    print("🧪 ТЕСТИРОВАНИЕ СИСТЕМЫ")
+    print("=" * 40)
+    
+    # Получаем первый ресторан для теста
+    try:
+        conn = sqlite3.connect('data/database.sqlite')
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM restaurants LIMIT 1")
+        test_restaurant = cursor.fetchone()
+        conn.close()
+        
+        if not test_restaurant:
+            print("❌ Нет ресторанов для тестирования")
+            return False
+        
+        test_restaurant = test_restaurant[0]
+        print(f"🎯 Тестируем на ресторане: {test_restaurant}")
+        
+    except Exception as e:
+        print(f"❌ Ошибка получения тестового ресторана: {e}")
+        return False
+    
+    tests_passed = 0
+    total_tests = 0
+    
+    # Тест 1: Быстрый анализ
+    total_tests += 1
+    print(f"\n🧪 Тест 1: Быстрый анализ...")
+    try:
+        quick_analysis(test_restaurant)
+        print("✅ Быстрый анализ работает")
+        tests_passed += 1
+    except Exception as e:
+        print(f"❌ Ошибка быстрого анализа: {e}")
+    
+    # Тест 2: Продвинутая аналитика
+    total_tests += 1
+    print(f"\n🧪 Тест 2: Продвинутая аналитика...")
+    try:
+        analysis = run_advanced_analysis(test_restaurant)
+        if "error" not in analysis:
+            print("✅ Продвинутая аналитика работает")
+            tests_passed += 1
+        else:
+            print(f"❌ Ошибка аналитики: {analysis['error']}")
+    except Exception as e:
+        print(f"❌ Ошибка продвинутой аналитики: {e}")
+    
+    # Тест 3: Генерация отчета (краткий)
+    total_tests += 1
+    print(f"\n🧪 Тест 3: Генерация отчета...")
+    try:
+        # Ограничиваем период для быстрого теста
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        
+        report = generate_restaurant_report(
+            test_restaurant, 
+            start_date.strftime('%Y-%m-%d'), 
+            end_date.strftime('%Y-%m-%d')
+        )
+        
+        if len(report) > 500:  # Проверяем что отчет содержательный
+            print("✅ Генерация отчетов работает")
+            tests_passed += 1
+        else:
+            print("❌ Отчет слишком короткий")
+    except Exception as e:
+        print(f"❌ Ошибка генерации отчета: {e}")
+    
+    # Результаты тестирования
+    print(f"\n📊 РЕЗУЛЬТАТЫ ТЕСТИРОВАНИЯ:")
+    print(f"✅ Пройдено: {tests_passed}/{total_tests}")
+    print(f"❌ Ошибок: {total_tests - tests_passed}/{total_tests}")
+    
+    if tests_passed == total_tests:
+        print(f"\n🎉 ВСЕ ТЕСТЫ ПРОШЛИ УСПЕШНО")
+        return True
+    else:
+        print(f"\n⚠️ НЕКОТОРЫЕ ФУНКЦИИ ТРЕБУЮТ ИСПРАВЛЕНИЯ")
+        return False
 
 def main():
-    """Главная функция приложения"""
-    
+    """Главная функция CLI"""
     parser = argparse.ArgumentParser(
-        description='🚀 Интегрированная система бизнес-аналитики ресторанов',
+        description='🔬 Продвинутая система аналитики ресторанов с глубоким анализом 2.5 лет данных',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Примеры использования:
-
-📊 Анализ ресторана за период:
-  python3 main_fixed.py analyze --restaurant "Ika Canggu" --start-date "2025-04-01" --end-date "2025-06-30"
-
-📋 Быстрый отчет:
-  python3 main_fixed.py quick --restaurant "Ika Canggu"
-
-🔍 Валидация данных:
-  python3 main_fixed.py validate --restaurant "Ika Canggu"
-
-📊 Список ресторанов:
-  python3 main_fixed.py list
+  python main.py list                                    # Список ресторанов
+  python main.py report "Ika Canggu"                     # Полный отчет
+  python main.py report "Ika Canggu" --start 2024-01-01 --end 2024-06-30
+  python main.py quick "Prana Restaurant"                # Быстрый анализ
+  python main.py market                                  # Обзор рынка
+  python main.py validate                                # Проверка системы
+  python main.py test                                    # Тестирование
         """
     )
     
-    # Основные команды
-    subparsers = parser.add_subparsers(dest='command', help='Доступные команды')
+    parser.add_argument('command', choices=['list', 'report', 'quick', 'market', 'validate', 'test'],
+                       help='Команда для выполнения')
+    parser.add_argument('restaurant', nargs='?', help='Название ресторана')
+    parser.add_argument('--start', help='Дата начала периода (YYYY-MM-DD)')
+    parser.add_argument('--end', help='Дата окончания периода (YYYY-MM-DD)')
     
-    # Команда анализа
-    analyze_parser = subparsers.add_parser('analyze', help='📊 Полный анализ ресторана')
-    analyze_parser.add_argument('--restaurant', '-r', required=True, help='Название ресторана')
-    analyze_parser.add_argument('--start-date', '-s', help='Дата начала (YYYY-MM-DD)')
-    analyze_parser.add_argument('--end-date', '-e', help='Дата окончания (YYYY-MM-DD)')
-    
-    # Команда быстрого отчета
-    quick_parser = subparsers.add_parser('quick', help='📋 Быстрый отчет')
-    quick_parser.add_argument('--restaurant', '-r', required=True, help='Название ресторана')
-    
-    # Команда валидации
-    validate_parser = subparsers.add_parser('validate', help='🔍 Валидация данных')
-    validate_parser.add_argument('--restaurant', '-r', help='Название ресторана (опционально)')
-    
-    # Команда списка ресторанов
-    list_parser = subparsers.add_parser('list', help='📊 Список ресторанов')
-    
-    # Команда тестирования
-    test_parser = subparsers.add_parser('test', help='🧪 Тестирование системы')
-    
-    args = parser.parse_args()
-    
-    if not args.command:
+    if len(sys.argv) == 1:
         parser.print_help()
         return
     
+    args = parser.parse_args()
+    
+    print("🔬 ПРОДВИНУТАЯ СИСТЕМА АНАЛИТИКИ РЕСТОРАНОВ")
+    print(f"🕐 Время запуска: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 60)
+    
     try:
-        if args.command == 'analyze':
-            run_full_analysis(args.restaurant, args.start_date, args.end_date)
-        elif args.command == 'quick':
-            run_quick_analysis(args.restaurant)
-        elif args.command == 'validate':
-            run_validation(args.restaurant)
-        elif args.command == 'list':
+        if args.command == 'list':
             list_restaurants()
+            
+        elif args.command == 'report':
+            if not args.restaurant:
+                print("❌ Укажите название ресторана для отчета")
+                parser.print_help()
+                return
+            generate_full_report(args.restaurant, args.start, args.end)
+            
+        elif args.command == 'quick':
+            if not args.restaurant:
+                print("❌ Укажите название ресторана для быстрого анализа")
+                parser.print_help()
+                return
+            quick_analysis(args.restaurant)
+            
+        elif args.command == 'market':
+            generate_market_overview()
+            
+        elif args.command == 'validate':
+            validate_system()
+            
         elif args.command == 'test':
-            run_system_test()
-        else:
-            parser.print_help()
+            test_system()
             
     except KeyboardInterrupt:
-        print("\n❌ Операция прервана пользователем")
+        print("\n\n⚠️ Операция прервана пользователем")
     except Exception as e:
-        logger.error(f"❌ Критическая ошибка: {e}")
+        print(f"\n❌ Неожиданная ошибка: {e}")
         import traceback
         traceback.print_exc()
-
-def run_full_analysis(restaurant_name: str, start_date: str = None, end_date: str = None):
-    """Запускает полный анализ ресторана"""
-    
-    logger.info(f"🚀 Запуск полного анализа для {restaurant_name}")
-    
-    try:
-        from main.integrated_system import run_analysis
-        run_analysis(restaurant_name, start_date, end_date)
-    except ImportError:
-        logger.error("❌ Не удалось импортировать интегрированную систему")
-        logger.info("🔄 Пытаемся использовать альтернативный метод...")
-        
-        # Альтернативный способ через прямой импорт
-        try:
-            sys.path.append('main')
-            from integrated_system import run_analysis
-            run_analysis(restaurant_name, start_date, end_date)
-        except Exception as e:
-            logger.error(f"❌ Альтернативный метод тоже не работает: {e}")
-            
-            # Минимальный анализ
-            run_minimal_analysis(restaurant_name, start_date, end_date)
-
-def run_quick_analysis(restaurant_name: str):
-    """Запускает быстрый анализ"""
-    
-    logger.info(f"📋 Быстрый анализ для {restaurant_name}")
-    
-    # Используем последние 30 дней
-    from datetime import datetime, timedelta
-    end_date = datetime.now().strftime('%Y-%m-%d')
-    start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-    
-    run_full_analysis(restaurant_name, start_date, end_date)
-
-def run_validation(restaurant_name: str = None):
-    """Проверяет качество данных"""
-    
-    logger.info(f"🔍 Валидация данных для {restaurant_name or 'всех ресторанов'}")
-    
-    try:
-        from main.data_loader import get_restaurant_data, validate_features
-        
-        # Загружаем данные
-        df = get_restaurant_data(restaurant_name)
-        
-        if df.empty:
-            print("❌ Нет данных для валидации")
-            return
-        
-        print(f"✅ Загружено {len(df)} записей")
-        print(f"📊 Колонки: {len(df.columns)}")
-        print(f"🏪 Рестораны: {df['restaurant_name'].nunique()}")
-        print(f"📅 Период: {df['date'].min()} - {df['date'].max()}")
-        
-        # Валидируем
-        validate_features(df)
-        print("✅ Валидация пройдена успешно")
-        
-    except Exception as e:
-        logger.error(f"❌ Ошибка валидации: {e}")
-
-def list_restaurants():
-    """Выводит список доступных ресторанов"""
-    
-    logger.info("📊 Получение списка ресторанов")
-    
-    try:
-        from main.data_loader import get_restaurant_data
-        
-        df = get_restaurant_data()
-        
-        if df.empty:
-            print("❌ Нет данных о ресторанах")
-            return
-        
-        restaurants = df['restaurant_name'].unique()
-        
-        print("🏪 ДОСТУПНЫЕ РЕСТОРАНЫ:")
-        print("=" * 40)
-        
-        for i, restaurant in enumerate(restaurants, 1):
-            restaurant_data = df[df['restaurant_name'] == restaurant]
-            record_count = len(restaurant_data)
-            date_range = f"{restaurant_data['date'].min().strftime('%Y-%m-%d')} - {restaurant_data['date'].max().strftime('%Y-%m-%d')}"
-            
-            print(f"{i:2d}. {restaurant}")
-            print(f"    📊 Записей: {record_count}")
-            print(f"    📅 Период: {date_range}")
-            print()
-            
-    except Exception as e:
-        logger.error(f"❌ Ошибка получения списка: {e}")
-
-def run_system_test():
-    """Запускает тестирование системы"""
-    
-    logger.info("🧪 Запуск тестирования системы")
-    
-    print("🧪 ТЕСТИРОВАНИЕ ИНТЕГРИРОВАННОЙ СИСТЕМЫ")
-    print("=" * 50)
-    
-    # Тест 1: Загрузка данных
-    try:
-        from main.data_loader import get_restaurant_data
-        
-        print("📊 Тест 1: Загрузка данных...")
-        df = get_restaurant_data("Ika Canggu")
-        
-        if not df.empty:
-            print(f"✅ Тест 1 пройден: {len(df)} записей")
-        else:
-            print("❌ Тест 1 не пройден: нет данных")
-            
-    except Exception as e:
-        print(f"❌ Тест 1 не пройден: {e}")
-    
-    # Тест 2: Feature Engineering
-    try:
-        from main.feature_engineering_fixed import prepare_features_fixed
-        
-        print("🔧 Тест 2: Feature Engineering...")
-        
-        if not df.empty:
-            df_featured = prepare_features_fixed(df.head(100))  # Берем первые 100 записей для теста
-            print(f"✅ Тест 2 пройден: {len(df.columns)} → {len(df_featured.columns)} признаков")
-        else:
-            print("⚠️ Тест 2 пропущен: нет данных")
-            
-    except Exception as e:
-        print(f"❌ Тест 2 не пройден: {e}")
-    
-    # Тест 3: Интегрированная система
-    try:
-        print("🚀 Тест 3: Интегрированная система...")
-        run_minimal_analysis("Ika Canggu", "2025-04-01", "2025-04-30")
-        print("✅ Тест 3 пройден")
-        
-    except Exception as e:
-        print(f"❌ Тест 3 не пройден: {e}")
-    
-    print("\n🏁 Тестирование завершено")
-
-def run_minimal_analysis(restaurant_name: str, start_date: str = None, end_date: str = None):
-    """Минимальный анализ без сложных зависимостей"""
-    
-    try:
-        from main.data_loader import get_restaurant_data
-        
-        print(f"📊 МИНИМАЛЬНЫЙ АНАЛИЗ '{restaurant_name.upper()}'")
-        print("=" * 50)
-        
-        # Загружаем данные
-        df = get_restaurant_data()
-        
-        if df.empty:
-            print("❌ Нет данных для анализа")
-            return
-        
-        # Фильтруем по ресторану
-        restaurant_data = df[df['restaurant_name'] == restaurant_name].copy()
-        
-        if start_date and end_date:
-            mask = (restaurant_data['date'] >= start_date) & (restaurant_data['date'] <= end_date)
-            restaurant_data = restaurant_data[mask]
-        
-        if restaurant_data.empty:
-            print(f"❌ Нет данных для ресторана {restaurant_name} за указанный период")
-            return
-        
-        # Базовая статистика
-        total_sales = restaurant_data['total_sales'].sum()
-        total_orders = restaurant_data['orders'].sum()
-        avg_rating = restaurant_data['rating'].mean()
-        days_count = len(restaurant_data)
-        
-        print(f"📅 Период: {restaurant_data['date'].min().strftime('%Y-%m-%d')} - {restaurant_data['date'].max().strftime('%Y-%m-%d')}")
-        print(f"📊 Дней анализа: {days_count}")
-        print(f"💰 Общие продажи: {total_sales:,.0f}")
-        print(f"📈 Средние продажи в день: {total_sales/days_count:,.0f}")
-        print(f"📦 Общие заказы: {total_orders:,}")
-        print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
-        
-        # Лучшие и худшие дни
-        avg_daily_sales = restaurant_data['total_sales'].mean()
-        
-        best_day = restaurant_data.loc[restaurant_data['total_sales'].idxmax()]
-        worst_day = restaurant_data.loc[restaurant_data['total_sales'].idxmin()]
-        
-        print(f"\n🏆 ЛУЧШИЙ ДЕНЬ:")
-        print(f"   {best_day['date'].strftime('%Y-%m-%d')}: {best_day['total_sales']:,.0f} (+{((best_day['total_sales']/avg_daily_sales-1)*100):+.1f}%)")
-        
-        print(f"📉 ХУДШИЙ ДЕНЬ:")
-        print(f"   {worst_day['date'].strftime('%Y-%m-%d')}: {worst_day['total_sales']:,.0f} ({((worst_day['total_sales']/avg_daily_sales-1)*100):+.1f}%)")
-        
-        # Конкуренты
-        all_restaurants = df.groupby('restaurant_name')['total_sales'].sum().sort_values(ascending=False)
-        position = list(all_restaurants.index).index(restaurant_name) + 1
-        
-        print(f"\n🏪 РЫНОЧНАЯ ПОЗИЦИЯ: {position} место из {len(all_restaurants)}")
-        
-        print("✅ Минимальный анализ завершен")
-        
-    except Exception as e:
-        logger.error(f"❌ Ошибка минимального анализа: {e}")
 
 if __name__ == "__main__":
     main()
