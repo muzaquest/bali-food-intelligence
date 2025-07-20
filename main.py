@@ -393,6 +393,100 @@ def update_weather_data(start_date: str = None, end_date: str = None):
         import traceback
         traceback.print_exc()
 
+def check_api_status():
+    """Проверяет статус всех API ключей и их работоспособность"""
+    print("🔑 ПРОВЕРКА СТАТУСА API КЛЮЧЕЙ")
+    print("=" * 60)
+    
+    import os
+    
+    # Проверяем переменные окружения
+    apis = {
+        'WEATHER_API_KEY': os.getenv('WEATHER_API_KEY'),
+        'CALENDAR_API_KEY': os.getenv('CALENDAR_API_KEY'), 
+        'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY')
+    }
+    
+    print("📋 СТАТУС ПЕРЕМЕННЫХ ОКРУЖЕНИЯ:")
+    for api_name, api_key in apis.items():
+        status = "✅ НАЙДЕН" if api_key else "❌ НЕ НАЙДЕН"
+        masked_key = f"{api_key[:8]}...{api_key[-4:]}" if api_key else "None"
+        print(f"  {api_name}: {status} ({masked_key})")
+    
+    print("\n🧪 ТЕСТИРОВАНИЕ API:")
+    
+    # Тест Weather API
+    try:
+        from main.weather_calendar_api import WeatherCalendarAPI
+        weather_api = WeatherCalendarAPI()
+        
+        if weather_api.weather_api_key:
+            print("🌤️  Weather API: Попытка получения данных...")
+            weather = weather_api.get_historical_weather('2025-05-15')
+            print(f"   ✅ Успешно: {weather['weather_condition']}, {weather['temperature_celsius']:.1f}°C")
+        else:
+            print("🌤️  Weather API: ❌ Ключ не настроен - используются симулированные данные")
+            
+        if weather_api.calendar_api_key:
+            print("📅 Calendar API: Попытка получения праздников...")
+            holidays = weather_api.get_holidays(2025)
+            print(f"   ✅ Успешно: найдено {len(holidays)} праздников")
+        else:
+            print("📅 Calendar API: ❌ Ключ не настроен - используются базовые праздники")
+            
+    except Exception as e:
+        print(f"❌ Ошибка проверки Weather/Calendar API: {e}")
+    
+    # Тест OpenAI API
+    try:
+        from main.openai_analytics import OpenAIAnalytics
+        openai_api = OpenAIAnalytics()
+        
+        if openai_api.enabled:
+            print("🤖 OpenAI API: Попытка генерации инсайтов...")
+            test_data = {
+                'total_sales': 1000000,
+                'roas': 12.5,
+                'avg_rating': 4.8,
+                'avg_delivery_time': 28
+            }
+            insights = openai_api.generate_business_insights(test_data)
+            print("   ✅ Успешно: AI анализ работает")
+        else:
+            print("🤖 OpenAI API: ❌ Ключ не настроен - используются стандартные инсайты")
+            
+    except Exception as e:
+        print(f"❌ Ошибка проверки OpenAI API: {e}")
+    
+    print("\n💡 ИНСТРУКЦИИ ПО НАСТРОЙКЕ:")
+    
+    if not apis['WEATHER_API_KEY']:
+        print("🌤️  Weather API (OpenWeatherMap):")
+        print("   export WEATHER_API_KEY='your_openweathermap_key'")
+        
+    if not apis['CALENDAR_API_KEY']: 
+        print("📅 Calendar API (Calendarific):")
+        print("   export CALENDAR_API_KEY='your_calendarific_key'")
+        
+    if not apis['OPENAI_API_KEY']:
+        print("🤖 OpenAI API:")
+        print("   export OPENAI_API_KEY='your_openai_key'")
+    
+    print("\n📚 Подробная инструкция: см. WEATHER_API_SETUP.md")
+    
+    # Показываем текущие возможности
+    enabled_apis = sum(1 for key in apis.values() if key)
+    total_apis = len(apis)
+    
+    print(f"\n📊 ИТОГО: {enabled_apis}/{total_apis} API настроено")
+    
+    if enabled_apis == 0:
+        print("⚠️  Система работает БЕЗ внешних API (используются улучшенные симуляции)")
+    elif enabled_apis == total_apis:
+        print("🎉 ВСЕ API НАСТРОЕНЫ - максимальная точность анализа!")
+    else:
+        print("🔧 Частичная настройка - добавьте остальные API для полной функциональности")
+
 def main():
     """Главная функция CLI"""
     parser = argparse.ArgumentParser(
@@ -410,7 +504,7 @@ def main():
         """
     )
     
-    parser.add_argument('command', choices=['list', 'report', 'quick', 'market', 'validate', 'test', 'update-weather'],
+    parser.add_argument('command', choices=['list', 'report', 'quick', 'market', 'validate', 'test', 'update-weather', 'check-apis'],
                        help='Команда для выполнения')
     parser.add_argument('restaurant', nargs='?', help='Название ресторана')
     parser.add_argument('--start', help='Дата начала периода (YYYY-MM-DD)')
@@ -455,6 +549,9 @@ def main():
             
         elif args.command == 'update-weather':
             update_weather_data(args.start, args.end)
+            
+        elif args.command == 'check-apis':
+            check_api_status()
             
     except KeyboardInterrupt:
         print("\n\n⚠️ Операция прервана пользователем")

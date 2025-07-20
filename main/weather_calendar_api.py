@@ -16,9 +16,10 @@ class WeatherCalendarAPI:
     """Интеграция с API погоды и календаря праздников"""
     
     def __init__(self):
-        # API ключи (должны быть в переменных окружения или конфиге)
-        self.weather_api_key = None  # OpenWeatherMap API key
-        self.calendar_api_key = None  # Calendarific API key
+        # API ключи из переменных окружения
+        import os
+        self.weather_api_key = os.getenv('WEATHER_API_KEY')
+        self.calendar_api_key = os.getenv('CALENDAR_API_KEY')
         
         # Координаты Бали для погодных запросов
         self.bali_coords = {
