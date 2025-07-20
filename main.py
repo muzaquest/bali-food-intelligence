@@ -17,28 +17,32 @@ def list_restaurants():
     print("=" * 50)
     
     try:
-        conn = sqlite3.connect('data/database.sqlite')
+        # Используем реальную базу данных
+        conn = sqlite3.connect('database.sqlite')
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT r.name, r.location, r.cuisine_type,
-                   COUNT(DISTINCT rd.date) as days_data,
-                   MIN(rd.date) as first_date,
-                   MAX(rd.date) as last_date
+            SELECT r.name,
+                   COUNT(DISTINCT COALESCE(g.stat_date, gj.stat_date)) as days_data,
+                   MIN(COALESCE(g.stat_date, gj.stat_date)) as first_date,
+                   MAX(COALESCE(g.stat_date, gj.stat_date)) as last_date,
+                   COUNT(g.id) as grab_records,
+                   COUNT(gj.id) as gojek_records
             FROM restaurants r
-            LEFT JOIN restaurant_data rd ON r.id = rd.restaurant_id
-            GROUP BY r.id, r.name, r.location, r.cuisine_type
+            LEFT JOIN grab_stats g ON r.id = g.restaurant_id
+            LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id
+            WHERE g.id IS NOT NULL OR gj.id IS NOT NULL
+            GROUP BY r.id, r.name
             ORDER BY r.name
         ''')
         
         restaurants = cursor.fetchall()
         
-        for i, (name, location, cuisine, days, first_date, last_date) in enumerate(restaurants, 1):
+        for i, (name, days, first_date, last_date, grab_records, gojek_records) in enumerate(restaurants, 1):
             print(f"{i}. 🍽️ {name}")
-            print(f"   📍 Локация: {location}")
-            print(f"   🍳 Тип кухни: {cuisine}")
             if days:
                 print(f"   📊 Данных: {days} дней ({first_date} → {last_date})")
+                print(f"   📈 Grab: {grab_records} записей | Gojek: {gojek_records} записей")
             else:
                 print(f"   📊 Данных: нет")
             print()
