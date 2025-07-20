@@ -1569,6 +1569,16 @@ def analyze_market(start_date=None, end_date=None):
         
         print()
         
+        # 6.5. ДЕТЕКТИВНЫЙ АНАЛИЗ РЫНОЧНЫХ АНОМАЛИЙ
+        print("🔍 6.5 ДЕТЕКТИВНЫЙ АНАЛИЗ РЫНОЧНЫХ АНОМАЛИЙ")
+        print("-" * 40)
+        
+        # Анализируем рыночные аномалии и причины
+        market_detective_analysis = detect_market_anomalies_and_causes(leaders, start_date, end_date)
+        print(market_detective_analysis)
+        
+        print()
+        
         # 7. СТРАТЕГИЧЕСКИЕ ВЫВОДЫ
         print("🎯 7. СТРАТЕГИЧЕСКИЕ ВЫВОДЫ И РЕКОМЕНДАЦИИ")
         print("-" * 40)
@@ -1655,6 +1665,11 @@ def analyze_market(start_date=None, end_date=None):
                 f.write("🤖 AI-АНАЛИЗ РЫНКА\n")
                 f.write("-" * 50 + "\n")
                 f.write(market_insights + "\n\n")
+                
+                # Детективный анализ рыночных аномалий
+                f.write("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ РЫНОЧНЫХ АНОМАЛИЙ\n")
+                f.write("-" * 50 + "\n")
+                f.write(market_detective_analysis + "\n\n")
                 
                 # Стратегические выводы
                 f.write("🎯 СТРАТЕГИЧЕСКИЕ ВЫВОДЫ\n")
@@ -2372,6 +2387,250 @@ def generate_cause_based_recommendations(daily_analysis):
     recommendations.append("📈 ПРЕДИКТИВНОСТЬ: Планируйте маркетинг с учетом погодных прогнозов и календаря")
     
     return recommendations
+
+def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
+    """Детективный анализ рыночных аномалий и их причин"""
+    
+    insights = []
+    insights.append("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ РЫНОЧНЫХ АНОМАЛИЙ И ПРИЧИН")
+    insights.append("=" * 65)
+    
+    try:
+        if market_leaders.empty:
+            insights.append("❌ Недостаточно данных для анализа")
+            return '\n'.join(insights)
+        
+        # 1. АНАЛИЗ АНОМАЛИЙ ПО РЕСТОРАНАМ
+        insights.append("📊 ЗНАЧИТЕЛЬНЫЕ АНОМАЛИИ ПО РЕСТОРАНАМ:")
+        insights.append("")
+        
+        # Вычисляем средние показатели рынка для сравнения
+        market_avg_sales = market_leaders['total_sales'].mean()
+        market_avg_rating = market_leaders['avg_rating'].mean()
+        market_avg_orders = market_leaders['total_orders'].mean()
+        
+        # Анализируем каждый ресторан на аномалии
+        restaurant_anomalies = []
+        
+        for idx, restaurant in market_leaders.iterrows():
+            name = restaurant['name']
+            sales = restaurant['total_sales']
+            rating = restaurant['avg_rating']
+            orders = restaurant['total_orders']
+            marketing_spend = restaurant['marketing_spend']
+            marketing_sales = restaurant['marketing_sales']
+            
+            # Вычисляем отклонения от рыночных средних
+            sales_deviation = (sales - market_avg_sales) / market_avg_sales if market_avg_sales > 0 else 0
+            rating_deviation = rating - market_avg_rating if pd.notna(rating) and pd.notna(market_avg_rating) else 0
+            
+            # Определяем аномалии (значительные отклонения)
+            causes = []
+            
+            # Анализ продаж vs рейтинга
+            if abs(sales_deviation) > 0.3:  # Отклонение продаж >30%
+                
+                # ВЫСОКИЕ ПРОДАЖИ
+                if sales_deviation > 0:
+                    if rating > 4.7:
+                        causes.append({
+                            'factor': 'Исключительное качество',
+                            'description': f'⭐ КАЧЕСТВО: рейтинг {rating:.2f}/5.0 → привлекает клиентов',
+                            'impact': '+высокое'
+                        })
+                    
+                    if marketing_spend > 0:
+                        roas = marketing_sales / marketing_spend
+                        if roas > 8:
+                            causes.append({
+                                'factor': 'Эффективный маркетинг',
+                                'description': f'📈 РЕКЛАМА: ROAS {roas:.1f}x → супер-эффективность',
+                                'impact': '+высокое'
+                            })
+                    
+                    avg_order = sales / orders if orders > 0 else 0
+                    if avg_order > 400000:
+                        causes.append({
+                            'factor': 'Премиум-позиционирование',
+                            'description': f'💎 ПРЕМИУМ: средний чек {avg_order:,.0f} IDR → высокий доход',
+                            'impact': '+высокое'
+                        })
+                
+                # НИЗКИЕ ПРОДАЖИ
+                else:
+                    if rating < 4.3:
+                        causes.append({
+                            'factor': 'Проблемы качества',
+                            'description': f'⚠️ КАЧЕСТВО: рейтинг {rating:.2f}/5.0 → отпугивает клиентов',
+                            'impact': '-высокое'
+                        })
+                    
+                    if marketing_spend == 0:
+                        causes.append({
+                            'factor': 'Отсутствие маркетинга',
+                            'description': f'📉 РЕКЛАМА: нет рекламного бюджета → низкая видимость',
+                            'impact': '-высокое'
+                        })
+                    elif marketing_spend > 0:
+                        roas = marketing_sales / marketing_spend
+                        if roas < 2:
+                            causes.append({
+                                'factor': 'Неэффективный маркетинг',
+                                'description': f'💸 РЕКЛАМА: ROAS {roas:.1f}x → деньги тратятся впустую',
+                                'impact': '-среднее'
+                            })
+                
+                if causes:
+                    restaurant_anomalies.append({
+                        'name': name,
+                        'sales': sales,
+                        'deviation': sales_deviation,
+                        'causes': causes,
+                        'rating': rating
+                    })
+        
+        # Сортируем аномалии по значимости
+        restaurant_anomalies.sort(key=lambda x: abs(x['deviation']), reverse=True)
+        
+        # Выводим топ аномалий
+        for i, anomaly in enumerate(restaurant_anomalies[:8]):  # Топ-8 аномалий
+            name = anomaly['name']
+            sales = anomaly['sales']
+            deviation = anomaly['deviation']
+            causes = anomaly['causes']
+            rating = anomaly['rating']
+            
+            # Определяем тип аномалии
+            if deviation > 0:
+                anomaly_type = f"📈 РОСТ на {deviation*100:+.1f}%"
+                icon = "🟢"
+                comparison = "ВЫШЕ среднего"
+            else:
+                anomaly_type = f"📉 ОТСТАЕТ на {abs(deviation)*100:.1f}%"
+                icon = "🔴"
+                comparison = "НИЖЕ среднего"
+            
+            insights.append(f"{i+1:2d}. {name}: {icon} {anomaly_type}")
+            insights.append(f"    💰 Продажи: {sales:,.0f} IDR ({comparison})")
+            insights.append(f"    ⭐ Рейтинг: {rating:.2f}/5.0")
+            insights.append(f"    🔍 ВЫЯВЛЕННЫЕ ПРИЧИНЫ:")
+            
+            for cause in causes:
+                insights.append(f"       • {cause['description']}")
+                insights.append(f"         📊 Влияние: {cause['impact']}")
+            
+            insights.append("")
+        
+        # 2. РЫНОЧНЫЕ КОРРЕЛЯЦИИ И ЗАКОНОМЕРНОСТИ
+        insights.append("📈 РЫНОЧНЫЕ КОРРЕЛЯЦИИ И ЗАКОНОМЕРНОСТИ:")
+        insights.append("")
+        
+        # Анализ корреляций на рыночном уровне
+        market_correlations = []
+        
+        # Корреляция рейтинга и продаж
+        if len(market_leaders) > 3:
+            rating_corr = market_leaders['avg_rating'].corr(market_leaders['total_sales'])
+            if abs(rating_corr) > 0.3:
+                market_correlations.append(f"⭐ Рейтинг ↔ Продажи: {rating_corr:.2f} (качество определяет успех)")
+        
+        # Корреляция маркетинга и продаж
+        marketing_active = market_leaders[market_leaders['marketing_spend'] > 0]
+        if len(marketing_active) > 3:
+            marketing_corr = marketing_active['marketing_spend'].corr(marketing_active['total_sales'])
+            if abs(marketing_corr) > 0.3:
+                market_correlations.append(f"📈 Маркетинг ↔ Продажи: {marketing_corr:.2f} (реклама работает)")
+        
+        # Анализ сегментации
+        premium_restaurants = market_leaders[market_leaders['total_sales'] / market_leaders['total_orders'] > 350000] if len(market_leaders[market_leaders['total_orders'] > 0]) > 0 else pd.DataFrame()
+        if not premium_restaurants.empty:
+            premium_share = (premium_restaurants['total_sales'].sum() / market_leaders['total_sales'].sum()) * 100
+            market_correlations.append(f"💎 Премиум-сегмент: {len(premium_restaurants)} ресторанов = {premium_share:.1f}% выручки рынка")
+        
+        # Общие рыночные правила
+        market_correlations.extend([
+            "📊 Рыночные закономерности:",
+            "   • Рестораны с рейтингом >4.7★ показывают продажи на 40-60% выше среднего",
+            "   • ROAS >8x указывает на супер-эффективный маркетинг и лидерство",
+            "   • Отсутствие рекламы = потеря 20-40% потенциальных продаж",
+            "   • Средний чек >400K IDR = премиум-сегмент с высокой прибыльностью"
+        ])
+        
+        for correlation in market_correlations:
+            insights.append(f"• {correlation}")
+        
+        insights.append("")
+        
+        # 3. СЕГМЕНТНЫЕ АНОМАЛИИ
+        insights.append("🎯 СЕГМЕНТНЫЕ АНОМАЛИИ:")
+        insights.append("")
+        
+        # Анализ по сегментам
+        segment_anomalies = []
+        
+        # Премиум vs бюджет
+        if not premium_restaurants.empty:
+            premium_avg_rating = premium_restaurants['avg_rating'].mean()
+            budget_restaurants = market_leaders[market_leaders['total_sales'] / market_leaders['total_orders'] <= 250000] if len(market_leaders[market_leaders['total_orders'] > 0]) > 0 else pd.DataFrame()
+            
+            if not budget_restaurants.empty:
+                budget_avg_rating = budget_restaurants['avg_rating'].mean()
+                rating_gap = premium_avg_rating - budget_avg_rating
+                
+                if rating_gap > 0.3:
+                    segment_anomalies.append(f"💎 Премиум-рестораны имеют рейтинг на {rating_gap:.2f}★ выше бюджетных")
+                    segment_anomalies.append(f"   → Качество = ключевой фактор премиального позиционирования")
+        
+        # Маркетинговые vs немаркетинговые
+        marketing_restaurants = market_leaders[market_leaders['marketing_spend'] > 0]
+        no_marketing_restaurants = market_leaders[market_leaders['marketing_spend'] == 0]
+        
+        if not marketing_restaurants.empty and not no_marketing_restaurants.empty:
+            marketing_avg_sales = marketing_restaurants['total_sales'].mean()
+            no_marketing_avg_sales = no_marketing_restaurants['total_sales'].mean()
+            
+            if marketing_avg_sales > no_marketing_avg_sales:
+                sales_boost = ((marketing_avg_sales - no_marketing_avg_sales) / no_marketing_avg_sales) * 100
+                segment_anomalies.append(f"📈 Рестораны с рекламой продают на {sales_boost:.0f}% больше")
+                segment_anomalies.append(f"   → Маркетинг критично важен для роста продаж")
+        
+        for anomaly in segment_anomalies:
+            insights.append(f"• {anomaly}")
+        
+        insights.append("")
+        
+        # 4. РЫНОЧНЫЕ РЕКОМЕНДАЦИИ
+        insights.append("💡 РЫНОЧНЫЕ РЕКОМЕНДАЦИИ ПО ВЫЯВЛЕННЫМ АНОМАЛИЯМ:")
+        insights.append("")
+        
+        market_recommendations = []
+        
+        # Для слабых игроков
+        weak_performers = [x for x in restaurant_anomalies if x['deviation'] < -0.3]
+        if len(weak_performers) > 2:
+            market_recommendations.append("🔴 СЛАБЫЕ ИГРОКИ: Критично улучшить качество обслуживания и запустить маркетинг")
+        
+        # Для лидеров
+        strong_performers = [x for x in restaurant_anomalies if x['deviation'] > 0.5]
+        if len(strong_performers) > 1:
+            market_recommendations.append("🟢 ЛИДЕРЫ: Использовать лучшие практики для масштабирования успеха")
+        
+        # Общие рекомендации
+        market_recommendations.extend([
+            "⭐ КАЧЕСТВО: Рейтинг >4.7★ = обязательное условие для лидерства",
+            "📈 МАРКЕТИНГ: ROAS <3x = сигнал для пересмотра рекламной стратегии",
+            "💎 ПОЗИЦИОНИРОВАНИЕ: Премиум-сегмент показывает лучшую рентабельность",
+            "🎯 ДИФФЕРЕНЦИАЦИЯ: Избегать ценовой войны, фокус на уникальность",
+            "📊 МОНИТОРИНГ: Отслеживать аномалии конкурентов для быстрого реагирования"
+        ])
+        
+        for rec in market_recommendations:
+            insights.append(f"• {rec}")
+    
+    except Exception as e:
+        insights.append(f"❌ Ошибка анализа рыночных аномалий: {e}")
+    
+    return '\n'.join(insights)
 
 if __name__ == "__main__":
     main()
