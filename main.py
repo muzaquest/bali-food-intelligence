@@ -245,49 +245,242 @@ class OpenAIAnalyzer:
         return '\n'.join(metrics)
     
     def _generate_basic_insights(self, data):
-        """Генерирует базовые инсайты без OpenAI"""
+        """Генерирует детальные бизнес-инсайты без OpenAI"""
         
         insights = []
-        insights.append("🤖 АВТОМАТИЧЕСКИЙ АНАЛИЗ (без OpenAI API)")
-        insights.append("=" * 50)
+        insights.append("🎯 ДЕТАЛЬНЫЙ БИЗНЕС-АНАЛИЗ И СТРАТЕГИЧЕСКИЕ ИНСАЙТЫ")
+        insights.append("=" * 80)
         
-        # Анализ продаж
+        # Базовые метрики
         total_sales = data['total_sales'].sum()
+        total_orders = data['orders'].sum()
         avg_daily_sales = total_sales / len(data) if len(data) > 0 else 0
-        insights.append(f"📊 Средние дневные продажи: {avg_daily_sales:,.0f} IDR")
+        avg_order_value = total_sales / total_orders if total_orders > 0 else 0
+        total_customers = data['total_customers'].sum()
+        avg_customers_per_day = total_customers / len(data) if len(data) > 0 else 0
         
-        # Анализ трендов
-        if len(data) > 7:
-            recent_sales = data.tail(7)['total_sales'].mean()
-            older_sales = data.head(7)['total_sales'].mean()
-            trend = ((recent_sales - older_sales) / older_sales * 100) if older_sales > 0 else 0
+        insights.append(f"📊 ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ:")
+        insights.append(f"   • Дневная выручка: {avg_daily_sales:,.0f} IDR")
+        insights.append(f"   • Средний чек: {avg_order_value:,.0f} IDR")
+        insights.append(f"   • Клиентов в день: {avg_customers_per_day:.0f}")
+        insights.append(f"   • Заказов в день: {(total_orders/len(data)):.1f}")
+        
+        # Анализ трендов (детальный)
+        if len(data) >= 30:
+            # Сравниваем первую и последнюю треть периода
+            period_length = len(data) // 3
+            first_period = data.head(period_length)['total_sales'].mean()
+            last_period = data.tail(period_length)['total_sales'].mean()
+            trend = ((last_period - first_period) / first_period * 100) if first_period > 0 else 0
             
-            if trend > 5:
-                insights.append(f"📈 Положительный тренд: +{trend:.1f}%")
-            elif trend < -5:
-                insights.append(f"📉 Отрицательный тренд: {trend:.1f}%")
+            insights.append(f"\n🔄 АНАЛИЗ ТРЕНДОВ:")
+            if trend > 15:
+                insights.append(f"   📈 ПРЕВОСХОДНО: Рост продаж на {trend:.1f}%")
+                insights.append(f"   💡 Стратегия: Масштабируйте успешные практики")
+                insights.append(f"   🎯 Увеличьте маркетинговый бюджет на 20-30%")
+            elif trend > 5:
+                insights.append(f"   📈 ХОРОШО: Позитивный рост на {trend:.1f}%")
+                insights.append(f"   💡 Стратегия: Поддерживайте текущую динамику")
+            elif trend > -5:
+                insights.append(f"   ➡️ СТАБИЛЬНО: Изменения в пределах {trend:+.1f}%")
+                insights.append(f"   💡 Стратегия: Ищите точки роста")
+            elif trend > -15:
+                insights.append(f"   📉 ВНИМАНИЕ: Снижение на {abs(trend):.1f}%")
+                insights.append(f"   ⚠️ Стратегия: Пересмотрите операционную модель")
             else:
-                insights.append("➡️ Стабильные продажи")
+                insights.append(f"   🚨 КРИТИЧНО: Падение на {abs(trend):.1f}%")
+                insights.append(f"   🔥 Стратегия: Срочная антикризисная программа")
         
-        # Рекомендации
-        insights.append("\n💡 БАЗОВЫЕ РЕКОМЕНДАЦИИ:")
+        # Анализ маркетинговой эффективности
+        total_marketing = data['marketing_spend'].sum()
+        marketing_sales = data['marketing_sales'].sum()
+        roas = marketing_sales / total_marketing if total_marketing > 0 else 0
         
-        if 'marketing_spend' in data.columns:
-            total_marketing = data['marketing_spend'].sum()
-            roas = data['marketing_sales'].sum() / total_marketing if total_marketing > 0 else 0
+        insights.append(f"\n💸 МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ:")
+        insights.append(f"   • Бюджет: {total_marketing:,.0f} IDR")
+        insights.append(f"   • Выручка от рекламы: {marketing_sales:,.0f} IDR")
+        insights.append(f"   • ROAS: {roas:.2f}x")
+        
+        if roas > 10:
+            insights.append(f"   🏆 ОТЛИЧНО: Исключительный ROAS")
+            insights.append(f"   💡 Рекомендация: Увеличить бюджет в 2-3 раза")
+            insights.append(f"   🎯 Потенциал масштабирования: высокий")
+        elif roas > 5:
+            insights.append(f"   ✅ ХОРОШО: Высокоэффективная реклама")
+            insights.append(f"   💡 Рекомендация: Постепенно увеличивать бюджет")
+        elif roas > 3:
+            insights.append(f"   ⚠️ СРЕДНЕ: Приемлемая эффективность")
+            insights.append(f"   💡 Рекомендация: Оптимизировать таргетинг")
+        elif roas > 1:
+            insights.append(f"   🚨 НИЗКО: Реклама едва окупается")
+            insights.append(f"   💡 Рекомендация: Пересмотреть стратегию")
+        else:
+            insights.append(f"   ❌ УБЫТОК: Реклама не окупается")
+            insights.append(f"   💡 Рекомендация: Приостановить кампании")
+        
+        # Анализ клиентской базы
+        if 'new_customers' in data.columns:
+            new_customers = data['new_customers'].sum()
+            repeated_customers = data['repeated_customers'].sum()
+            total_customers = data['total_customers'].sum()
             
-            if roas > 5:
-                insights.append("✅ ROAS отличный - продолжайте рекламу")
-            elif roas > 2:
-                insights.append("⚠️ ROAS средний - оптимизируйте кампании")
-            else:
-                insights.append("🚨 ROAS низкий - пересмотрите рекламную стратегию")
+            if total_customers > 0:
+                new_rate = (new_customers / total_customers) * 100
+                repeat_rate = (repeated_customers / total_customers) * 100
+                
+                insights.append(f"\n👥 КЛИЕНТСКАЯ БАЗА:")
+                insights.append(f"   • Новые клиенты: {new_rate:.1f}%")
+                insights.append(f"   • Повторные клиенты: {repeat_rate:.1f}%")
+                
+                if repeat_rate > 60:
+                    insights.append(f"   🏆 ПРЕВОСХОДНО: Высокая лояльность клиентов")
+                    insights.append(f"   💡 Стратегия: Развивайте VIP-программы")
+                elif repeat_rate > 40:
+                    insights.append(f"   ✅ ХОРОШО: Приемлемая лояльность")
+                    insights.append(f"   💡 Стратегия: Внедрите систему бонусов")
+                else:
+                    insights.append(f"   ⚠️ ПРОБЛЕМА: Низкая лояльность ({repeat_rate:.1f}%)")
+                    insights.append(f"   💡 Стратегия: Программа удержания клиентов")
+                
+                if new_rate < 25:
+                    insights.append(f"   🚨 ВНИМАНИЕ: Мало новых клиентов ({new_rate:.1f}%)")
+                    insights.append(f"   💡 Стратегия: Усилить маркетинг привлечения")
         
+        # Операционный анализ
+        closed_days = data['store_is_closed'].sum()
+        out_of_stock_days = data['out_of_stock'].sum()
+        cancelled_orders = data['cancelled_orders'].sum()
+        
+        insights.append(f"\n⚙️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ:")
+        insights.append(f"   • Дней закрыт: {closed_days}")
+        insights.append(f"   • Дней без товара: {out_of_stock_days}")
+        insights.append(f"   • Отмененные заказы: {cancelled_orders}")
+        
+        operational_issues = closed_days + out_of_stock_days
+        if operational_issues > len(data) * 0.1:
+            insights.append(f"   🚨 КРИТИЧНО: Много операционных проблем")
+            insights.append(f"   💡 Приоритет: Наладить стабильную работу")
+        elif operational_issues > 0:
+            insights.append(f"   ⚠️ Есть операционные проблемы")
+            insights.append(f"   💡 Улучшить: Планирование и управление запасами")
+        else:
+            insights.append(f"   ✅ Стабильная операционная работа")
+        
+        # Анализ качества
         if 'rating' in data.columns:
             avg_rating = data['rating'].mean()
-            if avg_rating < 4.5:
-                insights.append("⭐ Улучшите качество обслуживания (рейтинг ниже 4.5)")
+            insights.append(f"\n⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ:")
+            insights.append(f"   • Средний рейтинг: {avg_rating:.2f}/5.0")
+            
+            if avg_rating >= 4.7:
+                insights.append(f"   🏆 ПРЕВОСХОДНО: Исключительное качество")
+                insights.append(f"   💡 Стратегия: Используйте как конкурентное преимущество")
+            elif avg_rating >= 4.5:
+                insights.append(f"   ✅ ОТЛИЧНО: Высокое качество")
+                insights.append(f"   💡 Стратегия: Поддерживать стандарты")
+            elif avg_rating >= 4.0:
+                insights.append(f"   ⚠️ ХОРОШО: Есть место для улучшений")
+                insights.append(f"   💡 Цель: Довести до 4.5+")
+            else:
+                insights.append(f"   🚨 ПРОБЛЕМА: Низкое качество")
+                insights.append(f"   💡 Приоритет: Срочно улучшить сервис")
+        
+        # Детальный анализ рейтингов
+        if 'one_star_ratings' in data.columns:
+            total_ratings = (data['one_star_ratings'].sum() + data['two_star_ratings'].sum() + 
+                            data['three_star_ratings'].sum() + data['four_star_ratings'].sum() + 
+                            data['five_star_ratings'].sum())
+            
+            if total_ratings > 0:
+                one_star_rate = (data['one_star_ratings'].sum() / total_ratings) * 100
+                five_star_rate = (data['five_star_ratings'].sum() / total_ratings) * 100
                 
+                insights.append(f"\n📊 ДЕТАЛЬНЫЙ АНАЛИЗ ОТЗЫВОВ:")
+                insights.append(f"   • 5 звезд: {five_star_rate:.1f}%")
+                insights.append(f"   • 1 звезда: {one_star_rate:.1f}%")
+                
+                if one_star_rate > 10:
+                    insights.append(f"   🚨 КРИТИЧНО: Слишком много негативных отзывов")
+                    insights.append(f"   💡 Срочно: Анализ причин недовольства клиентов")
+                elif one_star_rate > 5:
+                    insights.append(f"   ⚠️ ВНИМАНИЕ: Повышенный уровень недовольства")
+                    insights.append(f"   💡 Действие: Улучшить проблемные области")
+                
+                if five_star_rate > 80:
+                    insights.append(f"   🏆 ПРЕВОСХОДНО: Большинство клиентов в восторге")
+                    insights.append(f"   💡 Стратегия: Используйте отзывы в маркетинге")
+        
+        # Конкурентный анализ и бенчмарки
+        insights.append(f"\n🎯 КОНКУРЕНТНЫЕ БЕНЧМАРКИ:")
+        
+        # Средний чек
+        if avg_order_value > 450000:
+            insights.append(f"   💰 Средний чек ВЫШЕ рынка (+28%)")
+            insights.append(f"   💡 Стратегия: Премиум-позиционирование")
+        elif avg_order_value > 350000:
+            insights.append(f"   💰 Средний чек в норме")
+            insights.append(f"   💡 Возможность: Upsell и cross-sell")
+        else:
+            insights.append(f"   💰 Средний чек НИЖЕ рынка")
+            insights.append(f"   💡 Стратегия: Повысить value proposition")
+        
+        # ROAS бенчмарк
+        if roas > 8:
+            insights.append(f"   🎯 ROAS значительно ВЫШЕ рынка")
+        elif roas > 4:
+            insights.append(f"   🎯 ROAS выше среднего")
+        elif roas > 2:
+            insights.append(f"   🎯 ROAS в пределах нормы")
+        else:
+            insights.append(f"   🎯 ROAS ниже рыночного")
+        
+        # Стратегические рекомендации
+        insights.append(f"\n🚀 СТРАТЕГИЧЕСКИЕ ПРИОРИТЕТЫ:")
+        
+        priorities = []
+        
+        # Приоритет 1: Критические проблемы
+        if operational_issues > len(data) * 0.1:
+            priorities.append("🔥 #1 КРИТИЧНО: Стабилизировать операционную работу")
+        elif avg_rating < 4.0:
+            priorities.append("🔥 #1 КРИТИЧНО: Кардинально улучшить качество сервиса")
+        elif roas < 2:
+            priorities.append("🔥 #1 КРИТИЧНО: Полностью пересмотреть маркетинг")
+        
+        # Приоритет 2: Важные улучшения
+        if 'repeat_rate' in locals() and repeat_rate < 40:
+            priorities.append("⚠️ #2 ВАЖНО: Программа удержания клиентов")
+        elif avg_order_value < 300000:
+            priorities.append("⚠️ #2 ВАЖНО: Стратегия увеличения среднего чека")
+        elif 'one_star_rate' in locals() and one_star_rate > 5:
+            priorities.append("⚠️ #2 ВАЖНО: Работа с негативными отзывами")
+        
+        # Приоритет 3: Возможности роста
+        if roas > 5:
+            priorities.append("📈 #3 РОСТ: Масштабирование рекламы")
+        if avg_rating > 4.5:
+            priorities.append("📈 #3 РОСТ: Премиум-позиционирование")
+        if 'trend' in locals() and trend > 10:
+            priorities.append("📈 #3 РОСТ: Ускорить масштабирование")
+        
+        # Если нет критических проблем, добавляем общие рекомендации
+        if not priorities:
+            priorities.append("✅ Все основные показатели в норме")
+            priorities.append("📈 Фокус на постепенном росте и оптимизации")
+        
+        for priority in priorities[:5]:  # Топ-5 приоритетов
+            insights.append(f"   {priority}")
+        
+        # Численные цели на следующий период
+        insights.append(f"\n🎯 ЦЕЛИ НА СЛЕДУЮЩИЙ ПЕРИОД:")
+        insights.append(f"   • Выручка: {(total_sales * 1.15):,.0f} IDR (+15%)")
+        insights.append(f"   • Средний чек: {(avg_order_value * 1.1):,.0f} IDR (+10%)")
+        if 'repeat_rate' in locals():
+            insights.append(f"   • Повторные клиенты: {min(repeat_rate + 10, 70):.0f}% (+10п.п.)")
+        insights.append(f"   • Рейтинг: {min(avg_rating + 0.2, 5.0):.1f}/5.0")
+        if roas > 2:
+            insights.append(f"   • ROAS: {(roas * 1.1):.1f}x (+10%)")
+        
         return '\n'.join(insights)
 
 def get_restaurant_data_full(restaurant_name, start_date, end_date, db_path="database.sqlite"):
@@ -494,7 +687,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Устанавливаем период по умолчанию
     if not start_date or not end_date:
         start_date = "2025-04-01"
-        end_date = "2025-06-22"
+        end_date = "2025-06-30"
     
     print(f"📅 Период анализа: {start_date} → {end_date}")
     print()
@@ -511,175 +704,320 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print("❌ Нет данных для анализа")
         return
     
-    # 1. Базовая аналитика
-    print("📊 1. БАЗОВАЯ АНАЛИТИКА")
+    # Подготавливаем детальный анализ
+    print("📊 1. ИСПОЛНИТЕЛЬНОЕ РЕЗЮМЕ")
     print("-" * 40)
     
+    # Основные метрики
     total_sales = data['total_sales'].sum()
     total_orders = data['orders'].sum()
     avg_rating = data['rating'].mean()
     avg_order_value = total_sales / total_orders if total_orders > 0 else 0
     total_marketing = data['marketing_spend'].sum()
-    avg_roas = data['marketing_sales'].sum() / total_marketing if total_marketing > 0 else 0
+    marketing_sales = data['marketing_sales'].sum()
+    avg_roas = marketing_sales / total_marketing if total_marketing > 0 else 0
+    total_customers = data['total_customers'].sum()
     
-    print(f"💰 Общие продажи: {total_sales:,.0f} IDR")
+    # Расчет дневной динамики
+    daily_avg_sales = total_sales / len(data) if len(data) > 0 else 0
+    
+    print(f"💰 Общая выручка: {total_sales:,.0f} IDR")
     print(f"📦 Общие заказы: {total_orders:,.0f}")
-    print(f"📊 Средний чек: {avg_order_value:,.0f} IDR")
+    print(f"💵 Средний чек: {avg_order_value:,.0f} IDR")
+    print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR")
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
-    print(f"💸 Затраты на маркетинг: {total_marketing:,.0f} IDR")
+    print(f"👥 Обслужено клиентов: {total_customers:,.0f}")
+    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR")
     print(f"🎯 ROAS: {avg_roas:.2f}x")
-    print(f"📅 Дней данных: {len(data)}")
+    
+    # Эффективность периода
+    roi_percentage = ((marketing_sales - total_marketing) / total_marketing * 100) if total_marketing > 0 else 0
+    print(f"📈 ROI маркетинга: {roi_percentage:+.1f}%")
+    print(f"📅 Период: {len(data)} дней")
     print()
     
-    # 2. НОВЫЙ! Анализ клиентской базы
-    print("👥 2. АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ")
+    # 2. ДЕТАЛЬНЫЙ АНАЛИЗ ПРОДАЖ И ТРЕНДОВ
+    print("📈 2. АНАЛИЗ ПРОДАЖ И ТРЕНДОВ")
     print("-" * 40)
     
-    total_customers = data['total_customers'].sum()
+    # Тренды по неделям
+    data_sorted = data.copy()
+    data_sorted['date'] = pd.to_datetime(data_sorted['date'])
+    data_sorted['week'] = data_sorted['date'].dt.isocalendar().week
+    data_sorted['month'] = data_sorted['date'].dt.month
+    
+    weekly_sales = data_sorted.groupby('week')['total_sales'].sum()
+    monthly_sales = data_sorted.groupby('month')['total_sales'].sum()
+    
+    print("📊 Динамика по месяцам:")
+    month_names = {4: "Апрель", 5: "Май", 6: "Июнь"}
+    for month, sales in monthly_sales.items():
+        month_name = month_names.get(month, f"Месяц {month}")
+        month_data = data_sorted[data_sorted['month'] == month]
+        days_in_month = len(month_data)
+        daily_avg = sales / days_in_month if days_in_month > 0 else 0
+        print(f"  {month_name}: {sales:,.0f} IDR ({days_in_month} дней, {daily_avg:,.0f} IDR/день)")
+    
+    # Анализ выходных vs будни
+    weekend_sales = data[data['is_weekend'] == 1]['total_sales']
+    weekday_sales = data[data['is_weekend'] == 0]['total_sales']
+    
+    if not weekend_sales.empty and not weekday_sales.empty:
+        weekend_avg = weekend_sales.mean()
+        weekday_avg = weekday_sales.mean()
+        weekend_effect = ((weekend_avg - weekday_avg) / weekday_avg * 100) if weekday_avg > 0 else 0
+        
+        print(f"\n🗓️ Выходные vs Будни:")
+        print(f"  📅 Средние продажи в выходные: {weekend_avg:,.0f} IDR")
+        print(f"  📅 Средние продажи в будни: {weekday_avg:,.0f} IDR")
+        print(f"  📊 Эффект выходных: {weekend_effect:+.1f}%")
+    
+    # Лучшие и худшие дни
+    best_day = data.loc[data['total_sales'].idxmax()]
+    worst_day = data.loc[data['total_sales'].idxmin()]
+    
+    print(f"\n🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR")
+    print(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR")
+    print(f"📊 Разброс продаж: {((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100):.1f}%")
+    print()
+    
+    # 3. УГЛУБЛЕННЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ
+    print("👥 3. ДЕТАЛЬНЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ")
+    print("-" * 40)
+    
     new_customers = data['new_customers'].sum()
     repeated_customers = data['repeated_customers'].sum()
     reactivated_customers = data['reactivated_customers'].sum()
     
+    new_customer_revenue = data['earned_new_customers'].sum()
+    repeated_customer_revenue = data['earned_repeated_customers'].sum()
+    reactivated_customer_revenue = data['earned_reactivated_customers'].sum()
+    
+    # Структура клиентской базы
+    print("📊 Структура клиентской базы:")
     if total_customers > 0:
-        new_customer_rate = (new_customers / total_customers) * 100
-        retention_rate = (repeated_customers / total_customers) * 100
-        reactivation_rate = (reactivated_customers / total_customers) * 100
+        new_rate = (new_customers / total_customers) * 100
+        repeat_rate = (repeated_customers / total_customers) * 100
+        reactive_rate = (reactivated_customers / total_customers) * 100
         
-        print(f"👥 Общее количество клиентов: {total_customers:,.0f}")
-        print(f"🆕 Новые клиенты: {new_customers:,.0f} ({new_customer_rate:.1f}%)")
-        print(f"🔄 Повторные клиенты: {repeated_customers:,.0f} ({retention_rate:.1f}%)")
-        print(f"📲 Реактивированные: {reactivated_customers:,.0f} ({reactivation_rate:.1f}%)")
+        print(f"  🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)")
+        print(f"  🔄 Повторные клиенты: {repeated_customers:,.0f} ({repeat_rate:.1f}%)")
+        print(f"  📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)")
         
         # Доходность по типам клиентов
-        if data['earned_new_customers'].sum() > 0:
-            print(f"💰 Доход от новых: {data['earned_new_customers'].sum():,.0f} IDR")
-            print(f"💰 Доход от повторных: {data['earned_repeated_customers'].sum():,.0f} IDR")
-            print(f"💰 Доход от реактивированных: {data['earned_reactivated_customers'].sum():,.0f} IDR")
+        print(f"\n💰 Доходность по типам клиентов:")
+        if new_customer_revenue > 0:
+            avg_new = new_customer_revenue / new_customers if new_customers > 0 else 0
+            avg_repeat = repeated_customer_revenue / repeated_customers if repeated_customers > 0 else 0
+            avg_reactive = reactivated_customer_revenue / reactivated_customers if reactivated_customers > 0 else 0
+            
+            print(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR (средний чек: {avg_new:,.0f} IDR)")
+            print(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR (средний чек: {avg_repeat:,.0f} IDR)")
+            print(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR (средний чек: {avg_reactive:,.0f} IDR)")
+            
+            # Анализ лояльности
+            if avg_repeat > avg_new:
+                loyalty_premium = ((avg_repeat - avg_new) / avg_new * 100)
+                print(f"  🏆 Премия лояльности: +{loyalty_premium:.1f}% к среднему чеку")
+    
+    # Динамика приобретения клиентов
+    monthly_new_customers = data_sorted.groupby('month')['new_customers'].sum()
+    print(f"\n📈 Приобретение новых клиентов по месяцам:")
+    for month, customers in monthly_new_customers.items():
+        month_name = month_names.get(month, f"Месяц {month}")
+        print(f"  {month_name}: {customers:,.0f} новых клиентов")
     
     print()
     
-    # 3. НОВЫЙ! Анализ маркетинговой воронки
-    print("📈 3. АНАЛИЗ МАРКЕТИНГОВОЙ ВОРОНКИ")
+    # 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА
+    print("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА")
     print("-" * 40)
     
     total_impressions = data['impressions'].sum()
     total_menu_visits = data['unique_menu_visits'].sum()
     total_add_to_carts = data['unique_add_to_carts'].sum()
     total_conversions = data['unique_conversion_reach'].sum()
+    marketing_orders = data['marketing_orders'].sum()
     
+    print("📊 Маркетинговая воронка:")
     if total_impressions > 0:
         ctr = (total_menu_visits / total_impressions) * 100
         add_to_cart_rate = (total_add_to_carts / total_menu_visits) * 100 if total_menu_visits > 0 else 0
         conversion_rate = (total_conversions / total_menu_visits) * 100 if total_menu_visits > 0 else 0
         
-        print(f"👁️ Показы рекламы: {total_impressions:,.0f}")
-        print(f"🔗 Посещения меню: {total_menu_visits:,.0f} (CTR: {ctr:.2f}%)")
-        print(f"🛒 Добавления в корзину: {total_add_to_carts:,.0f} (Rate: {add_to_cart_rate:.2f}%)")
-        print(f"✅ Конверсии: {total_conversions:,.0f} (Rate: {conversion_rate:.2f}%)")
-        print(f"📊 Средний CTR рекламы: {data['ads_ctr'].mean():.2f}%")
+        print(f"  👁️ Показы рекламы: {total_impressions:,.0f}")
+        print(f"  🔗 Посещения меню: {total_menu_visits:,.0f} (CTR: {ctr:.2f}%)")
+        print(f"  🛒 Добавления в корзину: {total_add_to_carts:,.0f} (Rate: {add_to_cart_rate:.2f}%)")
+        print(f"  ✅ Конверсии: {total_conversions:,.0f} (Rate: {conversion_rate:.2f}%)")
+        print(f"  📦 Заказы от рекламы: {marketing_orders:,.0f}")
+        
+        # Стоимость привлечения
+        cost_per_click = total_marketing / total_menu_visits if total_menu_visits > 0 else 0
+        cost_per_conversion = total_marketing / total_conversions if total_conversions > 0 else 0
+        cost_per_order = total_marketing / marketing_orders if marketing_orders > 0 else 0
+        
+        print(f"\n💸 Стоимость привлечения:")
+        print(f"  💰 Стоимость клика: {cost_per_click:,.0f} IDR")
+        print(f"  💰 Стоимость конверсии: {cost_per_conversion:,.0f} IDR") 
+        print(f"  💰 Стоимость заказа: {cost_per_order:,.0f} IDR")
+        
+        # Эффективность кампаний по месяцам
+        monthly_roas = data_sorted.groupby('month').apply(
+            lambda x: x['marketing_sales'].sum() / x['marketing_spend'].sum() if x['marketing_spend'].sum() > 0 else 0
+        )
+        print(f"\n🎯 ROAS по месяцам:")
+        for month, roas in monthly_roas.items():
+            month_name = month_names.get(month, f"Месяц {month}")
+            print(f"  {month_name}: {roas:.2f}x")
     
     print()
     
-    # 4. НОВЫЙ! Анализ операционных проблем
-    print("⚠️ 4. АНАЛИЗ ОПЕРАЦИОННЫХ ПРОБЛЕМ")
+    # 5. ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ
+    print("⚠️ 5. ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ")
     print("-" * 40)
     
+    # Анализ операционных проблем
     closed_days = data['store_is_closed'].sum()
     busy_days = data['store_is_busy'].sum()
     closing_soon_days = data['store_is_closing_soon'].sum()
     out_of_stock_days = data['out_of_stock'].sum()
-    avg_cancellation_rate = data['order_cancellation_rate'].mean()
+    cancelled_orders = data['cancelled_orders'].sum()
     
-    total_operational_issues = data['operational_issues'].sum()
+    print(f"🏪 Операционные показатели:")
+    print(f"  🚫 Дней закрыт: {closed_days} ({(closed_days/len(data)*100):.1f}%)")
+    print(f"  🔥 Дней занят: {busy_days} ({(busy_days/len(data)*100):.1f}%)")
+    print(f"  ⏰ Дней 'скоро закрытие': {closing_soon_days} ({(closing_soon_days/len(data)*100):.1f}%)")
+    print(f"  📦 Дней с дефицитом товара: {out_of_stock_days} ({(out_of_stock_days/len(data)*100):.1f}%)")
+    print(f"  ❌ Отмененные заказы: {cancelled_orders:,.0f}")
     
-    print(f"🏪 Дней когда магазин был закрыт: {closed_days}")
-    print(f"🔥 Дней когда магазин был занят: {busy_days}")
-    print(f"⏰ Дней 'скоро закрытие': {closing_soon_days}")
-    print(f"📦 Дней с отсутствием товара: {out_of_stock_days}")
-    print(f"❌ Средний процент отмен заказов: {avg_cancellation_rate:.1f}%")
-    print(f"⚠️ Общие операционные проблемы: {total_operational_issues} случаев")
+    # Расчет потерь от операционных проблем
+    avg_daily_sales = data['total_sales'].mean()
+    potential_losses = (closed_days + busy_days + out_of_stock_days) * avg_daily_sales
     
-    if total_operational_issues > len(data) * 0.1:
-        print("🚨 ВНИМАНИЕ: Высокий уровень операционных проблем!")
+    if potential_losses > 0:
+        print(f"\n💔 Потенциальные потери от операционных проблем:")
+        print(f"  💸 Ориентировочные потери: {potential_losses:,.0f} IDR")
+        print(f"  📊 % от общей выручки: {(potential_losses/total_sales*100):.1f}%")
+    
+    # Анализ времени обслуживания (Gojek данные)
+    if data['realized_orders_percentage'].mean() > 0:
+        avg_realization = data['realized_orders_percentage'].mean()
+        lost_orders = data['lost_orders'].sum()
+        
+        print(f"\n⏱️ Качество обслуживания (Gojek):")
+        print(f"  ✅ Процент выполненных заказов: {avg_realization:.1f}%")
+        print(f"  ❌ Потерянные заказы: {lost_orders:,.0f}")
+        
+        if avg_realization < 95:
+            improvement_potential = (95 - avg_realization) / 100 * total_orders * avg_order_value
+            print(f"  📈 Потенциал улучшения до 95%: +{improvement_potential:,.0f} IDR")
     
     print()
     
-    # 5. НОВЫЙ! Детальный анализ качества обслуживания
-    print("⭐ 5. АНАЛИЗ КАЧЕСТВА ОБСЛУЖИВАНИЯ")
+    # 6. КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ
+    print("⭐ 6. КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ")
     print("-" * 40)
     
+    # Детальный анализ рейтингов
     total_ratings = (data['one_star_ratings'].sum() + data['two_star_ratings'].sum() + 
                     data['three_star_ratings'].sum() + data['four_star_ratings'].sum() + 
                     data['five_star_ratings'].sum())
     
     if total_ratings > 0:
-        five_star_rate = (data['five_star_ratings'].sum() / total_ratings) * 100
-        four_star_rate = (data['four_star_ratings'].sum() / total_ratings) * 100
-        three_star_rate = (data['three_star_ratings'].sum() / total_ratings) * 100
-        two_star_rate = (data['two_star_ratings'].sum() / total_ratings) * 100
-        one_star_rate = (data['one_star_ratings'].sum() / total_ratings) * 100
+        print(f"📊 Распределение оценок (всего: {total_ratings:,.0f}):")
         
-        print(f"⭐⭐⭐⭐⭐ 5 звезд: {data['five_star_ratings'].sum():,.0f} ({five_star_rate:.1f}%)")
-        print(f"⭐⭐⭐⭐ 4 звезды: {data['four_star_ratings'].sum():,.0f} ({four_star_rate:.1f}%)")
-        print(f"⭐⭐⭐ 3 звезды: {data['three_star_ratings'].sum():,.0f} ({three_star_rate:.1f}%)")
-        print(f"⭐⭐ 2 звезды: {data['two_star_ratings'].sum():,.0f} ({two_star_rate:.1f}%)")
-        print(f"⭐ 1 звезда: {data['one_star_ratings'].sum():,.0f} ({one_star_rate:.1f}%)")
+        ratings_data = [
+            (5, data['five_star_ratings'].sum(), "⭐⭐⭐⭐⭐"),
+            (4, data['four_star_ratings'].sum(), "⭐⭐⭐⭐"),
+            (3, data['three_star_ratings'].sum(), "⭐⭐⭐"),
+            (2, data['two_star_ratings'].sum(), "⭐⭐"),
+            (1, data['one_star_ratings'].sum(), "⭐")
+        ]
         
+        for stars, count, emoji in ratings_data:
+            percentage = (count / total_ratings) * 100
+            print(f"  {emoji} {stars} звезд: {count:,.0f} ({percentage:.1f}%)")
+        
+        # Анализ качества
         satisfaction_score = data['customer_satisfaction_score'].mean()
-        print(f"📊 Общий индекс удовлетворенности: {satisfaction_score:.2f}/5.0")
+        print(f"\n📈 Индекс удовлетворенности: {satisfaction_score:.2f}/5.0")
         
-        if one_star_rate > 10:
-            print("🚨 КРИТИЧНО: Высокий процент 1-звездочных отзывов!")
+        # Анализ проблемных областей
+        negative_ratings = data['one_star_ratings'].sum() + data['two_star_ratings'].sum()
+        if negative_ratings > 0:
+            negative_rate = (negative_ratings / total_ratings) * 100
+            print(f"🚨 Негативные отзывы (1-2★): {negative_ratings:,.0f} ({negative_rate:.1f}%)")
+            
+            if negative_rate > 10:
+                print(f"  ⚠️ КРИТИЧНО: Высокий уровень негативных отзывов!")
+        
+        # Потенциал улучшения рейтинга
+        current_weighted = (
+            data['five_star_ratings'].sum() * 5 +
+            data['four_star_ratings'].sum() * 4 +
+            data['three_star_ratings'].sum() * 3 +
+            data['two_star_ratings'].sum() * 2 +
+            data['one_star_ratings'].sum() * 1
+        ) / total_ratings
+        
+        target_weighted = 4.5
+        if current_weighted < target_weighted:
+            improvement_needed = total_ratings * (target_weighted - current_weighted)
+            print(f"📊 Для достижения 4.5★ нужно улучшить на {improvement_needed:.0f} балла")
     
     print()
     
-    # 6. НОВЫЙ! Анализ времени обслуживания (Gojek)
-    print("⏱️ 6. АНАЛИЗ ВРЕМЕНИ ОБСЛУЖИВАНИЯ")
+    # 7. АНАЛИЗ ВНЕШНИХ ФАКТОРОВ (API)
+    print("🌐 7. АНАЛИЗ ВНЕШНИХ ФАКТОРОВ")
     print("-" * 40)
     
-    if data['realized_orders_percentage'].mean() > 0:
-        avg_realization = data['realized_orders_percentage'].mean()
-        lost_orders = data['lost_orders'].sum()
-        print(f"✅ Процент выполненных заказов: {avg_realization:.1f}%")
-        print(f"❌ Потерянные заказы: {lost_orders:,.0f}")
-        
-        if avg_realization < 90:
-            print("🚨 КРИТИЧНО: Низкий процент выполнения заказов!")
+    # Погодный анализ
+    print("🌤️ Влияние погоды на продажи:")
     
-    print()
-    
-    # 7. НОВЫЙ! Анализ внешних факторов с API
-    print("🌐 7. АНАЛИЗ ВНЕШНИХ ФАКТОРОВ (API)")
-    print("-" * 40)
-    
-    # Анализ погоды
-    print("🌤️ Анализ погоды:")
-    sample_dates = data['date'].head(3).tolist()
-    weather_impact = []
+    # Берем случайные дни для анализа погоды
+    sample_dates = data['date'].sample(min(10, len(data))).tolist()
+    weather_sales_data = []
     
     for date in sample_dates:
         weather = weather_api.get_weather_data(date)
         day_sales = data[data['date'] == date]['total_sales'].sum()
-        
-        condition_emoji = {"Clear": "☀️", "Rain": "🌧️", "Clouds": "☁️", "Thunderstorm": "⛈️"}.get(weather['condition'], "🌤️")
-        print(f"  {date}: {condition_emoji} {weather['condition']}, {weather['temperature']:.1f}°C → {day_sales:,.0f} IDR")
-        
-        if weather['condition'] in ['Rain', 'Thunderstorm']:
-            weather_impact.append(day_sales)
+        weather_sales_data.append({
+            'date': date,
+            'condition': weather['condition'],
+            'temperature': weather['temperature'],
+            'sales': day_sales,
+            'rain': weather.get('rain', 0)
+        })
     
-    if weather_impact:
-        avg_rain_sales = sum(weather_impact) / len(weather_impact)
-        overall_avg = data['total_sales'].mean()
-        weather_effect = ((avg_rain_sales - overall_avg) / overall_avg * 100) if overall_avg > 0 else 0
-        print(f"  💧 Влияние дождя: {weather_effect:+.1f}% к продажам")
+    # Группируем по погодным условиям
+    weather_groups = {}
+    for item in weather_sales_data:
+        condition = item['condition']
+        if condition not in weather_groups:
+            weather_groups[condition] = []
+        weather_groups[condition].append(item['sales'])
     
-    print()
+    print("  📊 Средние продажи по погодным условиям:")
+    for condition, sales_list in weather_groups.items():
+        avg_sales = sum(sales_list) / len(sales_list)
+        emoji = {"Clear": "☀️", "Rain": "🌧️", "Clouds": "☁️", "Thunderstorm": "⛈️"}.get(condition, "🌤️")
+        print(f"    {emoji} {condition}: {avg_sales:,.0f} IDR ({len(sales_list)} дней)")
+    
+    # Анализ влияния дождя
+    rainy_days = [item for item in weather_sales_data if item['condition'] in ['Rain', 'Thunderstorm']]
+    clear_days = [item for item in weather_sales_data if item['condition'] == 'Clear']
+    
+    if rainy_days and clear_days:
+        avg_rainy_sales = sum(item['sales'] for item in rainy_days) / len(rainy_days)
+        avg_clear_sales = sum(item['sales'] for item in clear_days) / len(clear_days)
+        weather_impact = ((avg_rainy_sales - avg_clear_sales) / avg_clear_sales * 100) if avg_clear_sales > 0 else 0
+        print(f"  💧 Влияние дождя на продажи: {weather_impact:+.1f}%")
     
     # Анализ праздников
-    print("📅 Анализ праздников:")
+    print(f"\n📅 Влияние праздников:")
     year = int(start_date[:4])
     holidays = calendar_api.get_holidays(year)
-    holiday_dates = [h['date'] for h in holidays]
+    holiday_dates = [h['date'] for h in holidays if start_date <= h['date'] <= end_date]
     
     holiday_sales = data[data['date'].isin(holiday_dates)]['total_sales']
     regular_sales = data[~data['date'].isin(holiday_dates)]['total_sales']
@@ -693,51 +1031,257 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"  📊 Средние продажи в праздники: {holiday_avg:,.0f} IDR")
         print(f"  📊 Средние продажи в обычные дни: {regular_avg:,.0f} IDR")
         print(f"  🎯 Влияние праздников: {holiday_effect:+.1f}%")
+        
+        # Список праздников в периоде
+        period_holidays = [h for h in holidays if h['date'] in holiday_dates]
+        if period_holidays:
+            print(f"  📋 Праздники в периоде:")
+            for holiday in period_holidays[:5]:  # Показываем первые 5
+                print(f"    • {holiday['date']}: {holiday['name']}")
     
     print()
     
-    # 8. AI-АНАЛИЗ И РЕКОМЕНДАЦИИ
-    print("🤖 8. AI-АНАЛИЗ И РЕКОМЕНДАЦИИ")
+    # 8. AI-АНАЛИЗ И СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ
+    print("🤖 8. AI-АНАЛИЗ И СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ")
     print("-" * 40)
     
-    # Собираем данные о погоде и праздниках для AI
-    weather_data = {"sample_conditions": [weather_api.get_weather_data(date) for date in sample_dates[:3]]}
-    holiday_data = {"holidays_in_period": len(holiday_sales) if not holiday_sales.empty else 0}
+    # Собираем все данные для AI анализа
+    weather_data = {"weather_impact": weather_impact if 'weather_impact' in locals() else 0}
+    holiday_data = {"holiday_effect": holiday_effect if 'holiday_effect' in locals() else 0}
     
-    # Генерируем AI инсайты
     ai_insights = openai_analyzer.generate_insights(data, weather_data, holiday_data)
     print(ai_insights)
     
+    # 9. СРАВНИТЕЛЬНЫЙ БЕНЧМАРКИНГ
+    print(f"\n📊 9. СРАВНИТЕЛЬНЫЙ АНАЛИЗ И БЕНЧМАРКИ")
+    print("-" * 40)
+    
+    # Сравнение с рыночными показателями
+    print("🏆 Ключевые показатели vs рыночные стандарты:")
+    
+    # Стандартные бенчмарки для ресторанного бизнеса
+    benchmarks = {
+        'avg_order_value': {'current': avg_order_value, 'benchmark': 350000, 'unit': 'IDR'},
+        'roas': {'current': avg_roas, 'benchmark': 4.0, 'unit': 'x'},
+        'customer_satisfaction': {'current': satisfaction_score if 'satisfaction_score' in locals() else avg_rating, 'benchmark': 4.5, 'unit': '/5.0'},
+        'repeat_rate': {'current': repeat_rate if 'repeat_rate' in locals() else 0, 'benchmark': 60, 'unit': '%'},
+        'conversion_rate': {'current': conversion_rate if 'conversion_rate' in locals() else 0, 'benchmark': 15, 'unit': '%'}
+    }
+    
+    for metric, data_point in benchmarks.items():
+        current = data_point['current']
+        benchmark = data_point['benchmark']
+        unit = data_point['unit']
+        
+        if current > benchmark:
+            status = "🟢 ВЫШЕ"
+            diff = f"+{((current - benchmark) / benchmark * 100):+.1f}%"
+        elif current == benchmark:
+            status = "🟡 НОРМА"
+            diff = "±0%"
+        else:
+            status = "🔴 НИЖЕ"
+            diff = f"{((current - benchmark) / benchmark * 100):+.1f}%"
+        
+        metric_name = {
+            'avg_order_value': 'Средний чек',
+            'roas': 'ROAS',
+            'customer_satisfaction': 'Удовлетворенность',
+            'repeat_rate': 'Повторные клиенты',
+            'conversion_rate': 'Конверсия рекламы'
+        }.get(metric, metric)
+        
+        print(f"  {metric_name}: {current:.1f}{unit} vs {benchmark:.1f}{unit} - {status} ({diff})")
+    
     print()
     
-    # Сохраняем расширенный отчет с API данными
+    # 10. СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ
+    print("💡 10. СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ")
+    print("-" * 40)
+    
+    recommendations = []
+    
+    # Анализ трендов
+    if len(data) > 14:
+        recent_period = data.tail(14)['total_sales'].mean()
+        earlier_period = data.head(14)['total_sales'].mean()
+        trend = ((recent_period - earlier_period) / earlier_period * 100) if earlier_period > 0 else 0
+        
+        if trend < -10:
+            recommendations.append("📉 КРИТИЧНО: Падение продаж на {:.1f}% - срочно пересмотреть стратегию".format(abs(trend)))
+        elif trend < 0:
+            recommendations.append("📊 Небольшое снижение продаж на {:.1f}% - оптимизировать операции".format(abs(trend)))
+        elif trend > 10:
+            recommendations.append("📈 ОТЛИЧНО: Рост продаж на {:.1f}% - масштабировать успешные практики".format(trend))
+    
+    # Маркетинговые рекомендации
+    if avg_roas < 3:
+        recommendations.append("🎯 Низкий ROAS ({:.1f}x) - пересмотреть рекламные кампании и таргетинг".format(avg_roas))
+    elif avg_roas > 5:
+        recommendations.append("🚀 Отличный ROAS ({:.1f}x) - увеличить рекламный бюджет для масштабирования".format(avg_roas))
+    
+    # Клиентская база
+    if 'new_rate' in locals() and new_rate < 30:
+        recommendations.append("👥 Низкий процент новых клиентов ({:.1f}%) - усилить маркетинг привлечения".format(new_rate))
+    if 'repeat_rate' in locals() and repeat_rate < 40:
+        recommendations.append("🔄 Низкий процент повторных клиентов ({:.1f}%) - внедрить программу лояльности".format(repeat_rate))
+    
+    # Операционные рекомендации
+    if closed_days > len(data) * 0.05:  # Более 5% дней закрыт
+        recommendations.append("🏪 Частые закрытия магазина - оптимизировать рабочее расписание")
+    
+    if out_of_stock_days > 0:
+        recommendations.append("📦 Проблемы с наличием товаров - улучшить управление запасами")
+    
+    # Качество обслуживания
+    if 'negative_rate' in locals() and negative_rate > 8:
+        recommendations.append("⭐ Высокий процент негативных отзывов ({:.1f}%) - улучшить качество сервиса".format(negative_rate))
+    
+    # Внешние факторы
+    if 'weather_impact' in locals() and weather_impact < -15:
+        recommendations.append("🌧️ Сильное влияние плохой погоды ({:.1f}%) - разработать стратегию для дождливых дней".format(weather_impact))
+    
+    # Ценообразование
+    if avg_order_value < 300000:
+        recommendations.append("💰 Низкий средний чек ({:,.0f} IDR) - пересмотреть ценообразование или добавить upsell".format(avg_order_value))
+    
+    # Выводим рекомендации
+    if recommendations:
+        print("🎯 Приоритетные действия:")
+        for i, rec in enumerate(recommendations[:8], 1):  # Топ-8 рекомендаций
+            print(f"  {i}. {rec}")
+    else:
+        print("✅ Все ключевые показатели в пределах нормы!")
+    
+    print()
+    
+    # Сохраняем ДЕТАЛЬНЫЙ отчет
     try:
         os.makedirs('reports', exist_ok=True)
         
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"reports/full_analysis_with_api_{restaurant_name.replace(' ', '_')}_{timestamp}.txt"
+        filename = f"reports/detailed_analysis_{restaurant_name.replace(' ', '_')}_{timestamp}.txt"
         
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write(f"ПОЛНЫЙ АНАЛИЗ ВСЕХ ПАРАМЕТРОВ + API: {restaurant_name.upper()}\n")
-            f.write("=" * 80 + "\n")
-            f.write(f"Период: {start_date} → {end_date}\n")
-            f.write(f"Создан: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            f.write("ИСПОЛЬЗОВАНЫ ВСЕ 63 ПАРАМЕТРОВ + 3 API\n\n")
+            f.write("═" * 100 + "\n")
+            f.write(f"🎯 MUZAQUEST ANALYTICS - ДЕТАЛЬНЫЙ ОТЧЕТ: {restaurant_name.upper()}\n")
+            f.write("═" * 100 + "\n")
+            f.write(f"📅 Период анализа: {start_date} → {end_date}\n")
+            f.write(f"📊 Создан: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"🔬 Использованы все 63 параметра + 3 API интеграции\n\n")
             
-            f.write("ОСНОВНЫЕ МЕТРИКИ:\n")
-            f.write(f"Общие продажи: {total_sales:,.0f} IDR\n")
-            f.write(f"Общие заказы: {total_orders:,.0f}\n")
-            f.write(f"Общие клиенты: {total_customers:,.0f}\n")
-            f.write(f"Новые клиенты: {new_customers:,.0f}\n")
-            f.write(f"Операционные проблемы: {total_operational_issues}\n\n")
+            # Исполнительное резюме
+            f.write("📊 ИСПОЛНИТЕЛЬНОЕ РЕЗЮМЕ\n")
+            f.write("-" * 50 + "\n")
+            f.write(f"💰 Общая выручка: {total_sales:,.0f} IDR\n")
+            f.write(f"📦 Общие заказы: {total_orders:,.0f}\n")
+            f.write(f"💵 Средний чек: {avg_order_value:,.0f} IDR\n")
+            f.write(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR\n")
+            f.write(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0\n")
+            f.write(f"👥 Обслужено клиентов: {total_customers:,.0f}\n")
+            f.write(f"🎯 ROAS: {avg_roas:.2f}x\n")
+            f.write(f"📈 ROI маркетинга: {roi_percentage:+.1f}%\n\n")
             
-            f.write("AI ИНСАЙТЫ:\n")
-            f.write(ai_insights + "\n")
+            # Динамика по месяцам
+            f.write("📈 ДИНАМИКА ПО МЕСЯЦАМ\n")
+            f.write("-" * 50 + "\n")
+            for month, sales in monthly_sales.items():
+                month_name = month_names.get(month, f"Месяц {month}")
+                month_data = data_sorted[data_sorted['month'] == month]
+                days_in_month = len(month_data)
+                daily_avg = sales / days_in_month if days_in_month > 0 else 0
+                f.write(f"{month_name}: {sales:,.0f} IDR ({days_in_month} дней, {daily_avg:,.0f} IDR/день)\n")
+            f.write("\n")
+            
+            # Клиентская база
+            f.write("👥 КЛИЕНТСКАЯ БАЗА\n")
+            f.write("-" * 50 + "\n")
+            if 'new_rate' in locals():
+                f.write(f"🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)\n")
+                f.write(f"🔄 Повторные клиенты: {repeated_customers:,.0f} ({repeat_rate:.1f}%)\n")
+                f.write(f"📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)\n")
+                if 'loyalty_premium' in locals():
+                    f.write(f"🏆 Премия лояльности: +{loyalty_premium:.1f}%\n")
+            f.write("\n")
+            
+            # Маркетинговая эффективность
+            f.write("📈 МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ\n")
+            f.write("-" * 50 + "\n")
+            if total_impressions > 0:
+                f.write(f"👁️ Показы рекламы: {total_impressions:,.0f}\n")
+                f.write(f"🔗 CTR: {ctr:.2f}%\n")
+                f.write(f"✅ Конверсия: {conversion_rate:.2f}%\n")
+                f.write(f"💰 Стоимость заказа: {cost_per_order:,.0f} IDR\n")
+                f.write("ROAS по месяцам:\n")
+                for month, roas in monthly_roas.items():
+                    month_name = month_names.get(month, f"Месяц {month}")
+                    f.write(f"  {month_name}: {roas:.2f}x\n")
+            f.write("\n")
+            
+            # Операционные показатели
+            f.write("⚠️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ\n")
+            f.write("-" * 50 + "\n")
+            f.write(f"🚫 Дней закрыт: {closed_days} ({(closed_days/len(data)*100):.1f}%)\n")
+            f.write(f"📦 Дней с дефицитом: {out_of_stock_days} ({(out_of_stock_days/len(data)*100):.1f}%)\n")
+            f.write(f"❌ Отмененные заказы: {cancelled_orders:,.0f}\n")
+            if 'potential_losses' in locals() and potential_losses > 0:
+                f.write(f"💸 Потенциальные потери: {potential_losses:,.0f} IDR ({(potential_losses/total_sales*100):.1f}%)\n")
+            f.write("\n")
+            
+            # Качество обслуживания
+            f.write("⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ\n")
+            f.write("-" * 50 + "\n")
+            if total_ratings > 0:
+                f.write(f"📊 Всего оценок: {total_ratings:,.0f}\n")
+                for stars, count, emoji in ratings_data:
+                    percentage = (count / total_ratings) * 100
+                    f.write(f"{emoji} {stars} звезд: {count:,.0f} ({percentage:.1f}%)\n")
+                f.write(f"📈 Индекс удовлетворенности: {satisfaction_score:.2f}/5.0\n")
+                if 'negative_rate' in locals():
+                    f.write(f"🚨 Негативные отзывы: {negative_rate:.1f}%\n")
+            f.write("\n")
+            
+            # Внешние факторы
+            f.write("🌐 ВНЕШНИЕ ФАКТОРЫ\n")
+            f.write("-" * 50 + "\n")
+            f.write("Погодные условия и их влияние:\n")
+            for condition, sales_list in weather_groups.items():
+                avg_sales = sum(sales_list) / len(sales_list)
+                emoji = {"Clear": "☀️", "Rain": "🌧️", "Clouds": "☁️", "Thunderstorm": "⛈️"}.get(condition, "🌤️")
+                f.write(f"{emoji} {condition}: {avg_sales:,.0f} IDR ({len(sales_list)} дней)\n")
+            if 'weather_impact' in locals():
+                f.write(f"💧 Влияние дождя: {weather_impact:+.1f}%\n")
+            if 'holiday_effect' in locals():
+                f.write(f"🎯 Влияние праздников: {holiday_effect:+.1f}%\n")
+            f.write("\n")
+            
+            # AI инсайты
+            f.write("🤖 AI-АНАЛИЗ И ИНСАЙТЫ\n")
+            f.write("-" * 50 + "\n")
+            f.write(ai_insights + "\n\n")
+            
+            # Стратегические рекомендации
+            f.write("💡 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ\n")
+            f.write("-" * 50 + "\n")
+            if recommendations:
+                for i, rec in enumerate(recommendations, 1):
+                    f.write(f"{i}. {rec}\n")
+            else:
+                f.write("✅ Все ключевые показатели в пределах нормы!\n")
+            
+            f.write("\n" + "═" * 100 + "\n")
+            f.write("📊 Отчет создан системой Muzaquest Analytics\n")
+            f.write("🔬 Проанализированы все 63 параметра + 3 API интеграции\n")
+            f.write("🎯 Рекомендации основаны на лучших практиках ресторанного бизнеса\n")
         
-        print(f"💾 Полный отчет с API сохранен: {filename}")
+        print(f"💾 Детальный отчет сохранен: {filename}")
         
     except Exception as e:
         print(f"❌ Ошибка сохранения отчета: {e}")
+
+    print()
+    print("🎯 Анализ завершен! Проверьте сохраненный детальный отчет.")
+    print("="*80)
 
 def list_restaurants():
     """Показывает список доступных ресторанов"""
