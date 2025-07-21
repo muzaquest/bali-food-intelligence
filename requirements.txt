@@ -1,42 +1,58 @@
-# Основные библиотеки для работы с данными
-pandas>=2.0.0
-numpy>=1.21.0
-# sqlite3 встроен в Python
-
-# Machine Learning
-scikit-learn>=1.3.0
-scipy>=1.11.0
-
-# SHAP анализ (опционально)
-shap>=0.42.0
-
-# Работа с API
-requests>=2.31.0
-python-dotenv>=1.0.0
-
-# OpenAI API (опционально)
+# Основные зависимости
+pandas>=1.5.0
+numpy>=1.24.0
+requests>=2.28.0
+python-dotenv>=0.19.0
 openai>=1.0.0
+argparse
 
-# Визуализация (опционально)
-matplotlib>=3.7.0
-seaborn>=0.12.0
+# Дополнительные библиотеки
+urllib3>=1.26.0
+certifi>=2022.12.7
 
-# Улучшенная работа с датами
+# Для работы с базой данных
+sqlite3
+
+# Для HTTP запросов и API
+httpx>=0.24.0
+aiohttp>=3.8.0
+
+# Для обработки JSON
+json5>=0.9.0
+
+# Для работы с датами
 python-dateutil>=2.8.0
 
-# Прогресс-бары
-tqdm>=4.65.0
-
-# Логирование
-loguru>=0.7.0
-
-# Для работы с конфигурацией
-pyyaml>=6.0
-
-# Дополнительные утилиты
-click>=8.1.0
+# Для логирования
 colorama>=0.4.6
 
-# Jupyter notebook support (опционально)
-jupyter>=1.0.0
-ipykernel>=6.25.0
+# Для валидации данных
+pydantic>=1.10.0
+
+# Для работы с CSV
+csv
+
+# Для математических операций
+math
+statistics
+decimal
+
+# Для работы с временем
+datetime
+time
+
+# Для системных операций
+os
+sys
+traceback
+warnings
+
+# ML зависимости
+scikit-learn>=1.3.0
+scipy>=1.10.0
+
+# Опциональные ML зависимости (устанавливаются отдельно)
+# prophet>=1.1.4
+# matplotlib>=3.6.0
+# seaborn>=0.12.0
+# plotly>=5.15.0
