@@ -1,0 +1,15 @@
+# ML зависимости для Muzaquest Analytics
+scikit-learn>=1.3.0
+prophet>=1.1.4
+matplotlib>=3.6.0
+seaborn>=0.12.0
+plotly>=5.15.0
+
+# Дополнительные ML библиотеки (опционально)
+xgboost>=1.7.0
+lightgbm>=3.3.0
+catboost>=1.2.0
+
+# Для продвинутой аналитики
+scipy>=1.10.0
+statsmodels>=0.14.0
