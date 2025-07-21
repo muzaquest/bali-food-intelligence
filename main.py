@@ -33,6 +33,14 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
+# Добавляем импорт ML модуля
+try:
+    from ml_models import analyze_restaurant_with_ml, RestaurantMLAnalyzer
+    ML_MODULE_AVAILABLE = True
+except ImportError:
+    ML_MODULE_AVAILABLE = False
+    print("⚠️ ML модуль недоступен. Запустите: pip install scikit-learn prophet")
+
 class WeatherAPI:
     """Класс для работы с OpenWeatherMap API"""
     
@@ -1061,6 +1069,22 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Анализируем причины аномалий в продажах
     detective_analysis = detect_sales_anomalies_and_causes(data, None, start_date, end_date)
     print(detective_analysis)
+    
+    # 8.6. ML-АНАЛИЗ И ПРОГНОЗИРОВАНИЕ (НОВИНКА!)
+    if ML_MODULE_AVAILABLE:
+        print("\n🤖 8.6 МАШИННОЕ ОБУЧЕНИЕ - РАСШИРЕННЫЙ АНАЛИЗ")
+        print("-" * 40)
+        
+        try:
+            ml_insights = analyze_restaurant_with_ml(restaurant_name, start_date, end_date)
+            for insight in ml_insights:
+                print(insight)
+        except Exception as e:
+            print(f"⚠️ Ошибка ML анализа: {e}")
+    else:
+        print("\n⚠️ 8.6 ML-АНАЛИЗ НЕДОСТУПЕН")
+        print("-" * 40)
+        print("Установите зависимости: pip install scikit-learn prophet")
     
     # 9. СРАВНИТЕЛЬНЫЙ БЕНЧМАРКИНГ
     print(f"\n📊 9. СРАВНИТЕЛЬНЫЙ АНАЛИЗ И БЕНЧМАРКИ")
