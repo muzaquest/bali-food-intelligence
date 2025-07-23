@@ -927,14 +927,28 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     gojek_marketing_sales = gojek_marketing_data['total_ads_sales'] or 0
     gojek_marketing_orders = gojek_marketing_data['total_ads_orders'] or 0
     
+    # Получаем чистые данные GRAB для маркетинга
+    grab_marketing_query = f"""
+    SELECT 
+        SUM(ads_spend) as grab_spend,
+        SUM(ads_sales) as grab_sales,
+        SUM(ads_orders) as grab_orders
+    FROM grab_stats 
+    WHERE restaurant_id = {restaurant_id} AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+    """
+    
+    conn_grab = sqlite3.connect("database.sqlite")
+    grab_marketing_raw = pd.read_sql_query(grab_marketing_query, conn_grab).iloc[0]
+    conn_grab.close()
+    
     # Данные воронки (только GRAB)
     total_impressions = data['impressions'].sum()
     total_menu_visits = data['unique_menu_visits'].sum()
     total_add_to_carts = data['unique_add_to_carts'].sum()
     total_conversions = data['unique_conversion_reach'].sum()
-    grab_marketing_orders = data['marketing_orders'].sum()
-    grab_marketing_spend = data['marketing_spend'].sum()
-    grab_marketing_sales = data['marketing_sales'].sum()
+    grab_marketing_orders = grab_marketing_raw['grab_orders'] or 0
+    grab_marketing_spend = grab_marketing_raw['grab_spend'] or 0
+    grab_marketing_sales = grab_marketing_raw['grab_sales'] or 0
     
     print("📊 Маркетинговая воронка (только GRAB - GOJEK не предоставляет данные воронки):")
     if total_impressions > 0:
