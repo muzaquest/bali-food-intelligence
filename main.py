@@ -2501,71 +2501,34 @@ def detect_sales_anomalies_and_causes(restaurant_data, weather_data, start_date,
     insights.append("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН ПАДЕНИЙ И РОСТА")
     insights.append("=" * 60)
     
-    # Анализируем данные по дням
-    daily_analysis = []
-    
     try:
-        # Создаем демо-анализ для презентации возможностей
-        insights.append("📊 ЗНАЧИТЕЛЬНЫЕ АНОМАЛИИ ПРОДАЖ И ИХ ПРИЧИНЫ:")
+        # РЕАЛЬНЫЙ анализ на основе данных
+        if len(restaurant_data) < 7:
+            insights.append("⚠️ Недостаточно данных для детективного анализа (минимум 7 дней)")
+            return insights
+            
+        # Рассчитываем среднее и стандартное отклонение продаж
+        mean_sales = restaurant_data['total_sales'].mean()
+        std_sales = restaurant_data['total_sales'].std()
+        
+        # Находим аномалии (отклонения больше 1.5 стандартных отклонений)
+        restaurant_data['sales_deviation'] = (restaurant_data['total_sales'] - mean_sales) / mean_sales
+        restaurant_data['is_anomaly'] = abs(restaurant_data['sales_deviation']) > 0.15  # 15% отклонение
+        
+        anomalies = restaurant_data[restaurant_data['is_anomaly']].copy()
+        
+        if len(anomalies) == 0:
+            insights.append("📊 Значительных аномалий продаж не обнаружено (все дни в пределах нормы)")
+            return insights
+            
+        insights.append(f"📊 ОБНАРУЖЕНО {len(anomalies)} ЗНАЧИТЕЛЬНЫХ АНОМАЛИЙ:")
         insights.append("")
         
-        # Примеры аномалий с выявленными причинами (демо данные)
-        demo_anomalies = [
-            {
-                'date': '2025-06-15',
-                'deviation': -0.32,
-                'sales': 8850000,
-                'causes': [
-                    {'description': '🌧️ RAIN: дождь снижает посещаемость (t°26.4°C)', 'impact': -0.15},
-                    {'description': '⭐ РЕЙТИНГ: снижение на 0.15 звезд → падение продаж', 'impact': -0.12, 'rule': 'Снижение рейтинга на 0.1★ ≈ падение продаж на 8%'},
-                    {'description': '📈 РЕКЛАМА: сокращение/отключение рекламы на 45% → падение продаж', 'impact': -0.14, 'rule': 'Отключение рекламы → падение продаж на 15-25% в течение 1-3 дней'}
-                ]
-            },
-            {
-                'date': '2025-05-18',
-                'deviation': +0.81,
-                'sales': 23592200,
-                'causes': [
-                    {'description': '☀️ CLEAR: ясная погода способствует заказам (t°29.8°C)', 'impact': 0.05},
-                    {'description': '📈 РЕКЛАМА: увеличение бюджета на 120% → рост продаж', 'impact': 0.36, 'rule': 'Увеличение рекламы → рост продаж на 20-35%'},
-                    {'description': '📅 ДЕНЬ НЕДЕЛИ: Saturday - субботы - пик недели', 'impact': 0.25}
-                ]
-            },
-            {
-                'date': '2025-04-22',
-                'deviation': -0.28,
-                'sales': 9387000,
-                'causes': [
-                    {'description': '🚫 ЗАКРЫТИЕ: ресторан был закрыт → потеря всех продаж', 'impact': -0.8},
-                    {'description': '📅 ДЕНЬ НЕДЕЛИ: Monday - понедельники обычно слабее выходных', 'impact': -0.15}
-                ]
-            },
-            {
-                'date': '2025-05-03',
-                'deviation': -0.22,
-                'sales': 10145000,
-                'causes': [
-                    {'description': '⛈️ THUNDERSTORM: гроза значительно снижает заказы (t°24.2°C)', 'impact': -0.25},
-                    {'description': '📦 ДЕФИЦИТ: нет товара → потеря потенциальных заказов', 'impact': -0.30}
-                ]
-            },
-            {
-                'date': '2025-06-01',
-                'deviation': +0.42,
-                'sales': 18490000,
-                'causes': [
-                    {'description': '📈 РЕКЛАМА: увеличение бюджета на 80% → рост продаж', 'impact': 0.24},
-                    {'description': '⭐ РЕЙТИНГ: повышение на 0.25 звезд → рост продаж', 'impact': 0.20, 'rule': 'Повышение рейтинга на 0.1★ ≈ рост продаж на 8%'},
-                    {'description': '📅 ДЕНЬ НЕДЕЛИ: Friday - пятницы показывают рост перед выходными', 'impact': 0.20}
-                ]
-            }
-        ]
-        
-        for i, anomaly in enumerate(demo_anomalies):
-            date = anomaly['date']
-            sales = anomaly['sales']
-            deviation = anomaly['deviation']
-            causes = anomaly['causes']
+        # Анализируем каждую аномалию
+        for i, (idx, row) in enumerate(anomalies.iterrows()):
+            date = row['date']
+            sales = row['total_sales']
+            deviation = row['sales_deviation']
             
             # Определяем тип аномалии
             if deviation > 0:
@@ -2576,34 +2539,97 @@ def detect_sales_anomalies_and_causes(restaurant_data, weather_data, start_date,
                 icon = "🔴"
             
             insights.append(f"{i+1:2d}. {date}: {icon} {anomaly_type}")
-            insights.append(f"    💰 Продажи: {sales:,.0f} IDR")
+            insights.append(f"    💰 Продажи: {sales:,.0f} IDR (среднее: {mean_sales:,.0f} IDR)")
             insights.append(f"    🔍 ВЫЯВЛЕННЫЕ ПРИЧИНЫ:")
             
-            for cause in causes:
-                insights.append(f"       • {cause['description']}")
-                if 'impact' in cause:
+            # Анализ причин на основе реальных данных
+            causes = []
+            total_explained_impact = 0
+            
+            # 1. Анализ рейтинга
+            if 'rating' in row and not pd.isna(row['rating']):
+                avg_rating = restaurant_data['rating'].mean()
+                rating_diff = row['rating'] - avg_rating
+                if abs(rating_diff) > 0.1:  # Значимое изменение рейтинга
+                    rating_impact = rating_diff * 0.08  # 8% за 0.1 звезды
+                    total_explained_impact += rating_impact
+                    direction = "повышение" if rating_diff > 0 else "снижение"
+                    causes.append({
+                        'description': f'⭐ РЕЙТИНГ: {direction} на {abs(rating_diff):.2f} звезд',
+                        'impact': rating_impact,
+                        'rule': 'Изменение рейтинга на 0.1★ ≈ изменение продаж на 8%'
+                    })
+            
+            # 2. Анализ маркетинга
+            if 'marketing_spend' in row and not pd.isna(row['marketing_spend']):
+                avg_marketing = restaurant_data['marketing_spend'].mean()
+                if avg_marketing > 0:
+                    marketing_change = (row['marketing_spend'] - avg_marketing) / avg_marketing
+                    if abs(marketing_change) > 0.2:  # Значимое изменение бюджета (>20%)
+                        marketing_impact = marketing_change * 0.5  # 50% эффективность
+                        total_explained_impact += marketing_impact
+                        direction = "увеличение" if marketing_change > 0 else "сокращение"
+                        causes.append({
+                            'description': f'📈 РЕКЛАМА: {direction} бюджета на {abs(marketing_change)*100:.1f}%',
+                            'impact': marketing_impact,
+                            'rule': 'Изменение рекламного бюджета влияет на продажи с коэффициентом ~0.5'
+                        })
+            
+            # 3. Анализ операционных проблем
+            if 'store_is_closed' in row and row['store_is_closed'] > 0:
+                closure_impact = -0.8  # 80% потеря продаж при закрытии
+                total_explained_impact += closure_impact
+                causes.append({
+                    'description': '🚫 ЗАКРЫТИЕ: ресторан был закрыт',
+                    'impact': closure_impact,
+                    'rule': 'Закрытие ресторана → потеря ~80% продаж'
+                })
+            
+            # 4. Анализ дня недели
+            if 'date' in row:
+                day_of_week = pd.to_datetime(row['date']).strftime('%A')
+                weekend_days = ['Friday', 'Saturday', 'Sunday']
+                if day_of_week in weekend_days and deviation > 0:
+                    weekend_impact = 0.15  # 15% бонус за выходные
+                    total_explained_impact += weekend_impact
+                    causes.append({
+                        'description': f'📅 ДЕНЬ НЕДЕЛИ: {day_of_week} - выходные дают прирост',
+                        'impact': weekend_impact,
+                        'rule': 'Выходные дни дают +15-25% к продажам'
+                    })
+                elif day_of_week == 'Monday' and deviation < 0:
+                    monday_impact = -0.1  # 10% снижение в понедельник
+                    total_explained_impact += monday_impact
+                    causes.append({
+                        'description': f'📅 ДЕНЬ НЕДЕЛИ: {day_of_week} - понедельники слабее',
+                        'impact': monday_impact,
+                        'rule': 'Понедельники обычно на 10% слабее среднего дня'
+                    })
+            
+            # Выводим причины
+            if causes:
+                for cause in causes:
+                    insights.append(f"       • {cause['description']}")
                     insights.append(f"         📊 Влияние: {cause['impact']*100:+.1f}%")
-                if 'rule' in cause:
-                    insights.append(f"         💡 Правило: {cause['rule']}")
+                    if 'rule' in cause:
+                        insights.append(f"         💡 Правило: {cause['rule']}")
+            else:
+                insights.append(f"       • 🤔 НЕИЗВЕСТНЫЕ ФАКТОРЫ: отклонение {deviation*100:+.1f}% требует дополнительного анализа")
+            
+            # Показываем объясненную/необъясненную часть
+            unexplained = deviation - total_explained_impact
+            if abs(unexplained) > 0.05:  # Если больше 5% не объяснено
+                insights.append(f"       • ❓ НЕОБЪЯСНЕННОЕ ВЛИЯНИЕ: {unexplained*100:+.1f}% (требует изучения)")
             
             insights.append("")
         
-        # КОРРЕЛЯЦИОННЫЙ АНАЛИЗ (демо данные)
+        # РЕАЛЬНЫЙ КОРРЕЛЯЦИОННЫЙ АНАЛИЗ
         insights.append("📈 КОРРЕЛЯЦИОННЫЙ АНАЛИЗ ФАКТОРОВ:")
         insights.append("")
         
-        demo_correlations = [
-            "⭐ Рейтинг ↔ Продажи: 0.73 (снижение рейтинга на 0.1★ ≈ падение продаж на 8%)",
-            "📈 Реклама ↔ Продажи: 0.85 (увеличение бюджета на 50% ≈ рост продаж на 25%)",
-            "🚫 Закрытие: 2.4% дней → потеря ~80% продаж в эти дни",
-            "📊 Общие закономерности (анализ всей базы данных):",
-            "   • Дождь снижает продажи на 15-25% (особенно delivery)",
-            "   • Отключение рекламы → падение на 20-30% в течение 2-3 дней",
-            "   • Снижение рейтинга ниже 4.5★ → потеря 10-15% клиентов",
-            "   • Выходные дают +20-30% к будням (пятница-воскресенье)"
-        ]
-        
-        for correlation in demo_correlations:
+        # Рассчитываем реальные корреляции
+        correlations = calculate_correlations(restaurant_data)
+        for correlation in correlations:
             insights.append(f"• {correlation}")
         
         insights.append("")
