@@ -320,14 +320,19 @@ class OpenAIAnalyzer:
         total_orders = data['orders'].sum()
         avg_daily_sales = total_sales / len(data) if len(data) > 0 else 0
         avg_order_value = total_sales / total_orders if total_orders > 0 else 0
-        total_customers = data['total_customers'].sum()
-        avg_customers_per_day = total_customers / len(data) if len(data) > 0 else 0
+        # Правильный расчет клиентов в день (дневные, а не кумулятивные)
+        daily_new_customers = data['new_customers'].sum()
+        daily_repeat_customers = data['repeated_customers'].sum()
+        daily_reactive_customers = data['reactivated_customers'].sum()
+        total_daily_customers = daily_new_customers + daily_repeat_customers + daily_reactive_customers
+        avg_customers_per_day = total_daily_customers / len(data) if len(data) > 0 else 0
         
         insights.append(f"📊 ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ:")
         insights.append(f"   • Дневная выручка: {avg_daily_sales:,.0f} IDR")
         insights.append(f"   • Средний чек: {avg_order_value:,.0f} IDR")
-        insights.append(f"   • Клиентов в день: {avg_customers_per_day:.0f}")
+        insights.append(f"   • Клиентов в день: {avg_customers_per_day:.1f}")
         insights.append(f"   • Заказов в день: {(total_orders/len(data)):.1f}")
+        insights.append(f"   • Заказов на клиента: {(total_orders/total_daily_customers):.1f}" if total_daily_customers > 0 else "   • Заказов на клиента: N/A")
         
         # Анализ трендов (детальный)
         if len(data) >= 30:
@@ -767,6 +772,79 @@ def get_restaurant_data_full(restaurant_name, start_date, end_date, db_path="dat
     
     conn.close()
     return data
+
+def calculate_market_benchmark(metric_type):
+    """Рассчитывает реальные рыночные бенчмарки из всех данных в базе"""
+    
+    try:
+        conn = sqlite3.connect("database.sqlite")
+        
+        if metric_type == 'avg_order_value':
+            # Средний чек по всему рынку
+            query = """
+            WITH market_data AS (
+                SELECT 
+                    r.name,
+                    SUM(COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) as total_sales,
+                    SUM(COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders
+                FROM restaurants r
+                LEFT JOIN grab_stats g ON r.id = g.restaurant_id
+                LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id AND g.stat_date = gj.stat_date
+                WHERE g.stat_date IS NOT NULL OR gj.stat_date IS NOT NULL
+                GROUP BY r.id, r.name
+                HAVING total_orders > 0
+            )
+            SELECT AVG(total_sales / total_orders) as market_avg_order_value
+            FROM market_data
+            """
+            
+        elif metric_type == 'roas':
+            # ROAS по всему рынку
+            query = """
+            WITH market_data AS (
+                SELECT 
+                    r.name,
+                    SUM(COALESCE(g.ads_sales, 0)) as total_marketing_sales,
+                    SUM(COALESCE(g.ads_spend, 0)) as total_marketing_spend
+                FROM restaurants r
+                LEFT JOIN grab_stats g ON r.id = g.restaurant_id
+                WHERE g.ads_spend > 0
+                GROUP BY r.id, r.name
+                HAVING total_marketing_spend > 0
+            )
+            SELECT AVG(total_marketing_sales / total_marketing_spend) as market_avg_roas
+            FROM market_data
+            """
+            
+        elif metric_type == 'rating':
+            # Средний рейтинг по всему рынку
+            query = """
+            WITH market_data AS (
+                SELECT 
+                    r.name,
+                    AVG(COALESCE(g.rating, gj.rating)) as avg_rating
+                FROM restaurants r
+                LEFT JOIN grab_stats g ON r.id = g.restaurant_id
+                LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id AND g.stat_date = gj.stat_date
+                WHERE (g.rating IS NOT NULL OR gj.rating IS NOT NULL)
+                GROUP BY r.id, r.name
+            )
+            SELECT AVG(avg_rating) as market_avg_rating
+            FROM market_data
+            """
+        else:
+            return 0
+            
+        result = pd.read_sql_query(query, conn).iloc[0, 0]
+        conn.close()
+        
+        return result if result and not pd.isna(result) else 0
+        
+    except Exception as e:
+        print(f"⚠️ Ошибка расчета бенчмарка {metric_type}: {e}")
+        # Возвращаем старые значения по умолчанию
+        defaults = {'avg_order_value': 350000, 'roas': 4.0, 'rating': 4.5}
+        return defaults.get(metric_type, 0)
 
 def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     """ПОЛНЫЙ анализ ресторана с использованием ВСЕХ доступных параметров + ВСЕ API"""
@@ -1368,11 +1446,15 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Сравнение с рыночными показателями
     print("🏆 Ключевые показатели vs рыночные стандарты:")
     
-    # Стандартные бенчмарки для ресторанного бизнеса
+    # Рассчитываем реальные бенчмарки из всех данных в базе
+    market_avg_order_value = calculate_market_benchmark('avg_order_value')
+    market_avg_roas = calculate_market_benchmark('roas')
+    market_avg_rating = calculate_market_benchmark('rating')
+    
     benchmarks = {
-        'avg_order_value': {'current': avg_order_value, 'benchmark': 350000, 'unit': 'IDR'},
-        'roas': {'current': avg_roas, 'benchmark': 4.0, 'unit': 'x'},
-        'customer_satisfaction': {'current': satisfaction_score if 'satisfaction_score' in locals() else avg_rating, 'benchmark': 4.5, 'unit': '/5.0'},
+        'avg_order_value': {'current': avg_order_value, 'benchmark': market_avg_order_value, 'unit': 'IDR'},
+        'roas': {'current': avg_roas, 'benchmark': market_avg_roas, 'unit': 'x'},
+        'customer_satisfaction': {'current': satisfaction_score if 'satisfaction_score' in locals() else avg_rating, 'benchmark': market_avg_rating, 'unit': '/5.0'},
         'repeat_rate': {'current': repeat_rate if 'repeat_rate' in locals() else 0, 'benchmark': 60, 'unit': '%'},
         'conversion_rate': {'current': conversion_rate if 'conversion_rate' in locals() else 0, 'benchmark': 15, 'unit': '%'}
     }
