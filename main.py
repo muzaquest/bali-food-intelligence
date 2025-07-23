@@ -355,16 +355,16 @@ class OpenAIAnalyzer:
                     insights.append(f"   💡 Стратегия: Усилить маркетинг привлечения")
         
         # Операционный анализ
-        closed_days = data['store_is_closed'].sum()
+        days_with_closure_cancellations = data['store_is_closed'].sum()
         out_of_stock_days = data['out_of_stock'].sum()
         cancelled_orders = data['cancelled_orders'].sum()
         
         insights.append(f"\n⚙️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ:")
-        insights.append(f"   • Дней закрыт: {closed_days}")
+        insights.append(f"   • Дней с отменами 'закрыто': {days_with_closure_cancellations}")
         insights.append(f"   • Дней без товара: {out_of_stock_days}")
         insights.append(f"   • Отмененные заказы: {cancelled_orders}")
         
-        operational_issues = closed_days + out_of_stock_days
+        operational_issues = days_with_closure_cancellations + out_of_stock_days
         if operational_issues > len(data) * 0.1:
             insights.append(f"   🚨 КРИТИЧНО: Много операционных проблем")
             insights.append(f"   💡 Приоритет: Наладить стабильную работу")
@@ -1012,27 +1012,41 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("-" * 40)
     
     # Анализ операционных проблем
-    closed_days = data['store_is_closed'].sum()
+    days_with_closure_cancellations = data['store_is_closed'].sum()
     busy_days = data['store_is_busy'].sum()
     closing_soon_days = data['store_is_closing_soon'].sum()
     out_of_stock_days = data['out_of_stock'].sum()
     cancelled_orders = data['cancelled_orders'].sum()
     
     print(f"🏪 Операционные показатели:")
-    print(f"  🚫 Дней закрыт: {closed_days} ({(closed_days/len(data)*100):.1f}%)")
+    print(f"  🚫 Дней с отменами 'ресторан закрыт': {days_with_closure_cancellations} ({(days_with_closure_cancellations/len(data)*100):.1f}%)")
     print(f"  🔥 Дней занят: {busy_days} ({(busy_days/len(data)*100):.1f}%)")
     print(f"  ⏰ Дней 'скоро закрытие': {closing_soon_days} ({(closing_soon_days/len(data)*100):.1f}%)")
     print(f"  📦 Дней с дефицитом товара: {out_of_stock_days} ({(out_of_stock_days/len(data)*100):.1f}%)")
-    print(f"  ❌ Отмененные заказы: {cancelled_orders:,.0f}")
+    print(f"  ❌ Всего отмененных заказов: {cancelled_orders:,.0f}")
     
-    # Расчет потерь от операционных проблем
+    # Пояснение о причинах отмен
+    print(f"\n💡 Пояснение: 'Дни с отменами по закрытию' означают дни, когда сотрудники")
+    print(f"   отменяли заказы с причиной 'ресторан закрыт' (обычно поздние заказы)")
+    
+    # Расчет реальных потерь от операционных проблем
+    avg_order_value = total_sales / data['orders'].sum() if data['orders'].sum() > 0 else 0
+    
+    # Потери от отмененных заказов
+    cancelled_orders_losses = cancelled_orders * avg_order_value
+    
+    # Потери от дней с проблемами (только busy и out_of_stock - реально влияют на продажи)
     avg_daily_sales = data['total_sales'].mean()
-    potential_losses = (closed_days + busy_days + out_of_stock_days) * avg_daily_sales
+    operational_losses = (busy_days + out_of_stock_days) * avg_daily_sales * 0.3  # 30% потери в проблемные дни
     
-    if potential_losses > 0:
-        print(f"\n💔 Потенциальные потери от операционных проблем:")
-        print(f"  💸 Ориентировочные потери: {potential_losses:,.0f} IDR")
-        print(f"  📊 % от общей выручки: {(potential_losses/total_sales*100):.1f}%")
+    total_operational_losses = cancelled_orders_losses + operational_losses
+    
+    if total_operational_losses > 0:
+        print(f"\n💔 Реальные потери от операционных проблем:")
+        print(f"  💸 От отмененных заказов: {cancelled_orders_losses:,.0f} IDR ({cancelled_orders} × {avg_order_value:,.0f} IDR)")
+        print(f"  💸 От дней 'занят/нет товара': {operational_losses:,.0f} IDR")
+        print(f"  💸 Общие потери: {total_operational_losses:,.0f} IDR")
+        print(f"  📊 % от общей выручки: {(total_operational_losses/total_sales*100):.1f}%")
     
     # Анализ времени обслуживания (Gojek данные)
     if data['realized_orders_percentage'].mean() > 0:
@@ -1288,8 +1302,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         recommendations.append("🔄 Низкий процент повторных клиентов ({:.1f}%) - внедрить программу лояльности".format(repeat_rate))
     
     # Операционные рекомендации
-    if closed_days > len(data) * 0.05:  # Более 5% дней закрыт
-        recommendations.append("🏪 Частые закрытия магазина - оптимизировать рабочее расписание")
+    if days_with_closure_cancellations > len(data) * 0.05:  # Более 5% дней с отменами
+        recommendations.append("🏪 Частые отмены 'ресторан закрыт' - обучить персонал работе до конца смены")
     
     if out_of_stock_days > 0:
         recommendations.append("📦 Проблемы с наличием товаров - улучшить управление запасами")
@@ -1382,11 +1396,11 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             # Операционные показатели
             f.write("⚠️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ\n")
             f.write("-" * 50 + "\n")
-            f.write(f"🚫 Дней закрыт: {closed_days} ({(closed_days/len(data)*100):.1f}%)\n")
+            f.write(f"🚫 Дней с отменами 'закрыто': {days_with_closure_cancellations} ({(days_with_closure_cancellations/len(data)*100):.1f}%)\n")
             f.write(f"📦 Дней с дефицитом: {out_of_stock_days} ({(out_of_stock_days/len(data)*100):.1f}%)\n")
             f.write(f"❌ Отмененные заказы: {cancelled_orders:,.0f}\n")
-            if 'potential_losses' in locals() and potential_losses > 0:
-                f.write(f"💸 Потенциальные потери: {potential_losses:,.0f} IDR ({(potential_losses/total_sales*100):.1f}%)\n")
+            if 'total_operational_losses' in locals() and total_operational_losses > 0:
+                f.write(f"💸 Реальные потери: {total_operational_losses:,.0f} IDR ({(total_operational_losses/total_sales*100):.1f}%)\n")
             f.write("\n")
             
             # Качество обслуживания
@@ -2449,11 +2463,11 @@ def analyze_operational_issues(day_data, sales_deviation):
     
     issues = []
     
-    if day_data['closed_days'] > 0:
+    if day_data.get('store_is_closed', 0) > 0:
         issues.append({
-            'description': f"🚫 ЗАКРЫТИЕ: ресторан был закрыт → потеря всех продаж",
-            'impact': -0.8,  # Закрытие = потеря 80% продаж
-            'severity': 'критично'
+            'description': f"🚫 ОТМЕНЫ 'ЗАКРЫТО': сотрудники отменяли заказы по причине закрытия",
+            'impact': -0.05,  # Отмены по закрытию = потеря ~5% потенциальных продаж
+            'severity': 'умеренно'
         })
     
     if day_data['out_of_stock_days'] > 0:
@@ -2537,10 +2551,10 @@ def calculate_correlations(daily_data):
                 correlations.append(f"📈 Реклама ↔ Продажи: {marketing_corr:.2f} (увеличение бюджета на 50% ≈ рост продаж на {marketing_corr*30:.0f}%)")
         
         # Корреляция операционных проблем
-        if 'closed_days' in daily_data.columns:
-            closed_impact = daily_data['closed_days'].sum() / len(daily_data) * 100
-            if closed_impact > 1:
-                correlations.append(f"🚫 Закрытие: {closed_impact:.1f}% дней → потеря ~80% продаж в эти дни")
+        if 'store_is_closed' in daily_data.columns:
+            closure_cancellations_impact = daily_data['store_is_closed'].sum() / len(daily_data) * 100
+            if closure_cancellations_impact > 1:
+                correlations.append(f"🚫 Отмены 'закрыто': {closure_cancellations_impact:.1f}% дней → потеря потенциальных заказов")
         
         # Добавляем общие паттерны из анализа базы
         correlations.append("📊 Общие закономерности (анализ всей базы данных):")
