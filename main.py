@@ -2565,7 +2565,7 @@ def detect_sales_anomalies_and_causes(restaurant_data, weather_data, start_date,
                 avg_marketing = restaurant_data['marketing_spend'].mean()
                 if avg_marketing > 0:
                     marketing_change = (row['marketing_spend'] - avg_marketing) / avg_marketing
-                    if abs(marketing_change) > 0.2:  # Значимое изменение бюджета (>20%)
+                    if abs(marketing_change) > 0.05:  # Любое значимое изменение бюджета (>5%)
                         marketing_impact = marketing_change * 0.5  # 50% эффективность
                         total_explained_impact += marketing_impact
                         direction = "увеличение" if marketing_change > 0 else "сокращение"
