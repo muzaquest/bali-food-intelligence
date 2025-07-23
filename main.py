@@ -145,27 +145,83 @@ class CalendarAPI:
             return self._get_indonesia_holidays(year)
     
     def _get_indonesia_holidays(self, year):
-        """Симуляция индонезийских праздников если API недоступно"""
-        holidays = [
-            f"{year}-01-01",  # Новый год
-            f"{year}-02-12",  # Китайский Новый год
-            f"{year}-03-11",  # Исра Мирадж
-            f"{year}-03-22",  # День тишины (Ньепи)
-            f"{year}-04-10",  # Страстная пятница
-            f"{year}-04-14",  # Ид аль-Фитр
-            f"{year}-05-01",  # День труда
-            f"{year}-05-07",  # Весак
-            f"{year}-05-12",  # Вознесение
-            f"{year}-05-29",  # Вознесение Иисуса
-            f"{year}-06-01",  # Панчасила
-            f"{year}-06-16",  # Ид аль-Адха
-            f"{year}-06-17",  # Исламский Новый год
-            f"{year}-08-17",  # День независимости
-            f"{year}-08-26",  # Мавлид
-            f"{year}-12-25"   # Рождество
-        ]
+        """Расширенный балийский календарь с местными праздниками"""
         
-        return [{'date': date, 'name': 'Holiday', 'type': 'national'} for date in holidays]
+        # Попробуем использовать библиотеку holidays для базовых праздников
+        try:
+            import holidays
+            indonesia_holidays = holidays.Indonesia(years=year)
+            base_holidays = {str(date): name for date, name in indonesia_holidays.items()}
+        except ImportError:
+            # Базовые индонезийские праздники если библиотека недоступна
+            base_holidays = {
+                f"{year}-01-01": "New Year's Day",
+                f"{year}-01-27": "Isra and Miraj", 
+                f"{year}-01-29": "Chinese New Year",
+                f"{year}-03-29": "Nyepi (Day of Silence)",
+                f"{year}-03-31": "Eid al-Fitr",
+                f"{year}-04-01": "Eid al-Fitr Holiday",
+                f"{year}-04-18": "Good Friday",
+                f"{year}-05-01": "Labor Day",
+                f"{year}-05-12": "Vesak Day",
+                f"{year}-05-29": "Ascension Day",
+                f"{year}-06-01": "Pancasila Day",
+                f"{year}-06-06": "Eid al-Adha",
+                f"{year}-08-17": "Independence Day",
+                f"{year}-12-25": "Christmas Day"
+            }
+        
+        # СПЕЦИФИЧЕСКИЕ БАЛИЙСКИЕ ПРАЗДНИКИ
+        balinese_holidays = {
+            # Полнолуния (Purnama) - важные религиозные дни
+            f"{year}-01-15": "Purnama Kapat (Full Moon)",
+            f"{year}-02-14": "Purnama Kalima (Full Moon)",
+            f"{year}-03-16": "Purnama Kaenam (Full Moon)",
+            f"{year}-04-13": "Purnama Kapitu (Full Moon)",
+            f"{year}-04-30": "Purnama Kawolu (Full Moon)",
+            f"{year}-05-12": "Purnama Kasanga (Full Moon)",
+            f"{year}-06-11": "Purnama Kadasa (Full Moon)",
+            
+            # Новолуния (Tilem) - дни очищения
+            f"{year}-01-08": "Tilem (New Moon)",
+            f"{year}-02-06": "Tilem (New Moon)", 
+            f"{year}-03-08": "Tilem (New Moon)",
+            f"{year}-04-06": "Tilem (New Moon)",
+            f"{year}-05-05": "Tilem (New Moon)",
+            f"{year}-06-04": "Tilem (New Moon)",
+            
+            # Galungan и Kuningan циклы (каждые 210 дней)
+            f"{year}-04-16": "Galungan",
+            f"{year}-04-26": "Kuningan",
+            
+            # Одаланы (храмовые праздники) - примерно каждую неделю
+            f"{year}-04-03": "Odalan Temple Festival",
+            f"{year}-04-10": "Odalan Temple Festival",
+            f"{year}-04-17": "Odalan Temple Festival",
+            f"{year}-04-24": "Odalan Temple Festival",
+            f"{year}-05-08": "Odalan Temple Festival",
+            f"{year}-05-15": "Odalan Temple Festival",
+            f"{year}-05-22": "Odalan Temple Festival",
+            f"{year}-06-05": "Odalan Temple Festival",
+            f"{year}-06-12": "Odalan Temple Festival",
+            f"{year}-06-19": "Odalan Temple Festival",
+            f"{year}-06-26": "Odalan Temple Festival",
+            
+            # Другие важные балийские дни
+            f"{year}-04-05": "Rambut Sedana",
+            f"{year}-04-12": "Pagerwesi", 
+            f"{year}-05-03": "Soma Ribek",
+            f"{year}-05-17": "Banyu Pinaruh",
+            f"{year}-06-07": "Saraswati Day",
+            f"{year}-06-14": "Siwaratri",
+            f"{year}-06-21": "Tumpek Landep"
+        }
+        
+        # Объединяем все праздники
+        all_holidays = {**base_holidays, **balinese_holidays}
+        
+        return [{'date': date, 'name': name, 'type': 'balinese' if date in balinese_holidays else 'national'} 
+                for date, name in all_holidays.items()]
 
 class OpenAIAnalyzer:
     """Класс для работы с OpenAI API"""
@@ -1244,9 +1300,27 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         # Список праздников в периоде
         period_holidays = [h for h in holidays if h['date'] in holiday_dates]
         if period_holidays:
-            print(f"  📋 Праздники в периоде:")
-            for holiday in period_holidays[:5]:  # Показываем первые 5
-                print(f"    • {holiday['date']}: {holiday['name']}")
+            print(f"  📋 Праздники в периоде ({len(period_holidays)} всего):")
+            
+            # Разделяем на национальные и балийские
+            national_holidays = [h for h in period_holidays if h.get('type') == 'national']
+            balinese_holidays = [h for h in period_holidays if h.get('type') == 'balinese']
+            
+            if national_holidays:
+                print(f"    🇮🇩 Национальные ({len(national_holidays)}):")
+                for holiday in national_holidays[:3]:
+                    print(f"      • {holiday['date']}: {holiday['name']}")
+                if len(national_holidays) > 3:
+                    print(f"      • ... и еще {len(national_holidays) - 3}")
+            
+            if balinese_holidays:
+                print(f"    🏝️ Балийские ({len(balinese_holidays)}):")
+                for holiday in balinese_holidays[:5]:
+                    print(f"      • {holiday['date']}: {holiday['name']}")
+                if len(balinese_holidays) > 5:
+                    print(f"      • ... и еще {len(balinese_holidays) - 5}")
+        else:
+            print(f"  📋 Нет праздников в анализируемом периоде")
     
     print()
     
