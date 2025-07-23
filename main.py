@@ -417,6 +417,24 @@ class OpenAIAnalyzer:
                 if five_star_rate > 80:
                     insights.append(f"   🏆 ПРЕВОСХОДНО: Большинство клиентов в восторге")
                     insights.append(f"   💡 Стратегия: Используйте отзывы в маркетинге")
+                
+                # Анализ частоты плохих оценок
+                bad_ratings = (data['four_star_ratings'].sum() + data['three_star_ratings'].sum() + 
+                              data['two_star_ratings'].sum() + data['one_star_ratings'].sum())
+                total_orders = data['orders'].sum()
+                
+                if bad_ratings > 0 and total_orders > 0:
+                    orders_per_bad_rating = total_orders / bad_ratings
+                    insights.append(f"   📊 Частота плохих оценок: каждый {orders_per_bad_rating:.0f}-й заказ")
+                    
+                    if orders_per_bad_rating >= 20:
+                        insights.append(f"   🟢 ОТЛИЧНО: Очень редкие плохие оценки")
+                    elif orders_per_bad_rating >= 10:
+                        insights.append(f"   🟡 НОРМА: Умеренная частота плохих оценок")
+                    elif orders_per_bad_rating >= 5:
+                        insights.append(f"   🟠 ВНИМАНИЕ: Частые плохие оценки - нужны улучшения")
+                    else:
+                        insights.append(f"   🔴 КРИТИЧНО: Очень частые плохие оценки - срочные меры!")
         
         # Конкурентный анализ и бенчмарки
         insights.append(f"\n🎯 КОНКУРЕНТНЫЕ БЕНЧМАРКИ:")
@@ -1096,6 +1114,28 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         if negative_ratings > 0:
             negative_rate = (negative_ratings / total_ratings) * 100
             print(f"🚨 Негативные отзывы (1-2★): {negative_ratings:,.0f} ({negative_rate:.1f}%)")
+        
+        # Расчет частоты плохих оценок (все кроме 5 звезд)
+        bad_ratings = (data['four_star_ratings'].sum() + data['three_star_ratings'].sum() + 
+                      data['two_star_ratings'].sum() + data['one_star_ratings'].sum())
+        total_orders = data['orders'].sum()
+        
+        if bad_ratings > 0 and total_orders > 0:
+            orders_per_bad_rating = total_orders / bad_ratings
+            print(f"\n📊 Частота плохих оценок (не 5★):")
+            print(f"  📈 Плохих оценок всего: {bad_ratings:,.0f} из {total_ratings:,.0f} ({(bad_ratings/total_ratings*100):.1f}%)")
+            print(f"  📦 Заказов на 1 плохую оценку: {orders_per_bad_rating:.1f}")
+            print(f"  💡 Это означает: каждый {orders_per_bad_rating:.0f}-й заказ получает оценку не 5★")
+            
+            # Интерпретация результата
+            if orders_per_bad_rating >= 20:
+                print(f"  🟢 ОТЛИЧНО: Очень редкие плохие оценки")
+            elif orders_per_bad_rating >= 10:
+                print(f"  🟡 ХОРОШО: Умеренная частота плохих оценок")
+            elif orders_per_bad_rating >= 5:
+                print(f"  🟠 ВНИМАНИЕ: Частые плохие оценки")
+            else:
+                print(f"  🔴 КРИТИЧНО: Очень частые плохие оценки")
             
             if negative_rate > 10:
                 print(f"  ⚠️ КРИТИЧНО: Высокий уровень негативных отзывов!")
