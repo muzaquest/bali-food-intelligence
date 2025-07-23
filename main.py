@@ -703,8 +703,11 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("🚨 ВАЖНЫЕ ОГРАНИЧЕНИЯ ДАННЫХ:")
     print("• Количество клиентов: ПОЛНЫЕ данные (GRAB + GOJEK)")
     print("• Доходность клиентов: ТОЛЬКО GRAB (клиенты GOJEK без данных о доходах)")  
-    print("• Маркетинг и ROAS: ТОЛЬКО GRAB (GOJEK не предоставляет эти данные)")
+    print("• Маркетинговая воронка: ТОЛЬКО GRAB (показы, клики, конверсии)")
+    print("• Финансы маркетинга: GRAB + GOJEK (бюджет и доходы)")
     print("• Операционные данные: ПОЛНЫЕ данные (GRAB + GOJEK)")
+    print()
+    print("⚠️ КРИТИЧНО: Воронка показывает только GRAB, а ROAS считается по обеим платформам!")
     print()
     
     # Инициализируем API
@@ -904,49 +907,89 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print()
     
     # 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА
-    print("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА (только GRAB)")
+    print("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА")
     print("-" * 40)
     
+    # Получаем раздельные данные по платформам для маркетинга
+    gojek_marketing_query = f"""
+    SELECT 
+        SUM(ads_spend) as total_ads_spend,
+        SUM(ads_sales) as total_ads_sales,
+        SUM(ads_orders) as total_ads_orders
+    FROM gojek_stats 
+    WHERE restaurant_id = {restaurant_id} AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+    """
+    
+    conn_marketing = sqlite3.connect("database.sqlite")
+    gojek_marketing_data = pd.read_sql_query(gojek_marketing_query, conn_marketing).iloc[0]
+    conn_marketing.close()
+    gojek_marketing_spend = gojek_marketing_data['total_ads_spend'] or 0
+    gojek_marketing_sales = gojek_marketing_data['total_ads_sales'] or 0
+    gojek_marketing_orders = gojek_marketing_data['total_ads_orders'] or 0
+    
+    # Данные воронки (только GRAB)
     total_impressions = data['impressions'].sum()
     total_menu_visits = data['unique_menu_visits'].sum()
     total_add_to_carts = data['unique_add_to_carts'].sum()
     total_conversions = data['unique_conversion_reach'].sum()
-    marketing_orders = data['marketing_orders'].sum()
+    grab_marketing_orders = data['marketing_orders'].sum()
+    grab_marketing_spend = data['marketing_spend'].sum()
+    grab_marketing_sales = data['marketing_sales'].sum()
     
-    print("📊 Маркетинговая воронка:")
+    print("📊 Маркетинговая воронка (только GRAB - GOJEK не предоставляет данные воронки):")
     if total_impressions > 0:
         ctr = (total_menu_visits / total_impressions) * 100
         add_to_cart_rate = (total_add_to_carts / total_menu_visits) * 100 if total_menu_visits > 0 else 0
         conversion_rate = (total_conversions / total_menu_visits) * 100 if total_menu_visits > 0 else 0
         
-        print(f"  👁️ Показы рекламы: {total_impressions:,.0f}")
-        print(f"  🔗 Посещения меню: {total_menu_visits:,.0f} (CTR: {ctr:.2f}%)")
-        print(f"  🛒 Добавления в корзину: {total_add_to_carts:,.0f} (Rate: {add_to_cart_rate:.2f}%)")
-        print(f"  ✅ Конверсии: {total_conversions:,.0f} (Rate: {conversion_rate:.2f}%)")
-        print(f"  📦 Заказы от рекламы: {marketing_orders:,.0f}")
+        print(f"  👁️ Показы рекламы: {total_impressions:,.0f} (только GRAB)")
+        print(f"  🔗 Посещения меню: {total_menu_visits:,.0f} (CTR: {ctr:.2f}%) (только GRAB)")
+        print(f"  🛒 Добавления в корзину: {total_add_to_carts:,.0f} (Rate: {add_to_cart_rate:.2f}%) (только GRAB)")
+        print(f"  ✅ Конверсии: {total_conversions:,.0f} (Rate: {conversion_rate:.2f}%) (только GRAB)")
+        print(f"  📦 Заказы от рекламы: {grab_marketing_orders:,.0f} (только GRAB)")
         
-        # Стоимость привлечения
-        cost_per_click = total_marketing / total_menu_visits if total_menu_visits > 0 else 0
-        cost_per_conversion = total_marketing / total_conversions if total_conversions > 0 else 0
-        cost_per_order = total_marketing / marketing_orders if marketing_orders > 0 else 0
+        print(f"\n⚠️ ВАЖНО: GOJEK не предоставляет данные о показах, кликах и воронке продаж")
         
-        print(f"\n💸 Стоимость привлечения:")
+        # Стоимость привлечения (только GRAB - есть данные воронки)
+        cost_per_click = grab_marketing_spend / total_menu_visits if total_menu_visits > 0 else 0
+        cost_per_conversion = grab_marketing_spend / total_conversions if total_conversions > 0 else 0
+        cost_per_order = grab_marketing_spend / grab_marketing_orders if grab_marketing_orders > 0 else 0
+        
+        print(f"\n💸 Стоимость привлечения (только GRAB):")
         print(f"  💰 Стоимость клика: {cost_per_click:,.0f} IDR")
         print(f"  💰 Стоимость конверсии: {cost_per_conversion:,.0f} IDR") 
         print(f"  💰 Стоимость заказа: {cost_per_order:,.0f} IDR")
         
-        # Эффективность кампаний по месяцам
+        # Финансовые данные по платформам
+        total_marketing_spend = grab_marketing_spend + gojek_marketing_spend
+        total_marketing_sales = grab_marketing_sales + gojek_marketing_sales
+        total_marketing_orders = grab_marketing_orders + gojek_marketing_orders
+        
+        print(f"\n💰 Финансовые показатели маркетинга:")
+        print(f"  📱 GRAB: {grab_marketing_spend:,.0f} IDR бюджет → {grab_marketing_sales:,.0f} IDR доход ({grab_marketing_orders} заказов)")
+        print(f"  🛵 GOJEK: {gojek_marketing_spend:,.0f} IDR бюджет → {gojek_marketing_sales:,.0f} IDR доход ({gojek_marketing_orders} заказов)")
+        print(f"  🎯 ИТОГО: {total_marketing_spend:,.0f} IDR бюджет → {total_marketing_sales:,.0f} IDR доход ({total_marketing_orders} заказов)")
+        
+        if total_marketing_spend > 0:
+            total_roas = total_marketing_sales / total_marketing_spend
+            grab_roas = grab_marketing_sales / grab_marketing_spend if grab_marketing_spend > 0 else 0
+            gojek_roas = gojek_marketing_sales / gojek_marketing_spend if gojek_marketing_spend > 0 else 0
+            print(f"  📊 ROAS: GRAB {grab_roas:.2f}x | GOJEK {gojek_roas:.2f}x | ОБЩИЙ {total_roas:.2f}x")
+        
+        # Эффективность кампаний по месяцам (только GRAB - есть помесячные данные)
         monthly_roas = data_sorted.groupby('month').apply(
             lambda x: x['marketing_sales'].sum() / x['marketing_spend'].sum() if x['marketing_spend'].sum() > 0 else 0
         )
-        print(f"\n🎯 ROAS по месяцам:")
+        print(f"\n🎯 ROAS по месяцам (только GRAB):")
         for month, roas in monthly_roas.items():
             month_name = month_names.get(month, f"Месяц {month}")
             print(f"  {month_name}: {roas:.2f}x")
         
-        print(f"\n⚠️ КРИТИЧНО: Данные маркетинговой аналитики доступны только для GRAB")
-        print(f"📊 GOJEK не предоставляет данные о маркетинговых кампаниях, воронке продаж и ROAS")
-        print(f"💡 Для полной картины необходимо запросить маркетинговые данные у GOJEK")
+        print(f"\n🚨 КРИТИЧЕСКИЕ ОГРАНИЧЕНИЯ МАРКЕТИНГОВЫХ ДАННЫХ:")
+        print(f"📊 Воронка продаж: ТОЛЬКО GRAB (показы, клики, конверсии)")
+        print(f"💰 Финансы маркетинга: GRAB + GOJEK (бюджет и доходы)")  
+        print(f"📈 Это создает искаженную картину эффективности!")
+        print(f"💡 РЕКОМЕНДАЦИЯ: Запросить у GOJEK данные воронки для честного анализа")
     
     print()
     
