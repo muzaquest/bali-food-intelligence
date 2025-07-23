@@ -793,40 +793,95 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("👥 3. ДЕТАЛЬНЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ")
     print("-" * 40)
     
+    # Получаем restaurant_id для запросов
+    import sqlite3
+    conn_temp = sqlite3.connect("database.sqlite")
+    restaurant_query = "SELECT id FROM restaurants WHERE name = ?"
+    restaurant_result = pd.read_sql_query(restaurant_query, conn_temp, params=(restaurant_name,))
+    restaurant_id = restaurant_result.iloc[0]['id'] if not restaurant_result.empty else None
+    
+    if restaurant_id is None:
+        print("❌ Не удалось найти ID ресторана")
+        conn_temp.close()
+        return
+    
+    # Получаем данные напрямую из базы для разделения по платформам
+    grab_customers_query = f"""
+    SELECT 
+        SUM(new_customers) as grab_new,
+        SUM(repeated_customers) as grab_repeat, 
+        SUM(reactivated_customers) as grab_reactive,
+        SUM(earned_new_customers) as grab_earned_new,
+        SUM(earned_repeated_customers) as grab_earned_repeat,
+        SUM(earned_reactivated_customers) as grab_earned_reactive
+    FROM grab_stats 
+    WHERE restaurant_id = {restaurant_id} AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+    """
+    
+    gojek_customers_query = f"""
+    SELECT 
+        SUM(new_client) as gojek_new,
+        SUM(active_client) as gojek_repeat,
+        SUM(returned_client) as gojek_reactive
+    FROM gojek_stats 
+    WHERE restaurant_id = {restaurant_id} AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+    """
+    
+    grab_customers = pd.read_sql_query(grab_customers_query, conn_temp).iloc[0]
+    gojek_customers = pd.read_sql_query(gojek_customers_query, conn_temp).iloc[0]
+    conn_temp.close()
+    
+    # Общие данные (обе платформы)
     new_customers = data['new_customers'].sum()
     repeated_customers = data['repeated_customers'].sum()
     reactivated_customers = data['reactivated_customers'].sum()
     
-    new_customer_revenue = data['earned_new_customers'].sum()
-    repeated_customer_revenue = data['earned_repeated_customers'].sum()
-    reactivated_customer_revenue = data['earned_reactivated_customers'].sum()
+    # Данные по платформам
+    grab_new = grab_customers['grab_new'] or 0
+    grab_repeat = grab_customers['grab_repeat'] or 0
+    grab_reactive = grab_customers['grab_reactive'] or 0
+    
+    gojek_new = gojek_customers['gojek_new'] or 0
+    gojek_repeat = gojek_customers['gojek_repeat'] or 0
+    gojek_reactive = gojek_customers['gojek_reactive'] or 0
+    
+    # Доходы (только GRAB имеет эти данные)
+    new_customer_revenue = grab_customers['grab_earned_new'] or 0
+    repeated_customer_revenue = grab_customers['grab_earned_repeat'] or 0
+    reactivated_customer_revenue = grab_customers['grab_earned_reactive'] or 0
     
     # Структура клиентской базы
-    print("📊 Структура клиентской базы:")
+    print("📊 Структура клиентской базы (GRAB + GOJEK):")
     if total_customers > 0:
         new_rate = (new_customers / total_customers) * 100
         repeat_rate = (repeated_customers / total_customers) * 100
         reactive_rate = (reactivated_customers / total_customers) * 100
         
         print(f"  🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)")
+        print(f"    📱 GRAB: {grab_new:,.0f} | 🛵 GOJEK: {gojek_new:,.0f}")
         print(f"  🔄 Повторные клиенты: {repeated_customers:,.0f} ({repeat_rate:.1f}%)")
+        print(f"    📱 GRAB: {grab_repeat:,.0f} | 🛵 GOJEK: {gojek_repeat:,.0f}")
         print(f"  📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)")
+        print(f"    📱 GRAB: {grab_reactive:,.0f} | 🛵 GOJEK: {gojek_reactive:,.0f}")
         
-        # Доходность по типам клиентов
-        print(f"\n💰 Доходность по типам клиентов:")
-        if new_customer_revenue > 0:
-            avg_new = new_customer_revenue / new_customers if new_customers > 0 else 0
-            avg_repeat = repeated_customer_revenue / repeated_customers if repeated_customers > 0 else 0
-            avg_reactive = reactivated_customer_revenue / reactivated_customers if reactivated_customers > 0 else 0
+        # Доходность по типам клиентов (только GRAB)
+        print(f"\n💰 Доходность по типам клиентов (только GRAB):")
+        if new_customer_revenue > 0 and grab_new > 0:
+            avg_new = new_customer_revenue / grab_new
+            avg_repeat = repeated_customer_revenue / grab_repeat if grab_repeat > 0 else 0
+            avg_reactive = reactivated_customer_revenue / grab_reactive if grab_reactive > 0 else 0
             
             print(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR (средний чек: {avg_new:,.0f} IDR)")
             print(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR (средний чек: {avg_repeat:,.0f} IDR)")
-            print(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR (средний чек: {avg_reactive:,.0f} IDR)")
+            if reactivated_customer_revenue > 0:
+                print(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR (средний чек: {avg_reactive:,.0f} IDR)")
             
-            # Анализ лояльности
+            print(f"  ⚠️ Примечание: Данные о доходах доступны только для GRAB")
+            
+            # Анализ лояльности (только GRAB)
             if avg_repeat > avg_new:
                 loyalty_premium = ((avg_repeat - avg_new) / avg_new * 100)
-                print(f"  🏆 Премия лояльности: +{loyalty_premium:.1f}% к среднему чеку")
+                print(f"  🏆 Премия лояльности (GRAB): +{loyalty_premium:.1f}% к среднему чеку")
     
     # Динамика приобретения клиентов
     monthly_new_customers = data_sorted.groupby('month')['new_customers'].sum()
@@ -838,7 +893,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print()
     
     # 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА
-    print("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА")
+    print("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА (только GRAB)")
     print("-" * 40)
     
     total_impressions = data['impressions'].sum()
@@ -877,6 +932,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         for month, roas in monthly_roas.items():
             month_name = month_names.get(month, f"Месяц {month}")
             print(f"  {month_name}: {roas:.2f}x")
+        
+        print(f"\n⚠️ Примечание: Данные маркетинговой аналитики доступны только для GRAB")
     
     print()
     
