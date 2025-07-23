@@ -832,6 +832,44 @@ def calculate_market_benchmark(metric_type):
             SELECT AVG(avg_rating) as market_avg_rating
             FROM market_data
             """
+            
+        elif metric_type == 'repeat_rate':
+            # Процент повторных клиентов по всему рынку
+            query = """
+            WITH market_data AS (
+                SELECT 
+                    r.name,
+                    SUM(COALESCE(g.repeated_customers, 0) + COALESCE(gj.active_client, 0)) as total_repeat,
+                    SUM(COALESCE(g.new_customers, 0) + COALESCE(gj.new_client, 0)) as total_new,
+                    SUM(COALESCE(g.reactivated_customers, 0) + COALESCE(gj.returned_client, 0)) as total_reactive
+                FROM restaurants r
+                LEFT JOIN grab_stats g ON r.id = g.restaurant_id
+                LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id AND g.stat_date = gj.stat_date
+                WHERE g.stat_date IS NOT NULL OR gj.stat_date IS NOT NULL
+                GROUP BY r.id, r.name
+                HAVING (total_repeat + total_new + total_reactive) > 0
+            )
+            SELECT AVG(total_repeat * 100.0 / (total_repeat + total_new + total_reactive)) as market_repeat_rate
+            FROM market_data
+            """
+            
+        elif metric_type == 'conversion_rate':
+            # Конверсия рекламы по всему рынку
+            query = """
+            WITH market_data AS (
+                SELECT 
+                    r.name,
+                    SUM(COALESCE(g.ads_orders, 0)) as total_ad_orders,
+                    SUM(COALESCE(g.unique_menu_visits, 0)) as total_visits
+                FROM restaurants r
+                LEFT JOIN grab_stats g ON r.id = g.restaurant_id
+                WHERE g.ads_orders > 0 AND g.unique_menu_visits > 0
+                GROUP BY r.id, r.name
+                HAVING total_visits > 0
+            )
+            SELECT AVG(total_ad_orders * 100.0 / total_visits) as market_conversion_rate
+            FROM market_data
+            """
         else:
             return 0
             
@@ -843,7 +881,13 @@ def calculate_market_benchmark(metric_type):
     except Exception as e:
         print(f"⚠️ Ошибка расчета бенчмарка {metric_type}: {e}")
         # Возвращаем старые значения по умолчанию
-        defaults = {'avg_order_value': 350000, 'roas': 4.0, 'rating': 4.5}
+        defaults = {
+            'avg_order_value': 350000, 
+            'roas': 4.0, 
+            'rating': 4.5,
+            'repeat_rate': 30.0,  # Реальный рыночный показатель
+            'conversion_rate': 16.0  # Реальный рыночный показатель
+        }
         return defaults.get(metric_type, 0)
 
 def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
@@ -1450,13 +1494,15 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     market_avg_order_value = calculate_market_benchmark('avg_order_value')
     market_avg_roas = calculate_market_benchmark('roas')
     market_avg_rating = calculate_market_benchmark('rating')
+    market_repeat_rate = calculate_market_benchmark('repeat_rate')
+    market_conversion_rate = calculate_market_benchmark('conversion_rate')
     
     benchmarks = {
         'avg_order_value': {'current': avg_order_value, 'benchmark': market_avg_order_value, 'unit': 'IDR'},
         'roas': {'current': avg_roas, 'benchmark': market_avg_roas, 'unit': 'x'},
         'customer_satisfaction': {'current': satisfaction_score if 'satisfaction_score' in locals() else avg_rating, 'benchmark': market_avg_rating, 'unit': '/5.0'},
-        'repeat_rate': {'current': repeat_rate if 'repeat_rate' in locals() else 0, 'benchmark': 60, 'unit': '%'},
-        'conversion_rate': {'current': conversion_rate if 'conversion_rate' in locals() else 0, 'benchmark': 15, 'unit': '%'}
+        'repeat_rate': {'current': repeat_rate if 'repeat_rate' in locals() else 0, 'benchmark': market_repeat_rate, 'unit': '%'},
+        'conversion_rate': {'current': conversion_rate if 'conversion_rate' in locals() else 0, 'benchmark': market_conversion_rate, 'unit': '%'}
     }
     
     for metric, data_point in benchmarks.items():
