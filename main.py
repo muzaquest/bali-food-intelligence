@@ -700,6 +700,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"📅 Период анализа: {start_date} → {end_date}")
     print()
     
+    print("🚨 ВАЖНЫЕ ОГРАНИЧЕНИЯ ДАННЫХ:")
+    print("• Количество клиентов: ПОЛНЫЕ данные (GRAB + GOJEK)")
+    print("• Доходность клиентов: ТОЛЬКО GRAB (клиенты GOJEK без данных о доходах)")  
+    print("• Маркетинг и ROAS: ТОЛЬКО GRAB (GOJEK не предоставляет эти данные)")
+    print("• Операционные данные: ПОЛНЫЕ данные (GRAB + GOJEK)")
+    print()
+    
     # Инициализируем API
     weather_api = WeatherAPI()
     calendar_api = CalendarAPI()
@@ -729,18 +736,21 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Расчет дневной динамики
     daily_avg_sales = total_sales / len(data) if len(data) > 0 else 0
     
-    print(f"💰 Общая выручка: {total_sales:,.0f} IDR")
-    print(f"📦 Общие заказы: {total_orders:,.0f}")
-    print(f"💵 Средний чек: {avg_order_value:,.0f} IDR")
-    print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR")
-    print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
-    print(f"👥 Обслужено клиентов: {total_customers:,.0f}")
-    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR")
-    print(f"🎯 ROAS: {avg_roas:.2f}x")
+    print(f"💰 Общая выручка: {total_sales:,.0f} IDR (GRAB + GOJEK)")
+    print(f"📦 Общие заказы: {total_orders:,.0f} (GRAB + GOJEK)")
+    print(f"💵 Средний чек: {avg_order_value:,.0f} IDR (общий по обеим платформам)")
+    print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (GRAB + GOJEK)")
+    print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0 (GRAB + GOJEK)")
+    print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB + GOJEK)")
+    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (только GRAB)")
+    print(f"🎯 ROAS: {avg_roas:.2f}x (только GRAB - данные GOJEK недоступны)")
     
     # Эффективность периода
     roi_percentage = ((marketing_sales - total_marketing) / total_marketing * 100) if total_marketing > 0 else 0
-    print(f"📈 ROI маркетинга: {roi_percentage:+.1f}%")
+    print(f"📈 ROI маркетинга: {roi_percentage:+.1f}% (только GRAB - данные GOJEK недоступны)")
+    
+    print()
+    print("⚠️ ВАЖНО: Данные о доходности клиентов и маркетинге доступны только для GRAB")
     print(f"📅 Период: {len(data)} дней")
     print()
     
@@ -871,12 +881,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             avg_repeat = repeated_customer_revenue / grab_repeat if grab_repeat > 0 else 0
             avg_reactive = reactivated_customer_revenue / grab_reactive if grab_reactive > 0 else 0
             
-            print(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR (средний чек: {avg_new:,.0f} IDR)")
-            print(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR (средний чек: {avg_repeat:,.0f} IDR)")
+            print(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR (средний чек: {avg_new:,.0f} IDR) - только {grab_new} клиентов GRAB")
+            print(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR (средний чек: {avg_repeat:,.0f} IDR) - только {grab_repeat} клиентов GRAB")
             if reactivated_customer_revenue > 0:
-                print(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR (средний чек: {avg_reactive:,.0f} IDR)")
+                print(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR (средний чек: {avg_reactive:,.0f} IDR) - только {grab_reactive} клиентов GRAB")
             
-            print(f"  ⚠️ Примечание: Данные о доходах доступны только для GRAB")
+            print(f"\n  ⚠️ КРИТИЧНО: Данные о доходах от {gojek_new + gojek_repeat + gojek_reactive} клиентов GOJEK ОТСУТСТВУЮТ в базе данных")
+            print(f"  📊 Это означает, что реальная доходность может быть выше указанной")
             
             # Анализ лояльности (только GRAB)
             if avg_repeat > avg_new:
@@ -933,7 +944,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             month_name = month_names.get(month, f"Месяц {month}")
             print(f"  {month_name}: {roas:.2f}x")
         
-        print(f"\n⚠️ Примечание: Данные маркетинговой аналитики доступны только для GRAB")
+        print(f"\n⚠️ КРИТИЧНО: Данные маркетинговой аналитики доступны только для GRAB")
+        print(f"📊 GOJEK не предоставляет данные о маркетинговых кампаниях, воронке продаж и ROAS")
+        print(f"💡 Для полной картины необходимо запросить маркетинговые данные у GOJEK")
     
     print()
     
