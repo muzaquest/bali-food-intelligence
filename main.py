@@ -686,11 +686,21 @@ def get_restaurant_data_full(restaurant_name, start_date, end_date, db_path="dat
         data['add_to_cart_rate'] = data['unique_add_to_carts'] / data['unique_menu_visits'].replace(0, 1) * 100
         data['customer_retention_rate'] = data['repeated_customers'] / data['total_customers'].replace(0, 1) * 100
         data['order_cancellation_rate'] = data['cancelled_orders'] / (data['orders'] + data['cancelled_orders']).replace(0, 1) * 100
-        data['customer_satisfaction_score'] = (data['five_star_ratings'] * 5 + data['four_star_ratings'] * 4 + 
-                                              data['three_star_ratings'] * 3 + data['two_star_ratings'] * 2 + 
-                                              data['one_star_ratings'] * 1) / (data['one_star_ratings'] + 
-                                              data['two_star_ratings'] + data['three_star_ratings'] + 
-                                              data['four_star_ratings'] + data['five_star_ratings']).replace(0, 1)
+        # Создаем правильный индекс удовлетворенности для совместимости
+        total_ratings_per_day = (data['one_star_ratings'] + data['two_star_ratings'] + 
+                                data['three_star_ratings'] + data['four_star_ratings'] + 
+                                data['five_star_ratings'])
+        
+        # Только для дней с оценками рассчитываем индекс
+        data['customer_satisfaction_score'] = 0.0
+        mask = total_ratings_per_day > 0
+        data.loc[mask, 'customer_satisfaction_score'] = (
+            (data.loc[mask, 'five_star_ratings'] * 5 + 
+             data.loc[mask, 'four_star_ratings'] * 4 + 
+             data.loc[mask, 'three_star_ratings'] * 3 + 
+             data.loc[mask, 'two_star_ratings'] * 2 + 
+             data.loc[mask, 'one_star_ratings'] * 1) / total_ratings_per_day.loc[mask]
+        )
         
         # Операционные проблемы
         data['operational_issues'] = (data['store_is_closed'] + data['store_is_busy'] + 
@@ -1105,9 +1115,19 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             percentage = (count / total_ratings) * 100
             print(f"  {emoji} {stars} звезд: {count:,.0f} ({percentage:.1f}%)")
         
-        # Анализ качества
-        satisfaction_score = data['customer_satisfaction_score'].mean()
-        print(f"\n📈 Индекс удовлетворенности: {satisfaction_score:.2f}/5.0")
+        # Анализ качества - ПРАВИЛЬНЫЙ расчет индекса удовлетворенности
+        total_weighted_score = (data['five_star_ratings'].sum() * 5 + 
+                               data['four_star_ratings'].sum() * 4 + 
+                               data['three_star_ratings'].sum() * 3 + 
+                               data['two_star_ratings'].sum() * 2 + 
+                               data['one_star_ratings'].sum() * 1)
+        
+        if total_ratings > 0:
+            satisfaction_score = total_weighted_score / total_ratings
+            print(f"\n📈 Индекс удовлетворенности: {satisfaction_score:.2f}/5.0")
+        else:
+            satisfaction_score = 0
+            print(f"\n📈 Индекс удовлетворенности: Нет данных")
         
         # Анализ проблемных областей
         negative_ratings = data['one_star_ratings'].sum() + data['two_star_ratings'].sum()
