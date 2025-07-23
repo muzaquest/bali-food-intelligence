@@ -2621,6 +2621,11 @@ def detect_sales_anomalies_and_causes(restaurant_data, weather_data, start_date,
             if abs(unexplained) > 0.05:  # Если больше 5% не объяснено
                 insights.append(f"       • ❓ НЕОБЪЯСНЕННОЕ ВЛИЯНИЕ: {unexplained*100:+.1f}% (требует изучения)")
             
+            # Проверяем математику (для отладки)
+            total_check = total_explained_impact + unexplained
+            if abs(total_check - deviation) > 0.01:  # Если есть расхождение больше 0.01%
+                insights.append(f"       • 🔧 ПРОВЕРКА: сумма факторов = {total_check*100:+.1f}%, отклонение = {deviation*100:+.1f}%")
+            
             insights.append("")
         
         # РЕАЛЬНЫЙ КОРРЕЛЯЦИОННЫЙ АНАЛИЗ
