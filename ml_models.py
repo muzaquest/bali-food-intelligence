@@ -36,7 +36,10 @@ class RestaurantMLAnalyzer:
     
     def __init__(self, db_path='database.sqlite'):
         self.db_path = db_path
-        self.scaler = StandardScaler()
+        if SKLEARN_AVAILABLE:
+            self.scaler = StandardScaler()
+        else:
+            self.scaler = None
         self.models = {}
         
     def load_restaurant_data(self, restaurant_id, start_date=None, end_date=None):
@@ -117,6 +120,9 @@ class RestaurantMLAnalyzer:
         df['month'] = df['stat_date'].dt.month
         df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
         
+        # Праздничные признаки (используем расширенный балийский календарь)
+        df = self._add_holiday_features(df)
+        
         # Лаговые признаки (предыдущие значения)
         df['sales_lag_1'] = df['total_sales'].shift(1)
         df['sales_lag_7'] = df['total_sales'].shift(7)
@@ -136,6 +142,122 @@ class RestaurantMLAnalyzer:
         
         return df
     
+    def _add_holiday_features(self, df):
+        """Добавляет признаки праздников (балийский календарь)"""
+        
+        def get_balinese_holidays(year):
+            """Возвращает балийские и индонезийские праздники"""
+            
+            # Базовые индонезийские праздники
+            base_holidays = {
+                f"{year}-01-01": "national",
+                f"{year}-01-27": "national", 
+                f"{year}-01-29": "national",
+                f"{year}-03-29": "national",
+                f"{year}-03-31": "national",
+                f"{year}-04-01": "national",
+                f"{year}-04-18": "national",
+                f"{year}-05-01": "national",
+                f"{year}-05-12": "national",
+                f"{year}-05-29": "national",
+                f"{year}-06-01": "national",
+                f"{year}-06-06": "national",
+                f"{year}-08-17": "national",
+                f"{year}-12-25": "national"
+            }
+            
+            # Балийские праздники
+            balinese_holidays = {
+                # Полнолуния (Purnama)
+                f"{year}-01-15": "purnama",
+                f"{year}-02-14": "purnama",
+                f"{year}-03-16": "purnama",
+                f"{year}-04-13": "purnama",
+                f"{year}-04-30": "purnama",
+                f"{year}-05-12": "purnama",
+                f"{year}-06-11": "purnama",
+                
+                # Новолуния (Tilem)
+                f"{year}-01-08": "tilem",
+                f"{year}-02-06": "tilem", 
+                f"{year}-03-08": "tilem",
+                f"{year}-04-06": "tilem",
+                f"{year}-05-05": "tilem",
+                f"{year}-06-04": "tilem",
+                
+                # Galungan и Kuningan
+                f"{year}-04-16": "galungan",
+                f"{year}-04-26": "kuningan",
+                
+                # Одаланы (храмовые праздники)
+                f"{year}-04-03": "odalan",
+                f"{year}-04-10": "odalan",
+                f"{year}-04-17": "odalan",
+                f"{year}-04-24": "odalan",
+                f"{year}-05-08": "odalan",
+                f"{year}-05-15": "odalan",
+                f"{year}-05-22": "odalan",
+                f"{year}-06-05": "odalan",
+                f"{year}-06-12": "odalan",
+                f"{year}-06-19": "odalan",
+                f"{year}-06-26": "odalan",
+                
+                # Другие балийские дни
+                f"{year}-04-05": "balinese",
+                f"{year}-04-12": "balinese", 
+                f"{year}-05-03": "balinese",
+                f"{year}-05-17": "balinese",
+                f"{year}-06-07": "balinese",
+                f"{year}-06-14": "balinese",
+                f"{year}-06-21": "balinese"
+            }
+            
+            return {**base_holidays, **balinese_holidays}
+        
+        # Создаем признаки праздников
+        df['date_str'] = df['stat_date'].dt.strftime('%Y-%m-%d')
+        
+        # Получаем праздники для всех лет в данных
+        years = df['stat_date'].dt.year.unique()
+        all_holidays = {}
+        for year in years:
+            all_holidays.update(get_balinese_holidays(year))
+        
+        # Основные признаки праздников
+        df['is_holiday'] = df['date_str'].isin(all_holidays.keys()).astype(int)
+        df['is_national_holiday'] = df['date_str'].map(lambda x: 1 if all_holidays.get(x) == 'national' else 0)
+        df['is_balinese_holiday'] = df['date_str'].map(lambda x: 1 if all_holidays.get(x) in ['purnama', 'tilem', 'galungan', 'kuningan', 'odalan', 'balinese'] else 0)
+        
+        # Специфические типы праздников
+        df['is_purnama'] = df['date_str'].map(lambda x: 1 if all_holidays.get(x) == 'purnama' else 0)
+        df['is_tilem'] = df['date_str'].map(lambda x: 1 if all_holidays.get(x) == 'tilem' else 0)
+        df['is_odalan'] = df['date_str'].map(lambda x: 1 if all_holidays.get(x) == 'odalan' else 0)
+        
+        # Признаки близости к праздникам
+        df['days_to_next_holiday'] = 0
+        df['days_from_prev_holiday'] = 0
+        
+        holiday_dates = pd.to_datetime(list(all_holidays.keys()))
+        
+        for i, date in enumerate(df['stat_date']):
+            future_holidays = holiday_dates[holiday_dates > date]
+            past_holidays = holiday_dates[holiday_dates < date]
+            
+            if len(future_holidays) > 0:
+                df.loc[i, 'days_to_next_holiday'] = (future_holidays.min() - date).days
+            else:
+                df.loc[i, 'days_to_next_holiday'] = 365  # Далекое будущее
+                
+            if len(past_holidays) > 0:
+                df.loc[i, 'days_from_prev_holiday'] = (date - past_holidays.max()).days
+            else:
+                df.loc[i, 'days_from_prev_holiday'] = 365  # Далекое прошлое
+        
+        # Убираем временную колонку
+        df = df.drop('date_str', axis=1)
+        
+        return df
+    
     def train_sales_prediction_model(self, df, model_type='random_forest'):
         """Обучает модель прогнозирования продаж"""
         
@@ -148,6 +270,10 @@ class RestaurantMLAnalyzer:
             'repeat_customers', 'day_of_week', 'month', 'is_weekend',
             'sales_lag_1', 'sales_lag_7', 'avg_order_value', 
             'marketing_efficiency', 'customer_retention', 'operational_issues',
+            # Праздничные признаки
+            'is_holiday', 'is_national_holiday', 'is_balinese_holiday',
+            'is_purnama', 'is_tilem', 'is_odalan',
+            'days_to_next_holiday', 'days_from_prev_holiday',
             'order_completion', 'negative_reviews', 'positive_reviews'
         ]
         
