@@ -10,7 +10,7 @@
 
 ### **✅ OpenAI API - РАБОТАЕТ ИДЕАЛЬНО!**
 ```
-🔑 Ключ: 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
+🔑 Ключ: [API KEY HIDDEN FOR SECURITY]
 
 ✅ ФУНКЦИИ:
    • Персонализированные AI-рекомендации

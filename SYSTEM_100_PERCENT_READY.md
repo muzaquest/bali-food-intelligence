@@ -20,7 +20,7 @@
 ### **✅ API ИНТЕГРАЦИИ - ВСЕ РАБОТАЮТ:**
 ```
 ✅ OpenAI API: Персонализированные AI-рекомендации
-   🔑 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
+   🔑 [API KEY HIDDEN FOR SECURITY]
 
 ✅ Open-Meteo API: Реальные погодные данные (БЕСПЛАТНЫЙ)
    🌤️ Исторические данные с 1940 года
