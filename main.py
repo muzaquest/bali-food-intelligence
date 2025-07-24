@@ -1348,8 +1348,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         
         # Анализ проблемных областей
         negative_ratings = data['one_star_ratings'].sum() + data['two_star_ratings'].sum()
+        negative_rate = (negative_ratings / total_ratings) * 100 if total_ratings > 0 else 0
         if negative_ratings > 0:
-            negative_rate = (negative_ratings / total_ratings) * 100
             print(f"🚨 Негативные отзывы (1-2★): {negative_ratings:,.0f} ({negative_rate:.1f}%)")
         
         # Расчет частоты плохих оценок (все кроме 5 звезд)
