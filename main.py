@@ -19,6 +19,40 @@ from dotenv import load_dotenv
 # Загружаем переменные окружения
 load_dotenv()
 
+# Импортируем функции для корректного разделения данных по платформам
+try:
+    from platform_breakdown_functions import (
+        generate_platform_breakdown,
+        generate_roas_breakdown, 
+        generate_data_limitations,
+        generate_methodology_note,
+        add_platform_indicators,
+        generate_comparison_context
+    )
+    print("✅ Функции разделения данных по платформам загружены")
+except ImportError as e:
+    print(f"⚠️ Не удалось загрузить функции разделения данных: {e}")
+    # Определяем базовые функции как fallback
+    def generate_roas_breakdown(grab_sales, grab_spend, gojek_sales, gojek_spend):
+        return f"ROAS: GRAB {grab_sales/grab_spend:.2f}x, GOJEK {gojek_sales/gojek_spend:.2f}x"
+    def generate_data_limitations():
+        return "⚠️ Ограничения данных: см. документацию"
+
+# Импортируем систему цветового кодирования
+try:
+    from color_coding_system import (
+        generate_colored_roas_breakdown,
+        generate_colored_limitations,
+        generate_colored_benchmark_comparison,
+        add_platform_color_indicators,
+        supports_color
+    )
+    USE_COLORS = supports_color()
+    print(f"✅ Цветовое кодирование {'включено' if USE_COLORS else 'отключено (терминал не поддерживает)'}")
+except ImportError as e:
+    print(f"⚠️ Цветовое кодирование недоступно: {e}")
+    USE_COLORS = False
+
 try:
     import pandas as pd
     import numpy as np
@@ -971,6 +1005,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("📊 1. ИСПОЛНИТЕЛЬНОЕ РЕЗЮМЕ")
     print("-" * 40)
     
+    # Добавляем блок ограничений данных в начало отчета
+    if USE_COLORS:
+        limitations = generate_colored_limitations()
+    else:
+        limitations = generate_data_limitations()
+    print(limitations)
+    
     # Основные метрики
     total_sales = data['total_sales'].sum()
     total_orders = data['orders'].sum()
@@ -991,11 +1032,30 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0 (GRAB + GOJEK)")
     print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB + GOJEK)")
     print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (только GRAB)")
-    print(f"🎯 ROAS: {avg_roas:.2f}x (только GRAB - данные GOJEK недоступны)")
+    # Используем новую функцию для корректного отображения ROAS
+    try:
+        # Получаем данные по GOJEK для корректного расчета
+        gojek_marketing_sales = restaurant_data['gojek_ads_sales'].sum() if 'gojek_ads_sales' in restaurant_data.columns else 0
+        gojek_marketing_spend = restaurant_data['gojek_ads_spend'].sum() if 'gojek_ads_spend' in restaurant_data.columns else 0
+        
+        if USE_COLORS:
+            roas_breakdown = generate_colored_roas_breakdown(marketing_sales, total_marketing, 
+                                                           gojek_marketing_sales, gojek_marketing_spend)
+        else:
+            roas_breakdown = generate_roas_breakdown(marketing_sales, total_marketing, 
+                                                   gojek_marketing_sales, gojek_marketing_spend)
+        print(roas_breakdown)
+        
+        # Обновляем avg_roas для корректного сравнения
+        total_roas = (marketing_sales + gojek_marketing_sales) / (total_marketing + gojek_marketing_spend) if (total_marketing + gojek_marketing_spend) > 0 else avg_roas
+        avg_roas = total_roas
+        
+    except:
+        print(f"🎯 ROAS: {avg_roas:.2f}x (только GRAB - данные GOJEK недоступны)")
     
     # Эффективность периода
     roi_percentage = ((marketing_sales - total_marketing) / total_marketing * 100) if total_marketing > 0 else 0
-    print(f"📈 ROI маркетинга: {roi_percentage:+.1f}% (только GRAB - данные GOJEK недоступны)")
+    print(f"📈 ROI маркетинга: {roi_percentage:+.1f}% (расчет по доступным данным)")
     
     print()
     print("⚠️ ВАЖНО: Данные о доходности клиентов и маркетинге доступны только для GRAB")
@@ -1207,7 +1267,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"  ✅ Конверсии: {total_conversions:,.0f} (Rate: {conversion_rate:.2f}%) (только GRAB)")
         print(f"  📦 Заказы от рекламы: {grab_marketing_orders:,.0f} (только GRAB)")
         
-        print(f"\n⚠️ ВАЖНО: GOJEK не предоставляет данные о показах, кликах и воронке продаж")
+        # Добавляем методическое примечание для воронки
+        funnel_note = generate_methodology_note('conversion')
+        print(f"\n⚠️ МЕТОДИКА: {funnel_note}")
         
         # Стоимость привлечения (только GRAB - есть данные воронки)
         cost_per_click = grab_marketing_spend / total_menu_visits if total_menu_visits > 0 else 0
@@ -1230,10 +1292,10 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"  🎯 ИТОГО: {total_marketing_spend:,.0f} IDR бюджет → {total_marketing_sales:,.0f} IDR доход ({total_marketing_orders} заказов)")
         
         if total_marketing_spend > 0:
-            total_roas = total_marketing_sales / total_marketing_spend
-            grab_roas = grab_marketing_sales / grab_marketing_spend if grab_marketing_spend > 0 else 0
-            gojek_roas = gojek_marketing_sales / gojek_marketing_spend if gojek_marketing_spend > 0 else 0
-            print(f"  📊 ROAS: GRAB {grab_roas:.2f}x | GOJEK {gojek_roas:.2f}x | ОБЩИЙ {total_roas:.2f}x")
+            # Используем новую функцию для корректного отображения ROAS
+            roas_breakdown = generate_roas_breakdown(grab_marketing_sales, grab_marketing_spend,
+                                                   gojek_marketing_sales, gojek_marketing_spend)
+            print(roas_breakdown)
         
         # Эффективность кампаний по месяцам (только GRAB - есть помесячные данные)
         monthly_roas = data_sorted.groupby('month').apply(
