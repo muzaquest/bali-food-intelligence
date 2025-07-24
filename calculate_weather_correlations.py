@@ -110,6 +110,10 @@ def get_sales_data():
         df = pd.read_sql_query(query, conn)
         conn.close()
         
+        # Преобразуем sales в числовой формат
+        df['sales'] = pd.to_numeric(df['sales'], errors='coerce')
+        df = df.dropna(subset=['sales'])
+        
         # Группируем по дням и суммируем продажи
         daily_sales = df.groupby('date')['sales'].sum().reset_index()
         
