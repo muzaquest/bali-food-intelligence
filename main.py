@@ -42,47 +42,83 @@ except ImportError:
     print("⚠️ ML модуль недоступен. Запустите: pip install scikit-learn prophet")
 
 class WeatherAPI:
-    """Класс для работы с OpenWeatherMap API"""
+    """Класс для работы с Open-Meteo API (БЕСПЛАТНЫЙ!)"""
     
     def __init__(self):
-        self.api_key = os.getenv('WEATHER_API_KEY')
-        self.base_url = "http://api.openweathermap.org/data/2.5"
+        # Open-Meteo не требует API ключа!
+        self.base_url = "https://archive-api.open-meteo.com/v1/archive"
+        self.current_url = "https://api.open-meteo.com/v1/forecast"
         
     def get_weather_data(self, date, lat=-8.4095, lon=115.1889):
-        """Получает данные о погоде за конкретную дату"""
-        if not self.api_key:
-            return self._simulate_weather(date)
-            
+        """Получает РЕАЛЬНЫЕ данные о погоде за конкретную дату из Open-Meteo"""
         try:
-            # Конвертируем дату в timestamp
-            timestamp = int(datetime.strptime(date, '%Y-%m-%d').timestamp())
-            
-            url = f"{self.base_url}/onecall/timemachine"
+            # Open-Meteo Historical Weather API
             params = {
-                'lat': lat,
-                'lon': lon,
-                'dt': timestamp,
-                'appid': self.api_key,
-                'units': 'metric'
+                'latitude': lat,
+                'longitude': lon,
+                'start_date': date,
+                'end_date': date,
+                'hourly': 'temperature_2m,relative_humidity_2m,precipitation,weather_code,cloud_cover',
+                'timezone': 'Asia/Jakarta'  # Бали
             }
             
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(self.base_url, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
-                weather = data.get('current', {})
-                return {
-                    'temperature': weather.get('temp', 28),
-                    'humidity': weather.get('humidity', 75),
-                    'condition': weather.get('weather', [{}])[0].get('main', 'Clear'),
-                    'rain': weather.get('rain', {}).get('1h', 0)
-                }
-            else:
-                return self._simulate_weather(date)
+                hourly = data.get('hourly', {})
+                
+                if hourly and len(hourly.get('time', [])) > 0:
+                    # Берем среднее за день
+                    temps = hourly.get('temperature_2m', [28])
+                    humidity = hourly.get('relative_humidity_2m', [75])
+                    precipitation = hourly.get('precipitation', [0])
+                    weather_codes = hourly.get('weather_code', [0])
+                    
+                    avg_temp = sum(temps) / len(temps) if temps else 28
+                    avg_humidity = sum(humidity) / len(humidity) if humidity else 75
+                    total_rain = sum(precipitation) if precipitation else 0
+                    
+                    # Определяем условия по WMO коду
+                    main_weather_code = max(set(weather_codes), key=weather_codes.count) if weather_codes else 0
+                    condition = self._weather_code_to_condition(main_weather_code)
+                    
+                    return {
+                        'temperature': avg_temp,
+                        'humidity': avg_humidity,
+                        'condition': condition,
+                        'rain': total_rain,
+                        'source': 'Open-Meteo (реальные данные)'
+                    }
+            
+            # Fallback к симуляции если API недоступно
+            return self._simulate_weather(date)
                 
         except Exception as e:
-            print(f"⚠️ Weather API error: {e}")
+            print(f"⚠️ Open-Meteo API error: {e}")
             return self._simulate_weather(date)
+    
+    def _weather_code_to_condition(self, code):
+        """Конвертирует WMO код погоды в читаемое условие"""
+        # WMO Weather interpretation codes
+        if code == 0:
+            return 'Clear'
+        elif code in [1, 2, 3]:
+            return 'Clouds'
+        elif code in [45, 48]:
+            return 'Fog'
+        elif code in [51, 53, 55, 56, 57]:
+            return 'Drizzle'
+        elif code in [61, 63, 65, 66, 67]:
+            return 'Rain'
+        elif code in [71, 73, 75, 77, 85, 86]:
+            return 'Snow'
+        elif code in [80, 81, 82]:
+            return 'Rain'  # Showers
+        elif code in [95, 96, 99]:
+            return 'Thunderstorm'
+        else:
+            return 'Clear'
     
     def _simulate_weather(self, date):
         """Симуляция погодных данных если API недоступно"""
@@ -99,7 +135,8 @@ class WeatherAPI:
             'temperature': random.uniform(24, 32),
             'humidity': random.uniform(65, 85),
             'condition': condition,
-            'rain': rain
+            'rain': rain,
+            'source': 'Симуляция (Open-Meteo недоступен)'
         }
 
 class CalendarAPI:
