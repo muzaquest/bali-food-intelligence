@@ -266,19 +266,21 @@ class OpenAIAnalyzer:
     def __init__(self):
         self.api_key = os.getenv('OPENAI_API_KEY')
         if self.api_key and OPENAI_AVAILABLE:
-            openai.api_key = self.api_key
+            self.client = openai.OpenAI(api_key=self.api_key)
+        else:
+            self.client = None
             
     def generate_insights(self, restaurant_data, weather_data=None, holiday_data=None):
         """Генерирует инсайты и рекомендации с помощью GPT"""
-        if not self.api_key or not OPENAI_AVAILABLE:
+        if not self.client:
             return self._generate_basic_insights(restaurant_data)
             
         try:
             # Подготавливаем данные для анализа
             prompt = self._prepare_analysis_prompt(restaurant_data, weather_data, holiday_data)
             
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",  # Используем более дешевую модель
                 messages=[
                     {"role": "system", "content": "Ты эксперт-аналитик ресторанного бизнеса в Индонезии с 15-летним опытом. Анализируй данные и давай конкретные, практичные рекомендации."},
                     {"role": "user", "content": prompt}
