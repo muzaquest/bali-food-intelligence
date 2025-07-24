@@ -2724,12 +2724,20 @@ def analyze_weather_impact(date, sales_deviation, weather_data):
     condition = random.choice(weather_conditions)
     temp = random.uniform(24, 34)
     
+    # Загружаем реальные погодные коэффициенты
+    try:
+        with open('real_coefficients.json', 'r', encoding='utf-8') as f:
+            real_coeffs = json.load(f)
+            weather_coeffs = real_coeffs.get('weather', {})
+    except:
+        weather_coeffs = {}
+    
     weather_impacts = {
-        'Rain': {'impact': -0.15, 'desc': 'дождь снижает посещаемость'},
-        'Thunderstorm': {'impact': -0.25, 'desc': 'гроза значительно снижает заказы'},
-        'Drizzle': {'impact': -0.08, 'desc': 'моросящий дождь немного влияет на продажи'},
-        'Clear': {'impact': 0.05, 'desc': 'ясная погода способствует заказам'},
-        'Clouds': {'impact': -0.02, 'desc': 'облачность незначительно влияет на продажи'}
+        'Rain': {'impact': weather_coeffs.get('Rain', 0.135), 'desc': 'дождь увеличивает заказы доставки (+13.5%)'},
+        'Thunderstorm': {'impact': weather_coeffs.get('Rain', 0.135), 'desc': 'гроза увеличивает заказы доставки'},
+        'Drizzle': {'impact': weather_coeffs.get('Drizzle', -0.104), 'desc': 'моросящий дождь снижает активность (-10.4%)'},
+        'Clear': {'impact': weather_coeffs.get('Rain_vs_Clear', 0.217), 'desc': 'ясная погода - базовая активность'},
+        'Clouds': {'impact': weather_coeffs.get('Clouds', -0.141), 'desc': 'облачность снижает активность (-14.1%)'}
     }
     
     if condition in weather_impacts:
