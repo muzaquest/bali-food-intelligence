@@ -8,6 +8,7 @@ import argparse
 import sys
 import sqlite3
 import os
+import json
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
@@ -84,7 +85,7 @@ class WeatherAPI:
         self.current_url = "https://api.open-meteo.com/v1/forecast"
         
     def get_weather_data(self, date, lat=-8.4095, lon=115.1889):
-        """Получает РЕАЛЬНЫЕ данные о погоде за конкретную дату из Open-Meteo"""
+        """Получает РЕАЛЬНЫЕ данные о погоде за конкретную дату из Open-Meteo по точным координатам"""
         try:
             # Open-Meteo Historical Weather API
             params = {
@@ -1461,15 +1462,26 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("🌐 7. АНАЛИЗ ВНЕШНИХ ФАКТОРОВ")
     print("-" * 40)
     
-    # Погодный анализ
+    # Получаем точные координаты ресторана
+    restaurant_location = get_restaurant_location(restaurant_name)
+    print(f"📍 Локация: {restaurant_location['location']}, {restaurant_location['area']} ({restaurant_location['zone']} зона)")
+    print(f"🗺️ Координаты: {restaurant_location['latitude']:.4f}, {restaurant_location['longitude']:.4f}")
+    
+    # Погодный анализ - ИСПРАВЛЕНО: анализируем ВСЕ дни, а не случайную выборку
     print("🌤️ Влияние погоды на продажи:")
     
-    # Берем случайные дни для анализа погоды
-    sample_dates = data['date'].sample(min(10, len(data))).tolist()
+    # Анализируем ВСЕ дни с данными
+    all_dates = data['date'].unique()
     weather_sales_data = []
     
-    for date in sample_dates:
-        weather = weather_api.get_weather_data(date)
+    print(f"  🔍 Анализируем погоду для {len(all_dates)} дней по точным координатам...")
+    
+    for date in all_dates:
+        weather = weather_api.get_weather_data(
+            date, 
+            lat=restaurant_location['latitude'], 
+            lon=restaurant_location['longitude']
+        )
         day_sales = data[data['date'] == date]['total_sales'].sum()
         weather_sales_data.append({
             'date': date,
@@ -1493,15 +1505,44 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         emoji = {"Clear": "☀️", "Rain": "🌧️", "Clouds": "☁️", "Thunderstorm": "⛈️"}.get(condition, "🌤️")
         print(f"    {emoji} {condition}: {avg_sales:,.0f} IDR ({len(sales_list)} дней)")
     
-    # Анализ влияния дождя
+    # Детальный анализ влияния погоды
     rainy_days = [item for item in weather_sales_data if item['condition'] in ['Rain', 'Thunderstorm']]
     clear_days = [item for item in weather_sales_data if item['condition'] == 'Clear']
+    cloudy_days = [item for item in weather_sales_data if item['condition'] in ['Clouds', 'Drizzle']]
     
-    if rainy_days and clear_days:
+    print(f"  📊 Статистика по погодным условиям:")
+    
+    # Анализ всех типов погоды
+    all_conditions = {}
+    for item in weather_sales_data:
+        condition = item['condition']
+        if condition not in all_conditions:
+            all_conditions[condition] = []
+        all_conditions[condition].append(item['sales'])
+    
+    # Общая средняя для сравнения
+    overall_avg = sum(item['sales'] for item in weather_sales_data) / len(weather_sales_data)
+    
+    for condition, sales_list in all_conditions.items():
+        avg_sales = sum(sales_list) / len(sales_list)
+        impact = ((avg_sales - overall_avg) / overall_avg * 100) if overall_avg > 0 else 0
+        emoji = {"Clear": "☀️", "Rain": "🌧️", "Clouds": "☁️", "Thunderstorm": "⛈️", "Drizzle": "🌦️"}.get(condition, "🌤️")
+        
+        if abs(impact) > 5:  # Показываем только значимые влияния
+            impact_text = "КРИТИЧНО!" if abs(impact) > 15 else "заметно"
+            print(f"    {emoji} {condition}: {avg_sales:,.0f} IDR ({len(sales_list)} дней) - {impact:+.1f}% ({impact_text})")
+        else:
+            print(f"    {emoji} {condition}: {avg_sales:,.0f} IDR ({len(sales_list)} дней) - {impact:+.1f}%")
+    
+    # Специальный анализ дождливых дней
+    if rainy_days:
         avg_rainy_sales = sum(item['sales'] for item in rainy_days) / len(rainy_days)
-        avg_clear_sales = sum(item['sales'] for item in clear_days) / len(clear_days)
-        weather_impact = ((avg_rainy_sales - avg_clear_sales) / avg_clear_sales * 100) if avg_clear_sales > 0 else 0
-        print(f"  💧 Влияние дождя на продажи: {weather_impact:+.1f}%")
+        weather_impact = ((avg_rainy_sales - overall_avg) / overall_avg * 100) if overall_avg > 0 else 0
+        
+        if abs(weather_impact) > 10:
+            print(f"  💧 КРИТИЧНО: Дождь влияет на продажи на {weather_impact:+.1f}%!")
+        else:
+            print(f"  💧 Влияние дождя на продажи: {weather_impact:+.1f}%")
     
     # Анализ праздников
     print(f"\n📅 Влияние праздников:")
@@ -1522,28 +1563,70 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"  📊 Средние продажи в обычные дни: {regular_avg:,.0f} IDR")
         print(f"  🎯 Влияние праздников: {holiday_effect:+.1f}%")
         
-        # Список праздников в периоде
+        # Детальный анализ праздников с влиянием на продажи
         period_holidays = [h for h in holidays if h['date'] in holiday_dates]
         if period_holidays:
             print(f"  📋 Праздники в периоде ({len(period_holidays)} всего):")
+            
+            # Анализируем влияние каждого типа праздника
+            holiday_impact_analysis = {}
+            
+            for holiday in period_holidays:
+                h_date = holiday['date']
+                h_type = holiday.get('type', 'unknown')
+                h_name = holiday['name']
+                
+                # Получаем продажи в праздничный день
+                holiday_sales = data[data['date'] == h_date]['total_sales'].sum()
+                
+                if h_type not in holiday_impact_analysis:
+                    holiday_impact_analysis[h_type] = []
+                
+                holiday_impact_analysis[h_type].append({
+                    'date': h_date,
+                    'name': h_name,
+                    'sales': holiday_sales
+                })
             
             # Разделяем на национальные и балийские
             national_holidays = [h for h in period_holidays if h.get('type') == 'national']
             balinese_holidays = [h for h in period_holidays if h.get('type') == 'balinese']
             
             if national_holidays:
-                print(f"    🇮🇩 Национальные ({len(national_holidays)}):")
+                national_avg = sum(h['sales'] for h in holiday_impact_analysis.get('national', [])) / len(holiday_impact_analysis.get('national', [1])) if holiday_impact_analysis.get('national') else 0
+                national_impact = ((national_avg - regular_avg) / regular_avg * 100) if regular_avg > 0 and national_avg > 0 else 0
+                
+                impact_emoji = "📈" if national_impact > 5 else "📉" if national_impact < -5 else "➡️"
+                print(f"    🇮🇩 Национальные ({len(national_holidays)}): {impact_emoji} {national_impact:+.1f}% влияние")
+                
+                # Показываем самые значимые
                 for holiday in national_holidays[:3]:
-                    print(f"      • {holiday['date']}: {holiday['name']}")
+                    h_sales = next((h['sales'] for h in holiday_impact_analysis.get('national', []) if h['date'] == holiday['date']), 0)
+                    h_impact = ((h_sales - regular_avg) / regular_avg * 100) if regular_avg > 0 and h_sales > 0 else 0
+                    impact_text = f" ({h_impact:+.1f}%)" if abs(h_impact) > 10 else ""
+                    print(f"      • {holiday['date']}: {holiday['name']}{impact_text}")
                 if len(national_holidays) > 3:
                     print(f"      • ... и еще {len(national_holidays) - 3}")
             
             if balinese_holidays:
-                print(f"    🏝️ Балийские ({len(balinese_holidays)}):")
+                balinese_avg = sum(h['sales'] for h in holiday_impact_analysis.get('balinese', [])) / len(holiday_impact_analysis.get('balinese', [1])) if holiday_impact_analysis.get('balinese') else 0
+                balinese_impact = ((balinese_avg - regular_avg) / regular_avg * 100) if regular_avg > 0 and balinese_avg > 0 else 0
+                
+                impact_emoji = "📈" if balinese_impact > 5 else "📉" if balinese_impact < -5 else "➡️"
+                print(f"    🏝️ Балийские ({len(balinese_holidays)}): {impact_emoji} {balinese_impact:+.1f}% влияние")
+                
+                # Показываем самые значимые
                 for holiday in balinese_holidays[:5]:
-                    print(f"      • {holiday['date']}: {holiday['name']}")
-                if len(balinese_holidays) > 5:
-                    print(f"      • ... и еще {len(balinese_holidays) - 5}")
+                    h_sales = next((h['sales'] for h in holiday_impact_analysis.get('balinese', []) if h['date'] == holiday['date']), 0)
+                    h_impact = ((h_sales - regular_avg) / regular_avg * 100) if regular_avg > 0 and h_sales > 0 else 0
+                    if abs(h_impact) > 10:  # Показываем только значимые
+                        impact_text = f" ({h_impact:+.1f}%)"
+                        print(f"      • {holiday['date']}: {holiday['name']}{impact_text}")
+                
+                if len([h for h in balinese_holidays if abs(((next((s['sales'] for s in holiday_impact_analysis.get('balinese', []) if s['date'] == h['date']), 0) - regular_avg) / regular_avg * 100)) > 10]) < len(balinese_holidays):
+                    remaining = len(balinese_holidays) - len([h for h in balinese_holidays if abs(((next((s['sales'] for s in holiday_impact_analysis.get('balinese', []) if s['date'] == h['date']), 0) - regular_avg) / regular_avg * 100)) > 10])
+                    if remaining > 0:
+                        print(f"      • ... и еще {remaining} с меньшим влиянием")
         else:
             print(f"  📋 Нет праздников в анализируемом периоде")
     
@@ -3408,6 +3491,40 @@ def get_russia_position():
             break
     
     return russia_info
+
+def get_restaurant_location(restaurant_name):
+    """Получает координаты ресторана из файла локаций"""
+    try:
+        with open('data/bali_restaurant_locations.json', 'r', encoding='utf-8') as f:
+            locations_data = json.load(f)
+        
+        for restaurant in locations_data['restaurants']:
+            if restaurant['name'].lower() == restaurant_name.lower():
+                return {
+                    'latitude': restaurant['latitude'],
+                    'longitude': restaurant['longitude'],
+                    'location': restaurant['location'],
+                    'area': restaurant['area'],
+                    'zone': restaurant['zone']
+                }
+        
+        # Если не найден, возвращаем координаты центра Бали
+        return {
+            'latitude': -8.4095,
+            'longitude': 115.1889,
+            'location': 'Denpasar',
+            'area': 'Denpasar',
+            'zone': 'Central'
+        }
+    except Exception as e:
+        print(f"⚠️ Ошибка при загрузке локаций: {e}")
+        return {
+            'latitude': -8.4095,
+            'longitude': 115.1889,
+            'location': 'Denpasar',
+            'area': 'Denpasar', 
+            'zone': 'Central'
+        }
 
 if __name__ == "__main__":
     main()
