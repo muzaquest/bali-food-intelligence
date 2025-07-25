@@ -2334,13 +2334,16 @@ def generate_market_insights(market_data, leaders_df):
     # Анализ размера рынка
     total_sales = market_data['total_sales']
     total_restaurants = market_data['total_restaurants']
-    avg_order_value = market_data['avg_order_value']
+    total_orders = market_data['total_orders']
     market_roas = market_data['market_roas']
+    
+    # ИСПРАВЛЕНО: Правильный расчет среднего чека
+    correct_avg_order_value = total_sales / total_orders if total_orders > 0 else 0
     
     insights.append(f"💰 РАЗМЕР И СТРУКТУРА РЫНКА:")
     insights.append(f"   • Общий оборот: {total_sales:,.0f} IDR")
     insights.append(f"   • Средняя выручка на ресторан: {(total_sales/total_restaurants):,.0f} IDR")
-    insights.append(f"   • Средний чек рынка: {avg_order_value:,.0f} IDR")
+    insights.append(f"   • Средний чек рынка: {correct_avg_order_value:,.0f} IDR")
     
     # Оценка размера рынка (корректно для Бали)
     total_sales_billions = total_sales / 1000000000
@@ -2387,10 +2390,10 @@ def generate_market_insights(market_data, leaders_df):
     
     # Анализ ценообразования
     insights.append(f"\n💰 ЦЕНОВОЕ ПОЗИЦИОНИРОВАНИЕ:")
-    if avg_order_value > 400000:
+    if correct_avg_order_value > 400000:
         insights.append(f"   💎 ПРЕМИУМ РЫНОК: Высокий средний чек")
         insights.append(f"   💡 Возможность: Развитие luxury-сегмента")
-    elif avg_order_value > 250000:
+    elif correct_avg_order_value > 250000:
         insights.append(f"   🏷️ СРЕДНИЙ СЕГМЕНТ: Сбалансированное ценообразование")
         insights.append(f"   💡 Возможность: Upsell и премиализация")
     else:
