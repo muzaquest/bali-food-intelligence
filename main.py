@@ -2082,14 +2082,17 @@ def analyze_market(start_date=None, end_date=None):
         
         print()
         
-        # 3. СЕГМЕНТАЦИЯ РЫНКА
-        print("📈 3. СЕГМЕНТАЦИЯ РЫНКА")
+        # 3. СЕГМЕНТАЦИЯ ТОП-15 ЛИДЕРОВ
+        print("📈 3. СЕГМЕНТАЦИЯ ТОП-15 ЛИДЕРОВ")
         print("-" * 40)
         
         # Анализ по сегментам
         segment_analysis = leaders.copy()
         segment_analysis['avg_order_value'] = segment_analysis['total_sales'] / segment_analysis['total_orders']
         segment_analysis['daily_sales'] = segment_analysis['total_sales'] / segment_analysis['active_days']
+        
+        # ИСПРАВЛЕНО: Рассчитываем доли от ТОП-15, а не от всего рынка
+        top15_total_sales = segment_analysis['total_sales'].sum()
         
         # Сегменты по среднему чеку
         premium_segment = segment_analysis[segment_analysis['avg_order_value'] >= 350000]
@@ -2101,21 +2104,21 @@ def analyze_market(start_date=None, end_date=None):
         if not premium_segment.empty:
             print(f"   • Средний чек: {premium_segment['avg_order_value'].mean():,.0f} IDR")
             print(f"   • Общие продажи: {premium_segment['total_sales'].sum():,.0f} IDR")
-            print(f"   • Доля рынка: {(premium_segment['total_sales'].sum() / stats['market_sales'] * 100):.1f}%")
+            print(f"   • Доля ТОП-15: {(premium_segment['total_sales'].sum() / top15_total_sales * 100):.1f}%")
         
         print(f"\n🏷️ СРЕДНИЙ СЕГМЕНТ (средний чек 200-350K IDR):")
         print(f"   • Ресторанов: {len(mid_segment)}")
         if not mid_segment.empty:
             print(f"   • Средний чек: {mid_segment['avg_order_value'].mean():,.0f} IDR")
             print(f"   • Общие продажи: {mid_segment['total_sales'].sum():,.0f} IDR")
-            print(f"   • Доля рынка: {(mid_segment['total_sales'].sum() / stats['market_sales'] * 100):.1f}%")
+            print(f"   • Доля ТОП-15: {(mid_segment['total_sales'].sum() / top15_total_sales * 100):.1f}%")
         
         print(f"\n💰 БЮДЖЕТНЫЙ СЕГМЕНТ (средний чек <200K IDR):")
         print(f"   • Ресторанов: {len(budget_segment)}")
         if not budget_segment.empty:
             print(f"   • Средний чек: {budget_segment['avg_order_value'].mean():,.0f} IDR")
             print(f"   • Общие продажи: {budget_segment['total_sales'].sum():,.0f} IDR")
-            print(f"   • Доля рынка: {(budget_segment['total_sales'].sum() / stats['market_sales'] * 100):.1f}%")
+            print(f"   • Доля ТОП-15: {(budget_segment['total_sales'].sum() / top15_total_sales * 100):.1f}%")
         
         print()
         
