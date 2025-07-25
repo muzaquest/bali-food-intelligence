@@ -2346,8 +2346,11 @@ def generate_market_insights(market_data, leaders_df):
     total_sales_billions = total_sales / 1000000000
     insights.append(f"   💰 РАЗМЕР АНАЛИЗИРУЕМОГО СЕГМЕНТА: {total_sales_billions:.0f} млрд IDR")
     insights.append(f"   📊 ВАЖНО: Это данные по {total_restaurants} клиентам MUZAQUEST, не весь рынок Бали")
-    insights.append(f"   🏝️ КОНТЕКСТ: Данные из наших файлов по туризму Бали (2024: 2.39 млн, 2025: 1.43 млн на май)")
     insights.append(f"   🎯 СЕГМЕНТ: Выборка из ресторанного рынка Бали (преимущественно delivery-платформы)")
+    
+    # Добавляем детальные туристические данные
+    tourist_insights = get_tourist_insights()
+    insights.append(tourist_insights)
     
     # Анализ концентрации
     if not leaders_df.empty:
@@ -3211,6 +3214,98 @@ def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
         insights.append(f"❌ Ошибка анализа рыночных аномалий: {e}")
     
     return '\n'.join(insights)
+
+def analyze_tourist_data():
+    """Анализ туристических данных из наших XLS файлов"""
+    try:
+        import pandas as pd
+        
+        # Читаем файлы
+        df_2024 = pd.read_excel('Kunjungan_Wisatawan_Bali_2024.xls', engine='xlrd', skiprows=4)
+        df_2025 = pd.read_excel('Kunjungan_Wisatawan_Bali_2025.xls', engine='xlrd', skiprows=4)
+        
+        # Анализ 2024
+        countries_2024 = []
+        for i, row in df_2024.iterrows():
+            if i < 150 and pd.notna(row.iloc[1]) and isinstance(row.iloc[1], str):
+                country = row.iloc[1].strip()
+                if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS']:
+                    total_col = df_2024.columns[-3]
+                    total_value = row[total_col]
+                    if pd.notna(total_value) and isinstance(total_value, (int, float)) and total_value > 0:
+                        countries_2024.append({
+                            'country': country,
+                            'total': total_value
+                        })
+        
+        # Анализ 2025
+        countries_2025 = []
+        for i, row in df_2025.iterrows():
+            if i < 150 and pd.notna(row.iloc[1]) and isinstance(row.iloc[1], str):
+                country = row.iloc[1].strip()
+                if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS']:
+                    total_col = df_2025.columns[-4]
+                    total_value = row[total_col]
+                    if pd.notna(total_value) and isinstance(total_value, (int, float)) and total_value > 0:
+                        countries_2025.append({
+                            'country': country,
+                            'total': total_value
+                        })
+        
+        # Сортируем по количеству туристов
+        countries_2024 = sorted(countries_2024, key=lambda x: x['total'], reverse=True)
+        countries_2025 = sorted(countries_2025, key=lambda x: x['total'], reverse=True)
+        
+        # Подсчитываем итоги
+        total_2024 = sum([d['total'] for d in countries_2024])
+        total_2025 = sum([d['total'] for d in countries_2025])
+        
+        # Формируем результат
+        result = {
+            'total_2024': total_2024,
+            'total_2025_partial': total_2025,
+            'top_countries_2024': countries_2024[:3],
+            'top_countries_2025': countries_2025[:3],
+            'all_countries_2024': countries_2024,
+            'all_countries_2025': countries_2025
+        }
+        
+        return result
+        
+    except Exception as e:
+        print(f"Ошибка анализа туристических данных: {e}")
+        return None
+
+def get_tourist_insights():
+    """Получить инсайты по туристическим данным для отчетов"""
+    tourist_data = analyze_tourist_data()
+    if not tourist_data:
+        return "   🏝️ КОНТЕКСТ: Туристические данные недоступны"
+    
+    # Топ-3 страны 2024
+    top_2024 = tourist_data['top_countries_2024']
+    top_2025 = tourist_data['top_countries_2025']
+    
+    insights = []
+    insights.append(f"   🏝️ ТУРИСТИЧЕСКИЕ ДАННЫЕ БАЛИ (из наших файлов):")
+    insights.append(f"   • 2024 ИТОГО: {tourist_data['total_2024']:,.0f} туристов")
+    insights.append(f"   • 2025 до мая: {tourist_data['total_2025_partial']:,.0f} туристов")
+    
+    if len(top_2024) >= 3:
+        total_2024 = tourist_data['total_2024']
+        insights.append(f"   📊 ТОП-3 РЫНКА 2024:")
+        for i, country in enumerate(top_2024[:3]):
+            percentage = (country['total'] / total_2024) * 100
+            insights.append(f"      {i+1}. {country['country']}: {country['total']:,.0f} ({percentage:.1f}%)")
+    
+    if len(top_2025) >= 3:
+        total_2025 = tourist_data['total_2025_partial']
+        insights.append(f"   📊 ТОП-3 РЫНКА 2025 (до мая):")
+        for i, country in enumerate(top_2025[:3]):
+            percentage = (country['total'] / total_2025) * 100
+            insights.append(f"      {i+1}. {country['country']}: {country['total']:,.0f} ({percentage:.1f}%)")
+    
+    return "\n".join(insights)
 
 if __name__ == "__main__":
     main()
