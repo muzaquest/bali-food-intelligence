@@ -3227,9 +3227,9 @@ def analyze_tourist_data():
         # Анализ 2024
         countries_2024 = []
         for i, row in df_2024.iterrows():
-            if i < 150 and pd.notna(row.iloc[1]) and isinstance(row.iloc[1], str):
+            if i < 200 and pd.notna(row.iloc[1]) and isinstance(row.iloc[1], str):
                 country = row.iloc[1].strip()
-                if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS']:
+                if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS', '', 'NO', 'I']:
                     total_col = df_2024.columns[-3]
                     total_value = row[total_col]
                     if pd.notna(total_value) and isinstance(total_value, (int, float)) and total_value > 0:
@@ -3241,9 +3241,9 @@ def analyze_tourist_data():
         # Анализ 2025
         countries_2025 = []
         for i, row in df_2025.iterrows():
-            if i < 150 and pd.notna(row.iloc[1]) and isinstance(row.iloc[1], str):
+            if i < 200 and pd.notna(row.iloc[1]) and isinstance(row.iloc[1], str):
                 country = row.iloc[1].strip()
-                if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS']:
+                if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS', '', 'NO', 'I']:
                     total_col = df_2025.columns[-4]
                     total_value = row[total_col]
                     if pd.notna(total_value) and isinstance(total_value, (int, float)) and total_value > 0:
@@ -3306,6 +3306,41 @@ def get_tourist_insights():
             insights.append(f"      {i+1}. {country['country']}: {country['total']:,.0f} ({percentage:.1f}%)")
     
     return "\n".join(insights)
+
+def get_russia_position():
+    """Получить позицию России в туристических потоках"""
+    tourist_data = analyze_tourist_data()
+    if not tourist_data:
+        return None
+    
+    # Ищем Россию в данных 2024 и 2025
+    russia_info = {}
+    
+    # 2024
+    for i, country in enumerate(tourist_data['all_countries_2024']):
+        if 'Russian' in country['country']:
+            percentage = (country['total'] / tourist_data['total_2024']) * 100
+            russia_info['2024'] = {
+                'rank': i + 1,
+                'total': country['total'],
+                'percentage': percentage,
+                'total_countries': len(tourist_data['all_countries_2024'])
+            }
+            break
+    
+    # 2025
+    for i, country in enumerate(tourist_data['all_countries_2025']):
+        if 'Russian' in country['country']:
+            percentage = (country['total'] / tourist_data['total_2025_partial']) * 100
+            russia_info['2025'] = {
+                'rank': i + 1,
+                'total': country['total'],
+                'percentage': percentage,
+                'total_countries': len(tourist_data['all_countries_2025'])
+            }
+            break
+    
+    return russia_info
 
 if __name__ == "__main__":
     main()
