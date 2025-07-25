@@ -2164,8 +2164,8 @@ def analyze_market(start_date=None, end_date=None):
             # Распределение маркетинговых бюджетов
             marketing_active = leaders[leaders['marketing_spend'] > 0]
             if not marketing_active.empty:
-                print(f"\n📊 Маркетинговая активность:")
-                print(f"   • Ресторанов с рекламой: {len(marketing_active)}/{len(leaders)} ({(len(marketing_active)/len(leaders)*100):.1f}%)")
+                print(f"\n📊 Маркетинговая активность (ТОП-15 лидеров):")
+                print(f"   • Ресторанов с рекламой: {len(marketing_active)}/{len(leaders)} ({(len(marketing_active)/len(leaders)*100):.1f}% покрытие)")
                 print(f"   • Средний бюджет: {marketing_active['marketing_spend'].mean():,.0f} IDR")
                 print(f"   • Медианный бюджет: {marketing_active['marketing_spend'].median():,.0f} IDR")
                 
