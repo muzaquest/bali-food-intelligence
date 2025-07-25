@@ -3015,53 +3015,74 @@ def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
                 
                 # ВЫСОКИЕ ПРОДАЖИ
                 if sales_deviation > 0:
-                    if rating > 4.7:
+                    if rating > market_avg_rating:
+                        rating_advantage = rating - market_avg_rating
                         causes.append({
-                            'factor': 'Исключительное качество',
-                            'description': f'⭐ КАЧЕСТВО: рейтинг {rating:.2f}/5.0 → привлекает клиентов',
-                            'impact': '+высокое'
+                            'factor': 'Высокое качество',
+                            'description': f'⭐ КАЧЕСТВО: рейтинг {rating:.2f}/5.0 (на +{rating_advantage:.2f}★ выше среднего {market_avg_rating:.2f})',
+                            'impact': f'+{rating_advantage*100:.0f}% от рейтинга'
                         })
                     
                     if marketing_spend > 0:
                         roas = marketing_sales / marketing_spend
-                        if roas > 8:
-                            causes.append({
-                                'factor': 'Эффективный маркетинг',
-                                'description': f'📈 РЕКЛАМА: ROAS {roas:.1f}x → супер-эффективность',
-                                'impact': '+высокое'
-                            })
+                        # Рассчитываем средний ROAS по рынку для сравнения
+                        market_roas_data = market_leaders[market_leaders['marketing_spend'] > 0]
+                        if not market_roas_data.empty:
+                            market_avg_roas = (market_roas_data['marketing_sales'] / market_roas_data['marketing_spend']).mean()
+                            if roas > market_avg_roas:
+                                roas_advantage = ((roas - market_avg_roas) / market_avg_roas) * 100
+                                causes.append({
+                                    'factor': 'Эффективный маркетинг',
+                                    'description': f'📈 РЕКЛАМА: ROAS {roas:.1f}x (на +{roas_advantage:.0f}% выше среднего {market_avg_roas:.1f}x)',
+                                    'impact': f'+{roas_advantage:.0f}% эффективность'
+                                })
                     
                     avg_order = sales / orders if orders > 0 else 0
-                    if avg_order > 400000:
+                    market_avg_order = market_avg_sales / market_avg_orders if market_avg_orders > 0 else 0
+                    if avg_order > market_avg_order and market_avg_order > 0:
+                        order_advantage = ((avg_order - market_avg_order) / market_avg_order) * 100
                         causes.append({
                             'factor': 'Премиум-позиционирование',
-                            'description': f'💎 ПРЕМИУМ: средний чек {avg_order:,.0f} IDR → высокий доход',
-                            'impact': '+высокое'
+                            'description': f'💎 ПРЕМИУМ: средний чек {avg_order:,.0f} IDR (на +{order_advantage:.0f}% выше среднего {market_avg_order:,.0f} IDR)',
+                            'impact': f'+{order_advantage:.0f}% к среднему чеку'
                         })
                 
                 # НИЗКИЕ ПРОДАЖИ
                 else:
-                    if rating < 4.3:
+                    if rating < market_avg_rating:
+                        rating_disadvantage = market_avg_rating - rating
                         causes.append({
-                            'factor': 'Проблемы качества',
-                            'description': f'⚠️ КАЧЕСТВО: рейтинг {rating:.2f}/5.0 → отпугивает клиентов',
-                            'impact': '-высокое'
+                            'factor': 'Низкое качество',
+                            'description': f'⚠️ КАЧЕСТВО: рейтинг {rating:.2f}/5.0 (на -{rating_disadvantage:.2f}★ ниже среднего {market_avg_rating:.2f})',
+                            'impact': f'-{rating_disadvantage*100:.0f}% от рейтинга'
                         })
                     
                     if marketing_spend == 0:
-                        causes.append({
-                            'factor': 'Отсутствие маркетинга',
-                            'description': f'📉 РЕКЛАМА: нет рекламного бюджета → низкая видимость',
-                            'impact': '-высокое'
-                        })
+                        # Рассчитываем потенциальные потери от отсутствия маркетинга
+                        marketing_restaurants = market_leaders[market_leaders['marketing_spend'] > 0]
+                        no_marketing_restaurants = market_leaders[market_leaders['marketing_spend'] == 0]
+                        if not marketing_restaurants.empty and not no_marketing_restaurants.empty:
+                            marketing_avg_sales = marketing_restaurants['total_sales'].mean()
+                            no_marketing_avg_sales = no_marketing_restaurants['total_sales'].mean()
+                            potential_loss = ((marketing_avg_sales - no_marketing_avg_sales) / marketing_avg_sales) * 100
+                            causes.append({
+                                'factor': 'Отсутствие маркетинга',
+                                'description': f'📉 РЕКЛАМА: нет рекламного бюджета (потенциальные потери -{potential_loss:.0f}% продаж)',
+                                'impact': f'-{potential_loss:.0f}% потенциал'
+                            })
                     elif marketing_spend > 0:
                         roas = marketing_sales / marketing_spend
-                        if roas < 2:
-                            causes.append({
-                                'factor': 'Неэффективный маркетинг',
-                                'description': f'💸 РЕКЛАМА: ROAS {roas:.1f}x → деньги тратятся впустую',
-                                'impact': '-среднее'
-                            })
+                        # Сравниваем с рыночным средним ROAS
+                        market_roas_data = market_leaders[market_leaders['marketing_spend'] > 0]
+                        if not market_roas_data.empty:
+                            market_avg_roas = (market_roas_data['marketing_sales'] / market_roas_data['marketing_spend']).mean()
+                            if roas < market_avg_roas:
+                                roas_deficit = ((market_avg_roas - roas) / market_avg_roas) * 100
+                                causes.append({
+                                    'factor': 'Неэффективный маркетинг',
+                                    'description': f'💸 РЕКЛАМА: ROAS {roas:.1f}x (на -{roas_deficit:.0f}% ниже среднего {market_avg_roas:.1f}x)',
+                                    'impact': f'-{roas_deficit:.0f}% эффективность'
+                                })
                 
                 if causes:
                     restaurant_anomalies.append({
@@ -3220,14 +3241,32 @@ def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
         if len(strong_performers) > 1:
             market_recommendations.append("🟢 ЛИДЕРЫ: Использовать лучшие практики для масштабирования успеха")
         
-        # Общие рекомендации
-        market_recommendations.extend([
-            "⭐ КАЧЕСТВО: Рейтинг >4.7★ = обязательное условие для лидерства",
-            "📈 МАРКЕТИНГ: ROAS <3x = сигнал для пересмотра рекламной стратегии",
-            "💎 ПОЗИЦИОНИРОВАНИЕ: Премиум-сегмент показывает лучшую рентабельность",
-            "🎯 ДИФФЕРЕНЦИАЦИЯ: Избегать ценовой войны, фокус на уникальность",
-            "📊 МОНИТОРИНГ: Отслеживать аномалии конкурентов для быстрого реагирования"
-        ])
+        # Рекомендации на основе фактических данных
+        data_based_recommendations = []
+        
+        # Рекомендация по рейтингу на основе данных лидеров
+        top_performers = market_leaders.head(3)
+        if not top_performers.empty:
+            top_avg_rating = top_performers['avg_rating'].mean()
+            data_based_recommendations.append(f"⭐ КАЧЕСТВО: Рейтинг >{top_avg_rating:.1f}★ = стандарт лидеров (факт из топ-3)")
+        
+        # Рекомендация по ROAS на основе данных
+        if not marketing_active.empty:
+            successful_roas_threshold = marketing_active['marketing_sales'] / marketing_active['marketing_spend']
+            successful_roas_threshold = successful_roas_threshold.quantile(0.75)  # 75-й процентиль
+            data_based_recommendations.append(f"📈 МАРКЕТИНГ: ROAS <{successful_roas_threshold:.1f}x = сигнал для оптимизации (75% успешных выше)")
+        
+        # Рекомендация по премиум-сегменту на основе данных
+        if not premium_restaurants.empty:
+            premium_avg_roas = (premium_restaurants['marketing_sales'] / premium_restaurants['marketing_spend']).mean() if len(premium_restaurants[premium_restaurants['marketing_spend'] > 0]) > 0 else 0
+            regular_restaurants = market_leaders[~market_leaders.index.isin(premium_restaurants.index)]
+            regular_avg_roas = (regular_restaurants['marketing_sales'] / regular_restaurants['marketing_spend']).mean() if len(regular_restaurants[regular_restaurants['marketing_spend'] > 0]) > 0 else 0
+            
+            if premium_avg_roas > regular_avg_roas:
+                premium_advantage = ((premium_avg_roas - regular_avg_roas) / regular_avg_roas) * 100
+                data_based_recommendations.append(f"💎 ПОЗИЦИОНИРОВАНИЕ: Премиум-сегмент показывает ROAS на +{premium_advantage:.0f}% выше (факт)")
+        
+        market_recommendations.extend(data_based_recommendations)
         
         for rec in market_recommendations:
             insights.append(f"• {rec}")
