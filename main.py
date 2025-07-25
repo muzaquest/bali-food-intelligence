@@ -12,6 +12,7 @@ import json
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
+from weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
 
 # API интеграция
 import requests
