@@ -1272,9 +1272,11 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"\n⚠️ МЕТОДИКА: {funnel_note}")
         
         # Стоимость привлечения (только GRAB - есть данные воронки)
-        cost_per_click = grab_marketing_spend / total_menu_visits if total_menu_visits > 0 else 0
-        cost_per_conversion = grab_marketing_spend / total_conversions if total_conversions > 0 else 0
-        cost_per_order = grab_marketing_spend / grab_marketing_orders if grab_marketing_orders > 0 else 0
+        # ИСПРАВЛЕНО: Используем только GRAB бюджет для GRAB метрик
+        grab_only_spend = grab_marketing_raw['grab_spend'] or 0
+        cost_per_click = grab_only_spend / total_menu_visits if total_menu_visits > 0 else 0
+        cost_per_conversion = grab_only_spend / total_conversions if total_conversions > 0 else 0
+        cost_per_order = grab_only_spend / grab_marketing_orders if grab_marketing_orders > 0 else 0
         
         print(f"\n💸 Стоимость привлечения (только GRAB):")
         print(f"  💰 Стоимость клика: {cost_per_click:,.0f} IDR")
