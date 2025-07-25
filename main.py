@@ -3119,6 +3119,7 @@ def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
         
         # Корреляция маркетинга и продаж
         marketing_active = market_leaders[market_leaders['marketing_spend'] > 0]
+        no_marketing_restaurants = market_leaders[market_leaders['marketing_spend'] == 0]
         if len(marketing_active) > 3:
             marketing_corr = marketing_active['marketing_spend'].corr(marketing_active['total_sales'])
             if abs(marketing_corr) > 0.3:
@@ -3130,14 +3131,36 @@ def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
             premium_share = (premium_restaurants['total_sales'].sum() / market_leaders['total_sales'].sum()) * 100
             market_correlations.append(f"💎 Премиум-сегмент: {len(premium_restaurants)} ресторанов = {premium_share:.1f}% выручки рынка")
         
-        # Общие рыночные правила
-        market_correlations.extend([
-            "📊 Рыночные закономерности:",
-            "   • Рестораны с рейтингом >4.7★ показывают продажи на 40-60% выше среднего",
-            "   • ROAS >8x указывает на супер-эффективный маркетинг и лидерство",
-            "   • Отсутствие рекламы = потеря 20-40% потенциальных продаж",
-            "   • Средний чек >400K IDR = премиум-сегмент с высокой прибыльностью"
-        ])
+        # Рыночные закономерности - РАССЧИТАННЫЕ ИЗ РЕАЛЬНЫХ ДАННЫХ
+        market_correlations.append("📊 Рыночные закономерности (рассчитано из данных):")
+        
+        # Анализ влияния рейтинга на продажи
+        high_rating_restaurants = market_leaders[market_leaders['avg_rating'] > 4.7]
+        low_rating_restaurants = market_leaders[market_leaders['avg_rating'] <= 4.7]
+        
+        if not high_rating_restaurants.empty and not low_rating_restaurants.empty:
+            high_rating_avg_sales = high_rating_restaurants['total_sales'].mean()
+            low_rating_avg_sales = low_rating_restaurants['total_sales'].mean()
+            rating_boost = ((high_rating_avg_sales - low_rating_avg_sales) / low_rating_avg_sales) * 100
+            market_correlations.append(f"   • Рестораны с рейтингом >4.7★ продают на {rating_boost:+.0f}% больше (ФАКТ)")
+        
+        # Анализ ROAS лидеров
+        high_roas_restaurants = marketing_active[marketing_active['marketing_sales'] / marketing_active['marketing_spend'] > 8] if len(marketing_active) > 0 else pd.DataFrame()
+        if not high_roas_restaurants.empty:
+            avg_roas = (high_roas_restaurants['marketing_sales'] / high_roas_restaurants['marketing_spend']).mean()
+            market_correlations.append(f"   • ROAS >{avg_roas:.0f}x = показатель лидерства (из данных топ-ресторанов)")
+        
+        # Анализ влияния отсутствия рекламы
+        if not marketing_active.empty and not no_marketing_restaurants.empty:
+            marketing_avg = marketing_active['total_sales'].mean()
+            no_marketing_avg = no_marketing_restaurants['total_sales'].mean()
+            marketing_loss = ((marketing_avg - no_marketing_avg) / marketing_avg) * 100
+            market_correlations.append(f"   • Отсутствие рекламы = потеря {marketing_loss:.0f}% продаж (РАСЧЕТ)")
+        
+        # Анализ премиум-сегмента
+        if not premium_restaurants.empty:
+            premium_avg_check = (premium_restaurants['total_sales'] / premium_restaurants['total_orders']).mean()
+            market_correlations.append(f"   • Средний чек >{premium_avg_check:,.0f} IDR = премиум-сегмент (из фактических данных)")
         
         for correlation in market_correlations:
             insights.append(f"• {correlation}")
@@ -3164,9 +3187,8 @@ def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
                     segment_anomalies.append(f"💎 Премиум-рестораны имеют рейтинг на {rating_gap:.2f}★ выше бюджетных")
                     segment_anomalies.append(f"   → Качество = ключевой фактор премиального позиционирования")
         
-        # Маркетинговые vs немаркетинговые
-        marketing_restaurants = market_leaders[market_leaders['marketing_spend'] > 0]
-        no_marketing_restaurants = market_leaders[market_leaders['marketing_spend'] == 0]
+        # Маркетинговые vs немаркетинговые (переменные уже определены выше)
+        marketing_restaurants = marketing_active
         
         if not marketing_restaurants.empty and not no_marketing_restaurants.empty:
             marketing_avg_sales = marketing_restaurants['total_sales'].mean()
