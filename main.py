@@ -2425,7 +2425,7 @@ def generate_market_insights(market_data, leaders_df):
         priorities.append("⭐ #2 ВАЖНО: Улучшить качество обслуживания")
     if market_data['leader_dominance'] > 30:
         priorities.append("🎯 #3 СТРАТЕГИЯ: Усилить конкуренцию")
-    if avg_order_value < 250000:
+    if correct_avg_order_value < 250000:
         priorities.append("💰 #4 ВОЗМОЖНОСТЬ: Премиализация предложения")
     
     if not priorities:
@@ -2446,7 +2446,7 @@ def generate_market_insights(market_data, leaders_df):
     
     insights.append(f"   • Потенциал роста рынка: {growth_potential}%")
     insights.append(f"   • Целевой ROAS: {(market_roas * 1.1):.1f}x (+10%)")
-    insights.append(f"   • Целевой средний чек: {(avg_order_value * 1.1):,.0f} IDR (+10%)")
+    insights.append(f"   • Целевой средний чек: {(correct_avg_order_value * 1.1):,.0f} IDR (+10%)")
     insights.append(f"   • Целевой рейтинг: {min(avg_rating + 0.2, 5.0):.1f}/5.0")
     
     return '\n'.join(insights)
