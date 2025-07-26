@@ -142,7 +142,9 @@ class AIQueryProcessor:
     def _is_ml_query(self, query):
         """Проверяет, касается ли запрос ML анализа или поиска аномалий"""
         ml_keywords = ['ml', 'машинное обучение', 'прогноз', 'аномал', 'shap', 'модель', 'предсказание',
-                      'необычные дни', 'странные дни', 'выбросы', 'отклонения', 'провалы', 'пики']
+                      'необычные дни', 'странные дни', 'выбросы', 'отклонения', 'провалы', 'пики',
+                      'лучшими', 'худшими', 'топ дни', 'лучшие дни', 'худшие дни', 'успешные дни',
+                      'были лучшими', 'были худшими', 'самые успешные', 'самые плохие']
         return any(keyword in query.lower() for keyword in ml_keywords)
     
     def _is_location_query(self, query):
@@ -424,9 +426,10 @@ class AIQueryProcessor:
     def _handle_ml_query(self, original_query, query_lower):
         """Обработка запросов о ML анализе и поиске аномалий"""
         try:
-            # Если это запрос о поиске аномалий для ресторана
+            # Если это запрос о поиске аномалий или анализе лучших/худших дней для ресторана
             restaurant_name = self._extract_restaurant_name(original_query)
-            if restaurant_name and any(word in query_lower for word in ['аномал', 'необычные', 'странные', 'провалы', 'пики']):
+            analysis_keywords = ['аномал', 'необычные', 'странные', 'провалы', 'пики', 'лучшими', 'худшими', 'лучшие', 'худшие', 'топ', 'успешные']
+            if restaurant_name and any(word in query_lower for word in analysis_keywords):
                 return self._analyze_restaurant_anomalies(restaurant_name, original_query)
             
             # Иначе общая информация о ML
