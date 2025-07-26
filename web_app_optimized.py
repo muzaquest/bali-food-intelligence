@@ -129,7 +129,7 @@ def run_analysis(restaurant_name=None, start_date=None, end_date=None):
             cmd.append('market')
             
         if start_date and end_date:
-            cmd.extend(['--start-date', start_date, '--end-date', end_date])
+            cmd.extend(['--start', start_date, '--end', end_date])
             
         # Запуск анализа
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)  # Увеличен timeout
@@ -295,8 +295,8 @@ elif page == "🏪 Анализ ресторана":
     # Выбор периода
     period_type = st.sidebar.selectbox(
         "Период анализа:",
-        ["Последние 7 дней", "Последние 30 дней", "Последние 3 месяца", "Произвольный период"],
-        index=2,  # По умолчанию 3 месяца
+        ["Неделя", "Месяц", "Квартал", "Полгода", "Произвольный период"],
+        index=2,  # По умолчанию квартал
         help="Выберите временной период для анализа"
     )
     
@@ -335,14 +335,17 @@ elif page == "🏪 Анализ ресторана":
     if st.button("🚀 Запустить полный анализ", type="primary", use_container_width=True):
         
         # Определяем даты
-        if period_type == "Последние 7 дней":
+        if period_type == "Неделя":
             start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
             end_date = datetime.now().strftime('%Y-%m-%d')
-        elif period_type == "Последние 30 дней":
+        elif period_type == "Месяц":
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
             end_date = datetime.now().strftime('%Y-%m-%d')
-        elif period_type == "Последние 3 месяца":
+        elif period_type == "Квартал":
             start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        elif period_type == "Полгода":
+            start_date = (datetime.now() - timedelta(days=180)).strftime('%Y-%m-%d')
             end_date = datetime.now().strftime('%Y-%m-%d')
         else:  # Произвольный период
             if len(date_range) == 2:
@@ -409,8 +412,8 @@ elif page == "🏢 Анализ рынка":
     # Выбор периода
     period_type = st.sidebar.selectbox(
         "Период анализа:",
-        ["Последний месяц", "Последний квартал", "Последние полгода", "Произвольный период"],
-        index=1,  # По умолчанию квартал
+        ["Неделя", "Месяц", "Квартал", "Полгода", "Произвольный период"],
+        index=2,  # По умолчанию квартал
         help="Период для рыночного анализа"
     )
     
@@ -463,13 +466,16 @@ elif page == "🏢 Анализ рынка":
     if st.button("🚀 Запустить рыночный анализ", type="primary", use_container_width=True):
         
         # Определяем даты
-        if period_type == "Последний месяц":
+        if period_type == "Неделя":
+            start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        elif period_type == "Месяц":
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
             end_date = datetime.now().strftime('%Y-%m-%d')
-        elif period_type == "Последний квартал":
+        elif period_type == "Квартал":
             start_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
             end_date = datetime.now().strftime('%Y-%m-%d')
-        elif period_type == "Последние полгода":
+        elif period_type == "Полгода":
             start_date = (datetime.now() - timedelta(days=180)).strftime('%Y-%m-%d')
             end_date = datetime.now().strftime('%Y-%m-%d')
         else:
