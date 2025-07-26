@@ -149,6 +149,21 @@ class AIQueryProcessor:
             restaurant_name = self._extract_restaurant_name(original_query)
             
             if restaurant_name:
+                # КРИТИЧЕСКАЯ ПРОВЕРКА: Ресторан должен существовать!
+                if not self._restaurant_exists(restaurant_name):
+                    return f"""❌ **РЕСТОРАН НЕ НАЙДЕН**
+
+🔍 Ресторан '{restaurant_name}' отсутствует в базе данных.
+
+📋 **Проверьте правильность названия. Примеры доступных ресторанов:**
+• Ika Canggu, Ika Kero, Ika Ubud, Ika Uluwatu
+• Prana, Huge, Soul Kitchen, Signa
+• Honeycomb, See You, Ducat, The Room
+• Balagan, Only Eggs, Only Kebab, Pinkman
+
+💡 Для получения полного списка используйте: "Покажи все рестораны"
+"""
+                
                 # Получаем данные ресторана
                 restaurant_data = self._get_restaurant_data(restaurant_name)
                 
@@ -201,6 +216,17 @@ class AIQueryProcessor:
             
         except Exception as e:
             return f"❌ Ошибка при обработке запроса о ресторане: {e}"
+    
+    def _restaurant_exists(self, restaurant_name):
+        """КРИТИЧЕСКАЯ ФУНКЦИЯ: Проверяет существование ресторана в базе данных"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            query = "SELECT COUNT(*) as count FROM restaurants WHERE LOWER(name) LIKE ?"
+            result = pd.read_sql_query(query, conn, params=[f'%{restaurant_name.lower()}%'])
+            conn.close()
+            return result.iloc[0]['count'] > 0
+        except Exception:
+            return False
     
     def _handle_weather_query(self, original_query, query_lower):
         """Обработка запросов о погоде"""
@@ -539,34 +565,53 @@ class AIQueryProcessor:
         try:
             conn = sqlite3.connect(self.db_path)
             
-            # Grab данные
+            # Сначала получаем restaurant_id
+            restaurant_query = "SELECT id FROM restaurants WHERE LOWER(name) LIKE ?"
+            restaurant_result = pd.read_sql_query(restaurant_query, conn, params=[f'%{restaurant_name.lower()}%'])
+            
+            if restaurant_result.empty:
+                conn.close()
+                return None
+                
+            restaurant_id = restaurant_result.iloc[0]['id']
+            
+            # Grab данные (с правильными названиями колонок)
             grab_query = """
                 SELECT SUM(sales) as sales, SUM(orders) as orders, 
-                       AVG(avg_order_value) as avg_order_value, AVG(rating) as rating,
+                       AVG(rating) as rating,
                        SUM(new_customers) as new_customers, SUM(repeated_customers) as repeated_customers,
                        SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales
-                FROM grab_stats WHERE restaurant_name = ?
+                FROM grab_stats WHERE restaurant_id = ?
             """
-            grab_data = pd.read_sql_query(grab_query, conn, params=[restaurant_name])
+            grab_data = pd.read_sql_query(grab_query, conn, params=[restaurant_id])
             
-            # Gojek данные
+            # Gojek данные (с правильными названиями колонок)
             gojek_query = """
                 SELECT SUM(sales) as sales, SUM(orders) as orders,
-                       AVG(avg_order_value) as avg_order_value, AVG(rating) as rating
-                FROM gojek_stats WHERE restaurant_name = ?
+                       AVG(rating) as rating,
+                       SUM(new_client) as new_customers, SUM(returned_client) as returned_customers,
+                       SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales
+                FROM gojek_stats WHERE restaurant_id = ?
             """
-            gojek_data = pd.read_sql_query(gojek_query, conn, params=[restaurant_name])
+            gojek_data = pd.read_sql_query(gojek_query, conn, params=[restaurant_id])
             
             conn.close()
             
             if not grab_data.empty or not gojek_data.empty:
-                total_sales = (grab_data['sales'].iloc[0] or 0) + (gojek_data['sales'].iloc[0] or 0)
-                total_orders = (grab_data['orders'].iloc[0] or 0) + (gojek_data['orders'].iloc[0] or 0)
+                # Безопасное извлечение данных с обработкой None
+                grab_sales = grab_data['sales'].iloc[0] if not grab_data.empty and pd.notna(grab_data['sales'].iloc[0]) else 0
+                gojek_sales = gojek_data['sales'].iloc[0] if not gojek_data.empty and pd.notna(gojek_data['sales'].iloc[0]) else 0
+                
+                grab_orders = grab_data['orders'].iloc[0] if not grab_data.empty and pd.notna(grab_data['orders'].iloc[0]) else 0
+                gojek_orders = gojek_data['orders'].iloc[0] if not gojek_data.empty and pd.notna(gojek_data['orders'].iloc[0]) else 0
+                
+                total_sales = grab_sales + gojek_sales
+                total_orders = grab_orders + gojek_orders
                 avg_order_value = total_sales / total_orders if total_orders > 0 else 0
                 
                 # ROAS расчет
-                marketing_spend = grab_data['marketing_spend'].iloc[0] or 0
-                ads_sales = grab_data['ads_sales'].iloc[0] or 0
+                marketing_spend = grab_data['marketing_spend'].iloc[0] if not grab_data.empty and pd.notna(grab_data['marketing_spend'].iloc[0]) else 0
+                ads_sales = grab_data['ads_sales'].iloc[0] if not grab_data.empty and pd.notna(grab_data['ads_sales'].iloc[0]) else 0
                 roas = ads_sales / marketing_spend if marketing_spend > 0 else 0
                 
                 return {
@@ -587,29 +632,51 @@ class AIQueryProcessor:
     
     def _extract_restaurant_name(self, query):
         """Извлечение названия ресторана из запроса"""
-        # Получаем список всех ресторанов
-        restaurants = self._get_all_restaurant_names()
+        # КРИТИЧЕСКИ ВАЖНО: Сначала проверяем есть ли в запросе попытка указать ресторан
+        restaurant_indicators = ['ресторан', 'restaurant', 'в ', 'для ', 'анализ', 'продажи', 
+                                'влияет на', 'время доставки', 'рейтинг у', 'сравни']
         
-        # Ищем полные совпадения сначала
-        for restaurant in restaurants:
-            if restaurant.lower() in query.lower():
-                return restaurant
+        has_restaurant_context = any(indicator in query.lower() for indicator in restaurant_indicators)
         
-        # Если полных совпадений нет, ищем частичные
-        query_words = query.lower().split()
-        for restaurant in restaurants:
-            restaurant_words = restaurant.lower().split()
-            for rest_word in restaurant_words:
-                if any(rest_word in query_word for query_word in query_words):
+        if has_restaurant_context:
+            # Получаем список всех реальных ресторанов
+            restaurants = self._get_all_restaurant_names()
+            
+            # Ищем полные совпадения с реальными ресторанами
+            for restaurant in restaurants:
+                if restaurant.lower() in query.lower():
                     return restaurant
-        
-        # Специальная обработка для известных ресторанов
-        if 'ika' in query.lower() and 'kero' in query.lower():
-            return 'Ika Kero'
-        elif 'ika' in query.lower() and 'canggu' in query.lower():
-            return 'Ika Canggu'
-        elif 'ika' in query.lower() and 'ubud' in query.lower():
-            return 'Ika Ubud'
+            
+            # Специальная обработка для известных ресторанов
+            if 'ika' in query.lower() and 'kero' in query.lower():
+                return 'Ika Kero'
+            elif 'ika' in query.lower() and 'canggu' in query.lower():
+                return 'Ika Canggu'
+            elif 'ika' in query.lower() and 'ubud' in query.lower():
+                return 'Ika Ubud'
+            
+            # Если контекст ресторана есть, но название не найдено - извлекаем предполагаемое название
+            import re
+            
+            # Ищем после ключевых слов
+            patterns = [
+                r'ресторан[а-я\s]*([A-Za-z\s]+)',
+                r'restaurant[a-z\s]*([A-Za-z\s]+)',
+                r'влияет на\s+([A-Za-z\s]+)',
+                r'продажи\s+([A-Za-z\s]+)',
+                r'в\s+([A-Za-z][A-Za-z\s]+)',
+                r'для\s+([A-Za-z][A-Za-z\s]+)',
+                r'у\s+([A-Za-z][A-Za-z\s]+)'
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, query, re.IGNORECASE)
+                if match:
+                    potential_name = match.group(1).strip()
+                    # Очищаем от лишних слов
+                    potential_name = re.sub(r'\b(в|на|для|у|продажи|время|доставки|рейтинг|анализ)\b', '', potential_name, flags=re.IGNORECASE).strip()
+                    if potential_name and len(potential_name) > 2:
+                        return potential_name
                 
         return None
     
@@ -1308,6 +1375,10 @@ class AIQueryProcessor:
         restaurant_name = self._extract_restaurant_name(original_query)
         
         if restaurant_name:
+            # КРИТИЧЕСКАЯ ПРОВЕРКА: Ресторан должен существовать!
+            if not self._restaurant_exists(restaurant_name):
+                return f"❌ Ресторан '{restaurant_name}' не найден в базе данных. Проверьте правильность названия."
+            
             restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
             if restaurant_data:
                 marketing_analysis = self._analyze_marketing_impact(restaurant_data)
@@ -1335,6 +1406,10 @@ class AIQueryProcessor:
         restaurant_name = self._extract_restaurant_name(original_query)
         
         if restaurant_name:
+            # КРИТИЧЕСКАЯ ПРОВЕРКА: Ресторан должен существовать!
+            if not self._restaurant_exists(restaurant_name):
+                return f"❌ Ресторан '{restaurant_name}' не найден в базе данных. Проверьте правильность названия."
+            
             restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
             if restaurant_data:
                 delivery_analysis = self._get_delivery_performance_analysis(restaurant_data)
@@ -1361,6 +1436,10 @@ class AIQueryProcessor:
         restaurant_name = self._extract_restaurant_name(original_query)
         
         if restaurant_name:
+            # КРИТИЧЕСКАЯ ПРОВЕРКА: Ресторан должен существовать!
+            if not self._restaurant_exists(restaurant_name):
+                return f"❌ Ресторан '{restaurant_name}' не найден в базе данных. Проверьте правильность названия."
+            
             restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
             if restaurant_data:
                 grab_data = restaurant_data['grab_data']
@@ -1408,6 +1487,10 @@ class AIQueryProcessor:
         restaurant_name = self._extract_restaurant_name(original_query)
         
         if restaurant_name:
+            # КРИТИЧЕСКАЯ ПРОВЕРКА: Ресторан должен существовать!
+            if not self._restaurant_exists(restaurant_name):
+                return f"❌ Ресторан '{restaurant_name}' не найден в базе данных. Проверьте правильность названия."
+            
             restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
             if restaurant_data:
                 grab_data = restaurant_data['grab_data']
