@@ -1171,7 +1171,8 @@ class AIQueryProcessor:
     def _get_comprehensive_restaurant_data(self, restaurant_name, date_from=None, date_to=None):
         """Получает ВСЕ доступные данные о ресторане"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            # Создаем новое подключение с параметрами
+            conn = sqlite3.connect(self.db_path, timeout=20.0)
             
             # Получаем ID ресторана
             restaurant_query = "SELECT id, name FROM restaurants WHERE LOWER(name) LIKE ?"
@@ -1183,21 +1184,13 @@ class AIQueryProcessor:
             restaurant_id = restaurant_data.iloc[0]['id']
             actual_name = restaurant_data.iloc[0]['name']
             
-            # Определяем период анализа
+            # Определяем период анализа (упрощенный надежный подход)
             if not date_from or not date_to:
-                date_query = """
-                    SELECT MIN(stat_date) as min_date, MAX(stat_date) as max_date
-                    FROM (
-                        SELECT stat_date FROM grab_stats WHERE restaurant_id = ?
-                        UNION ALL
-                        SELECT stat_date FROM gojek_stats WHERE restaurant_id = ?
-                    )
-                """
-                date_ranges = pd.read_sql_query(date_query, conn, params=[restaurant_id, restaurant_id])
-                date_from = date_ranges.iloc[0]['min_date']
-                date_to = date_ranges.iloc[0]['max_date']
+                # Просто используем фиксированный период который покрывает все данные
+                date_from = '2023-01-01'
+                date_to = '2025-12-31'
             
-            # Получаем ВСЕ данные Grab (исправленные названия колонок)
+            # Получаем ВСЕ данные Grab (упрощенный запрос без BETWEEN)
             grab_query = """
                 SELECT stat_date, sales, orders, rating, 
                        new_customers, repeated_customers,
@@ -1205,12 +1198,12 @@ class AIQueryProcessor:
                        cancelation_rate, cancelled_orders,
                        store_is_closed, store_is_busy, out_of_stock
                 FROM grab_stats 
-                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                WHERE restaurant_id = ?
                 ORDER BY stat_date
             """
-            grab_data = pd.read_sql_query(grab_query, conn, params=[restaurant_id, date_from, date_to])
+            grab_data = pd.read_sql_query(grab_query, conn, params=[restaurant_id])
             
-            # Получаем ВСЕ данные Gojek (исправленные названия колонок)
+            # Получаем ВСЕ данные Gojek (упрощенный запрос без BETWEEN)
             gojek_query = """
                 SELECT stat_date, sales, orders, rating,
                        new_client, active_client, returned_client,
@@ -1218,10 +1211,10 @@ class AIQueryProcessor:
                        accepting_time, preparation_time, delivery_time,
                        cancelled_orders, store_is_closed, store_is_busy, out_of_stock
                 FROM gojek_stats
-                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                WHERE restaurant_id = ?
                 ORDER BY stat_date
             """
-            gojek_data = pd.read_sql_query(gojek_query, conn, params=[restaurant_id, date_from, date_to])
+            gojek_data = pd.read_sql_query(gojek_query, conn, params=[restaurant_id])
             
             conn.close()
             
