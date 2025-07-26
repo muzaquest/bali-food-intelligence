@@ -573,55 +573,69 @@ class AIQueryProcessor:
                 conn.close()
                 return None
                 
-            restaurant_id = restaurant_result.iloc[0]['id']
+            restaurant_id = int(restaurant_result.iloc[0]['id'])  # КРИТИЧНО: конвертируем numpy.int64 в int
             
-            # Grab данные (с правильными названиями колонок)
-            grab_query = """
-                SELECT SUM(sales) as sales, SUM(orders) as orders, 
-                       AVG(rating) as rating,
-                       SUM(new_customers) as new_customers, SUM(repeated_customers) as repeated_customers,
-                       SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales
-                FROM grab_stats WHERE restaurant_id = ?
-            """
+            # Grab данные (МАКСИМАЛЬНО ПРОСТЫЕ запросы)
+            grab_query = "SELECT SUM(sales) as sales, SUM(orders) as orders, AVG(rating) as rating FROM grab_stats WHERE restaurant_id = ?"
             grab_data = pd.read_sql_query(grab_query, conn, params=[restaurant_id])
             
-            # Gojek данные (с правильными названиями колонок)
-            gojek_query = """
-                SELECT SUM(sales) as sales, SUM(orders) as orders,
-                       AVG(rating) as rating,
-                       SUM(new_client) as new_customers, SUM(returned_client) as returned_customers,
-                       SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales
-                FROM gojek_stats WHERE restaurant_id = ?
-            """
+            # Дополнительные данные Grab
+            grab_extra_query = "SELECT SUM(new_customers) as new_customers, SUM(repeated_customers) as repeated_customers, SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales FROM grab_stats WHERE restaurant_id = ?"
+            grab_extra = pd.read_sql_query(grab_extra_query, conn, params=[restaurant_id])
+            
+            # Gojek данные (МАКСИМАЛЬНО ПРОСТЫЕ запросы)
+            gojek_query = "SELECT SUM(sales) as sales, SUM(orders) as orders, AVG(rating) as rating FROM gojek_stats WHERE restaurant_id = ?"
             gojek_data = pd.read_sql_query(gojek_query, conn, params=[restaurant_id])
+            
+            # Дополнительные данные Gojek
+            gojek_extra_query = "SELECT SUM(new_client) as new_customers, SUM(returned_client) as returned_customers, SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales FROM gojek_stats WHERE restaurant_id = ?"
+            gojek_extra = pd.read_sql_query(gojek_extra_query, conn, params=[restaurant_id])
             
             conn.close()
             
             if not grab_data.empty or not gojek_data.empty:
-                # Безопасное извлечение данных с обработкой None
-                grab_sales = grab_data['sales'].iloc[0] if not grab_data.empty and pd.notna(grab_data['sales'].iloc[0]) else 0
-                gojek_sales = gojek_data['sales'].iloc[0] if not gojek_data.empty and pd.notna(gojek_data['sales'].iloc[0]) else 0
+                # Безопасное извлечение данных с улучшенной обработкой None
+                def safe_get(df, column, default=0):
+                    if df.empty:
+                        return default
+                    value = df[column].iloc[0]
+                    return float(value) if pd.notna(value) and value is not None else default
                 
-                grab_orders = grab_data['orders'].iloc[0] if not grab_data.empty and pd.notna(grab_data['orders'].iloc[0]) else 0
-                gojek_orders = gojek_data['orders'].iloc[0] if not gojek_data.empty and pd.notna(gojek_data['orders'].iloc[0]) else 0
+                grab_sales = safe_get(grab_data, 'sales')
+                gojek_sales = safe_get(gojek_data, 'sales')
+                
+                grab_orders = safe_get(grab_data, 'orders')
+                gojek_orders = safe_get(gojek_data, 'orders')
+                
+                grab_rating = safe_get(grab_data, 'rating')
+                gojek_rating = safe_get(gojek_data, 'rating')
+                
+                # Дополнительные данные из отдельных запросов
+                marketing_spend = safe_get(grab_extra, 'marketing_spend') + safe_get(gojek_extra, 'marketing_spend')
+                ads_sales = safe_get(grab_extra, 'ads_sales') + safe_get(gojek_extra, 'ads_sales')
+                new_customers = safe_get(grab_extra, 'new_customers') + safe_get(gojek_extra, 'new_customers')
+                returning_customers = safe_get(grab_extra, 'repeated_customers') + safe_get(gojek_extra, 'returned_customers')
                 
                 total_sales = grab_sales + gojek_sales
                 total_orders = grab_orders + gojek_orders
                 avg_order_value = total_sales / total_orders if total_orders > 0 else 0
                 
                 # ROAS расчет
-                marketing_spend = grab_data['marketing_spend'].iloc[0] if not grab_data.empty and pd.notna(grab_data['marketing_spend'].iloc[0]) else 0
-                ads_sales = grab_data['ads_sales'].iloc[0] if not grab_data.empty and pd.notna(grab_data['ads_sales'].iloc[0]) else 0
-                roas = ads_sales / marketing_spend if marketing_spend > 0 else 0
+                roas = (ads_sales / marketing_spend * 100) if marketing_spend > 0 else 0
+                
+                # Средний рейтинг
+                ratings = [r for r in [grab_rating, gojek_rating] if r > 0]
+                avg_rating = sum(ratings) / len(ratings) if ratings else 0
                 
                 return {
                     'total_sales': total_sales,
                     'total_orders': total_orders,
                     'avg_order_value': avg_order_value,
-                    'avg_rating': (grab_data['rating'].iloc[0] + gojek_data['rating'].iloc[0]) / 2,
-                    'new_customers': grab_data['new_customers'].iloc[0] or 0,
-                    'returning_customers': grab_data['repeated_customers'].iloc[0] or 0,
+                    'avg_rating': round(avg_rating, 1),
+                    'new_customers': new_customers,
+                    'returning_customers': returning_customers,
                     'marketing_spend': marketing_spend,
+                    'ads_sales': ads_sales,
                     'roas': round(roas, 1)
                 }
                 
