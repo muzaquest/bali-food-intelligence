@@ -43,8 +43,17 @@ class AIQueryProcessor:
     
     def _is_restaurant_query(self, query):
         """Проверяет, касается ли запрос конкретного ресторана"""
+        # Специальная обработка для анализа падения продаж
+        if self._is_sales_drop_analysis(query):
+            return True
         restaurant_keywords = ['ресторан', 'restaurant', 'продажи', 'roas', 'клиенты', 'заказы']
         return any(keyword in query for keyword in restaurant_keywords)
+    
+    def _is_sales_drop_analysis(self, query):
+        """Проверяет, является ли запрос анализом падения продаж"""
+        drop_keywords = ['почему упали', 'почему снизились', 'причина падения', 'что случилось', 'анализ дня']
+        sales_keywords = ['продажи', 'sales', 'доходы', 'выручка']
+        return any(drop in query for drop in drop_keywords) and any(sales in query for sales in sales_keywords)
     
     def _is_weather_query(self, query):
         """Проверяет, касается ли запрос погоды"""
@@ -79,6 +88,10 @@ class AIQueryProcessor:
     def _handle_restaurant_query(self, original_query, query_lower):
         """Обработка запросов о ресторанах"""
         try:
+            # Специальная обработка для анализа падения продаж
+            if self._is_sales_drop_analysis(query_lower):
+                return self._analyze_sales_drop(original_query)
+            
             # Извлекаем название ресторана из запроса
             restaurant_name = self._extract_restaurant_name(original_query)
             
@@ -524,10 +537,26 @@ class AIQueryProcessor:
         # Получаем список всех ресторанов
         restaurants = self._get_all_restaurant_names()
         
-        # Ищем совпадения в запросе
+        # Ищем полные совпадения сначала
         for restaurant in restaurants:
             if restaurant.lower() in query.lower():
                 return restaurant
+        
+        # Если полных совпадений нет, ищем частичные
+        query_words = query.lower().split()
+        for restaurant in restaurants:
+            restaurant_words = restaurant.lower().split()
+            for rest_word in restaurant_words:
+                if any(rest_word in query_word for query_word in query_words):
+                    return restaurant
+        
+        # Специальная обработка для известных ресторанов
+        if 'ika' in query.lower() and 'kero' in query.lower():
+            return 'Ika Kero'
+        elif 'ika' in query.lower() and 'canggu' in query.lower():
+            return 'Ika Canggu'
+        elif 'ika' in query.lower() and 'ubud' in query.lower():
+            return 'Ika Ubud'
                 
         return None
     
@@ -535,17 +564,10 @@ class AIQueryProcessor:
         """Получение списка всех ресторанов"""
         try:
             conn = sqlite3.connect(self.db_path)
-            query = """
-                SELECT DISTINCT restaurant_name 
-                FROM grab_stats 
-                UNION 
-                SELECT DISTINCT restaurant_name 
-                FROM gojek_stats 
-                ORDER BY restaurant_name
-            """
+            query = "SELECT DISTINCT name FROM restaurants ORDER BY name"
             restaurants = pd.read_sql_query(query, conn)
             conn.close()
-            return restaurants['restaurant_name'].tolist()
+            return restaurants['name'].tolist()
         except:
             return []
     
@@ -823,3 +845,179 @@ class AIQueryProcessor:
 • Типов праздников: 35
 • Стран-источников туристов: 50+
 """
+    
+    def _analyze_sales_drop(self, query):
+        """Анализирует причины падения продаж в конкретный день"""
+        import re
+        import sqlite3
+        import pandas as pd
+        from datetime import datetime, timedelta
+        import json
+        
+        try:
+            # Извлекаем дату из запроса
+            date_pattern = r'(\d{1,2})\s*(?:мая|мая|may|mai)\s*(\d{4})'
+            date_match = re.search(date_pattern, query.lower())
+            
+            if not date_match:
+                # Попробуем другие форматы дат
+                date_pattern2 = r'(\d{4})-(\d{1,2})-(\d{1,2})'
+                date_match2 = re.search(date_pattern2, query)
+                if date_match2:
+                    target_date = f"{date_match2.group(1)}-{date_match2.group(2):0>2}-{date_match2.group(3):0>2}"
+                else:
+                    return "❌ Не удалось извлечь дату из запроса. Укажите дату в формате '2 мая 2025' или '2025-05-02'"
+            else:
+                day = int(date_match.group(1))
+                year = int(date_match.group(2))
+                target_date = f"{year}-05-{day:02d}"
+            
+            # Извлекаем название ресторана
+            restaurant_name = self._extract_restaurant_name(query)
+            if not restaurant_name:
+                return "❌ Не удалось определить название ресторана из запроса"
+            
+            # Получаем ID ресторана
+            conn = sqlite3.connect('database.sqlite')
+            restaurant_query = "SELECT id, name FROM restaurants WHERE LOWER(name) LIKE ?"
+            restaurant_data = pd.read_sql_query(restaurant_query, conn, params=[f'%{restaurant_name.lower()}%'])
+            
+            if len(restaurant_data) == 0:
+                conn.close()
+                return f"❌ Ресторан '{restaurant_name}' не найден в базе данных"
+            
+            restaurant_id = restaurant_data.iloc[0]['id']
+            actual_name = restaurant_data.iloc[0]['name']
+            
+            # Получаем данные за целевой день (правильный запрос)
+            grab_query = "SELECT sales, orders FROM grab_stats WHERE restaurant_id = ? AND stat_date = ?"
+            gojek_query = "SELECT sales, orders FROM gojek_stats WHERE restaurant_id = ? AND stat_date = ?"
+            
+            grab_data = pd.read_sql_query(grab_query, conn, params=[restaurant_id, target_date])
+            gojek_data = pd.read_sql_query(gojek_query, conn, params=[restaurant_id, target_date])
+            
+            if len(grab_data) == 0 and len(gojek_data) == 0:
+                conn.close()
+                return f"❌ Нет данных для ресторана '{actual_name}' за {target_date}"
+            
+            # Рассчитываем показатели целевого дня (обрабатываем NaN)
+            grab_sales = grab_data['sales'].fillna(0).sum() if len(grab_data) > 0 else 0
+            grab_orders = grab_data['orders'].fillna(0).sum() if len(grab_data) > 0 else 0
+            gojek_sales = gojek_data['sales'].fillna(0).sum() if len(gojek_data) > 0 else 0
+            gojek_orders = gojek_data['orders'].fillna(0).sum() if len(gojek_data) > 0 else 0
+            
+            target_sales = grab_sales + gojek_sales
+            target_orders = grab_orders + gojek_orders
+            
+            # Получаем данные за соседние дни (неделя до и после)
+            date_obj = datetime.strptime(target_date, '%Y-%m-%d')
+            week_before = (date_obj - timedelta(days=7)).strftime('%Y-%m-%d')
+            week_after = (date_obj + timedelta(days=7)).strftime('%Y-%m-%d')
+            
+            context_query = """
+                SELECT 
+                    stat_date,
+                    SUM(grab_sales + gojek_sales) as total_sales,
+                    SUM(grab_orders + gojek_orders) as total_orders
+                FROM (
+                    SELECT stat_date, sales as grab_sales, orders as grab_orders, 0 as gojek_sales, 0 as gojek_orders
+                    FROM grab_stats WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                    UNION ALL
+                    SELECT stat_date, 0 as grab_sales, 0 as grab_orders, sales as gojek_sales, orders as gojek_orders  
+                    FROM gojek_stats WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                )
+                GROUP BY stat_date
+                ORDER BY stat_date
+            """
+            
+            context_data = pd.read_sql_query(context_query, conn, params=[restaurant_id, week_before, week_after, restaurant_id, week_before, week_after])
+            
+            # Рассчитываем среднее
+            other_days = context_data[context_data['stat_date'] != target_date]
+            avg_sales = other_days['total_sales'].mean() if len(other_days) > 0 else 0
+            avg_orders = other_days['total_orders'].mean() if len(other_days) > 0 else 0
+            
+            # Проверяем праздники
+            holiday_info = None
+            try:
+                with open('data/comprehensive_holiday_analysis.json', 'r', encoding='utf-8') as f:
+                    holiday_data = json.load(f)
+                
+                if target_date in holiday_data['results']:
+                    holiday_info = holiday_data['results'][target_date]
+            except:
+                pass
+            
+                        # Проверяем погоду (если есть данные)
+            weather_info = "Данные о погоде недоступны"
+            
+            # Формируем ответ
+            drop_percent = ((target_sales - avg_sales) / avg_sales * 100) if avg_sales > 0 else 0
+            avg_check = f"{target_sales/target_orders:,.0f} IDR" if target_orders > 0 else "N/A"
+            
+            response = f"""
+🔍 **ДЕТЕКТИВНЫЙ АНАЛИЗ ПАДЕНИЯ ПРОДАЖ**
+
+🏪 **Ресторан:** {actual_name}
+📅 **Анализируемый день:** {target_date}
+💥 **Падение:** {drop_percent:+.1f}% от среднего
+
+📊 **ПОКАЗАТЕЛИ ПРОБЛЕМНОГО ДНЯ:**
+• 💰 Продажи: {target_sales:,.0f} IDR
+• 📦 Заказы: {target_orders:.0f}
+• 🚗 Grab: {grab_sales:,.0f} IDR ({grab_orders:.0f} заказов)
+• 🏍️ Gojek: {gojek_sales:,.0f} IDR ({gojek_orders:.0f} заказов)
+• 💵 Средний чек: {avg_check}
+
+📈 **СРАВНЕНИЕ СО СРЕДНИМИ (неделя до/после):**
+• 📊 Средние продажи: {avg_sales:,.0f} IDR
+• 📦 Средние заказы: {avg_orders:.1f}
+• 📉 Отклонение: {drop_percent:+.1f}%
+
+🔍 **ВОЗМОЖНЫЕ ПРИЧИНЫ:**
+
+{self._format_holiday_impact(holiday_info) if holiday_info else "✅ Не связано с праздниками"}
+
+🌤️ **ПОГОДНЫЕ УСЛОВИЯ:** 
+{weather_info}
+
+📊 **ДЕТАЛИ ПО ДНЯМ (контекст):**"""
+            
+            # Добавляем детали по соседним дням
+            for _, day in context_data.iterrows():
+                emoji = "⚠️" if day['stat_date'] == target_date else "📊"
+                response += f"\n{emoji} {day['stat_date']}: {day['total_sales']:,.0f} IDR ({day['total_orders']} заказов)"
+            
+            response += f"""
+
+💡 **РЕКОМЕНДАЦИИ:**
+• Изучить операционные проблемы в этот день
+• Проверить доступность курьеров и персонала
+• Анализ конкурентных акций
+• Проверка технических проблем с приложениями
+"""
+            
+            conn.close()
+            return response
+            
+        except Exception as e:
+            return f"❌ Ошибка анализа: {e}"
+    
+    def _format_holiday_impact(self, holiday_info):
+        """Форматирует информацию о влиянии праздника"""
+        if not holiday_info:
+            return ""
+        
+        impact = holiday_info.get('impact_percent', 0)
+        if impact < -20:
+            impact_desc = "КРИТИЧЕСКОЕ падение"
+        elif impact < 0:
+            impact_desc = "негативное влияние"
+        else:
+            impact_desc = "положительное влияние"
+        
+        return f"""🎭 **ПРАЗДНИЧНЫЙ ФАКТОР:**
+• Праздник: {holiday_info['name']}
+• Тип: {holiday_info['category']}
+• Рыночное влияние: {impact:+.1f}% ({impact_desc})
+• Описание: {holiday_info['description']}"""
