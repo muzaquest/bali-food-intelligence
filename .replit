@@ -1,7 +1,7 @@
 modules = ["python-3.11"]
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-22_11"
 
 [workflows]
 runButton = "Project"
@@ -19,8 +19,12 @@ args = "Start Muzaquest Analytics + ML"
 port = 8000
 
 [deployment]
-run = ["sh", "-c", "streamlit run web_app_optimized.py --server.port 8000 --server.address 0.0.0.0"]
+run = ["streamlit", "run", "web_app_optimized.py", "--server.port", "8080", "--server.address", "0.0.0.0"]
 deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 8080
+externalPort = 80
 
 [env]
 PYTHONPATH = "$PYTHONPATH:."
