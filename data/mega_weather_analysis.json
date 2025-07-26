@@ -1,0 +1,15 @@
+{
+  "total_observations": 99,
+  "restaurants_analyzed": 40,
+  "zones_analyzed": 6,
+  "avg_sales": 6955728.282828283,
+  "avg_orders": 26.494949494949495,
+  "correlations": {
+    "temperature_sales": -0.03620832596435572,
+    "rain_sales": -0.028072598440721422,
+    "wind_sales": -0.07829339427618234,
+    "rain_cancelled": 0.003879547365491578
+  },
+  "analysis_type": "mega_analysis",
+  "timestamp": "2025-07-26 06:26:20"
+}
