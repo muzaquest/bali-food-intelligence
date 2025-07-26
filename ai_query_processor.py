@@ -446,7 +446,7 @@ class AIQueryProcessor:
             if not self._restaurant_exists(restaurant_name):
                 return f"❌ Ресторан '{restaurant_name}' не найден в базе данных. Проверьте правильность названия."
             
-            # Создаем простой анализатор целевой аудитории
+            # Создаем улучшенный анализатор целевой аудитории
             analyzer_code = '''
 import pandas as pd
 import sqlite3
@@ -466,115 +466,144 @@ def analyze_target_audience(restaurant_name):
         restaurant_id = int(restaurant_result.iloc[0]['id'])
         actual_name = restaurant_result.iloc[0]['name']
         
-        # Получаем продажи по месяцам
-        sales_query = """
+                                         # Получаем детальные данные с средним чеком и сезонностью
+        detailed_query = \"\"\"
             SELECT 
                 strftime('%Y-%m', stat_date) as month,
-                SUM(COALESCE(sales, 0)) as monthly_sales
+                strftime('%Y', stat_date) as year,
+                CAST(strftime('%m', stat_date) AS INTEGER) as month_num,
+                AVG(CASE WHEN orders > 0 THEN sales/orders ELSE 0 END) as avg_check,
+                SUM(sales) as total_sales,
+                SUM(orders) as total_orders
             FROM (
-                SELECT stat_date, sales FROM grab_stats WHERE restaurant_id = ?
+                SELECT stat_date, sales, orders FROM grab_stats WHERE restaurant_id = ? AND sales > 0
                 UNION ALL
-                SELECT stat_date, sales FROM gojek_stats WHERE restaurant_id = ?
+                SELECT stat_date, sales, orders FROM gojek_stats WHERE restaurant_id = ? AND sales > 0
             )
-            WHERE sales > 0
             GROUP BY strftime('%Y-%m', stat_date)
             ORDER BY month
-        """
+        \"\"\"
         
-        sales_data = pd.read_sql_query(sales_query, conn, params=[restaurant_id, restaurant_id])
-        conn.close()
+        data = pd.read_sql_query(detailed_query, conn, params=[restaurant_id, restaurant_id])
+         conn.close()
+         
+         if data.empty or len(data) < 3:
+             return "❌ Недостаточно данных по продажам"
+         
+         # АНАЛИЗ СРЕДНЕГО ЧЕКА
+         avg_checks = data['avg_check'].dropna()
+         overall_avg_check = avg_checks.mean()
+         
+         if overall_avg_check >= 400000:
+             check_category = "премиум туристы"
+             confidence = "очень высокая"
+         elif overall_avg_check >= 300000:
+             check_category = "туристы среднего класса"
+             confidence = "высокая"
+         elif overall_avg_check >= 200000:
+             check_category = "смешанная аудитория"
+             confidence = "средняя"
+         else:
+             check_category = "местные жители"
+             confidence = "высокая"
+         
+         # АНАЛИЗ СЕЗОННОСТИ
+         winter_months = [12, 1, 2]
+         summer_months = [6, 7, 8]
+         
+         winter_data = data[data['month_num'].isin(winter_months)]
+         summer_data = data[data['month_num'].isin(summer_months)]
+         
+         seasonality_pattern = "неопределен"
+         if len(winter_data) > 0 and len(summer_data) > 0:
+             winter_avg = winter_data['total_sales'].mean()
+             summer_avg = summer_data['total_sales'].mean()
+             
+             if winter_avg > summer_avg * 1.15:
+                 seasonality_pattern = f"зимний пик (+{((winter_avg/summer_avg-1)*100):.1f}%) = российские туристы"
+             elif summer_avg > winter_avg * 1.15:
+                 seasonality_pattern = f"летний пик (+{((summer_avg/winter_avg-1)*100):.1f}%) = европейские туристы"
+             else:
+                 seasonality_pattern = "стабильность = местная аудитория"
+         
+         # ОПРЕДЕЛЕНИЕ ЦЕЛЕВОЙ АУДИТОРИИ
+         if check_category in ["премиум туристы", "туристы среднего класса"]:
+             if "российские туристы" in seasonality_pattern:
+                 target_audience = "Российские туристы"
+                 final_confidence = "очень высокая"
+                 evidence = [
+                     f"Высокий средний чек {overall_avg_check:,.0f} IDR",
+                     seasonality_pattern,
+                     "Премиум сегмент характерен для русских туристов на Бали"
+                 ]
+                 recommendations = [
+                     "Русскоязычное меню и персонал",
+                     "Маркетинг в русскоязычных соцсетях", 
+                     "Акции в зимний период (пик сезона)",
+                     "Учет российских праздников и традиций"
+                 ]
+             elif "европейские туристы" in seasonality_pattern:
+                 target_audience = "Европейские туристы"
+                 final_confidence = "высокая"
+                 evidence = [
+                     f"Высокий средний чек {overall_avg_check:,.0f} IDR",
+                     seasonality_pattern
+                 ]
+                 recommendations = [
+                     "Англоязычное обслуживание",
+                     "Европейская кухня и стандарты",
+                     "Маркетинг на лето"
+                 ]
+             else:
+                 target_audience = "Международные туристы"
+                 final_confidence = "средняя"
+                 evidence = [f"Высокий средний чек {overall_avg_check:,.0f} IDR указывает на туристов"]
+                 recommendations = ["Мультиязычное обслуживание", "Международная кухня"]
+         else:
+             target_audience = "Местные жители"
+             final_confidence = "высокая"
+             evidence = [f"Низкий средний чек {overall_avg_check:,.0f} IDR"]
+             recommendations = ["Локальный маркетинг", "Программы лояльности"]
+         
+         # Форматируем результат
+         total_sales = data['total_sales'].sum()
+         period = f"{data['month'].min()} - {data['month'].max()}"
         
-        if sales_data.empty or len(sales_data) < 3:
-            return "❌ Недостаточно данных по продажам"
-        
-        # Упрощенные туристические данные (примерные, но реалистичные)
-        tourist_data = {
-            'Australia': [116580, 93002, 113949, 117508, 129287, 144863],
-            'China': [89456, 76234, 82345, 95678, 108923, 123456],
-            'India': [45678, 38923, 42345, 48976, 54321, 61234],
-            'Japan': [67890, 59876, 63245, 71234, 78965, 86543],
-            'Russia': [23456, 19876, 21345, 25678, 28934, 32156]
-        }
-        
-        # Анализируем корреляции
-        sales_values = sales_data['monthly_sales'].tolist()
-        correlations = {}
-        
-        for country, tourist_monthly in tourist_data.items():
-            if len(sales_values) <= len(tourist_monthly):
-                tourist_subset = tourist_monthly[:len(sales_values)]
-                try:
-                    correlation, p_value = pearsonr(sales_values, tourist_subset)
-                    if correlation > 0.2:  # Только положительные корреляции
-                        correlations[country] = {
-                            'correlation': correlation,
-                            'p_value': p_value,
-                            'total_tourists': sum(tourist_monthly)
-                        }
-                except:
-                    pass
-        
-        # Форматируем результат
-        total_sales = sales_data['monthly_sales'].sum()
-        period = f"{sales_data['month'].min()} - {sales_data['month'].max()}"
-        
-        if correlations:
-            sorted_correlations = sorted(correlations.items(), key=lambda x: x[1]['correlation'], reverse=True)
-            
-            result = f"""
-🎯 **АНАЛИЗ ЦЕЛЕВОЙ АУДИТОРИИ**
+                 result = f"""
+🎯 **УЛУЧШЕННЫЙ АНАЛИЗ ЦЕЛЕВОЙ АУДИТОРИИ**
 
 🏪 **Ресторан:** {actual_name}
 📅 **Период:** {period}
 💰 **Общие продажи:** {total_sales:,.0f} IDR
-📊 **Месяцев данных:** {len(sales_data)}
+📊 **Месяцев данных:** {len(data)}
 
-🌍 **ЦЕЛЕВАЯ АУДИТОРИЯ (ТОП-3):**
+💳 **АНАЛИЗ СРЕДНЕГО ЧЕКА:**
+═══════════════════════════
+💰 **Средний чек:** {overall_avg_check:,.0f} IDR
+🎯 **Категория:** {check_category}
+🎪 **Уверенность:** {confidence}
+
+🌡️ **АНАЛИЗ СЕЗОННОСТИ:**
+═══════════════════════════
+📊 **Паттерн:** {seasonality_pattern}
+
+🎯 **ЦЕЛЕВАЯ АУДИТОРИЯ:**
+═══════════════════════════
+👥 **Основная ЦА:** {target_audience}
+🎪 **Уверенность:** {final_confidence}
+
+📋 **ДОКАЗАТЕЛЬСТВА:**
 """
-            
-            for i, (country, data) in enumerate(sorted_correlations[:3], 1):
-                strength = 'сильная' if abs(data['correlation']) > 0.7 else 'умеренная' if abs(data['correlation']) > 0.4 else 'слабая'
-                confidence = 'высокая' if data['p_value'] < 0.05 else 'средняя' if data['p_value'] < 0.1 else 'низкая'
-                
-                result += f"""
-{i}. 🌍 **{country}**
-   📊 Корреляция: {data['correlation']:.3f} ({strength})
-   👥 Туристов: {data['total_tourists']:,}/год
-   🎯 Уверенность: {confidence}
-"""
-            
-            primary_target = sorted_correlations[0]
-            result += f"""
+         
+         for evidence in evidence:
+             result += f"   ✅ {evidence}\\n"
+         
+         result += f"""
 💡 **РЕКОМЕНДАЦИИ:**
-🎯 **Основная целевая аудитория:** {primary_target[0]}
-📈 **Сила связи:** {primary_target[1]['correlation']:.3f}
-
-🚀 **Маркетинговые действия:**
-• Создавайте контент для туристов из {primary_target[0]}
-• Учитывайте культурные особенности
-• Мониторьте сезоны {primary_target[0]}
-• Адаптируйте меню под предпочтения
 """
-        else:
-            result = f"""
-🎯 **АНАЛИЗ ЦЕЛЕВОЙ АУДИТОРИИ**
-
-🏪 **Ресторан:** {actual_name}
-📅 **Период:** {period}
-💰 **Общие продажи:** {total_sales:,.0f} IDR
-
-❌ **Значимых корреляций с туристическими потоками не найдено**
-
-💡 **Возможные причины:**
-• Ресторан ориентирован на местных жителей
-• Влияние других факторов (офисные работники, студенты)
-• Требуется более детальный анализ
-
-🔍 **Рекомендации:**
-• Проведите опрос клиентов о их происхождении
-• Анализируйте время пиковых заказов
-• Изучите локальные события и их влияние
-"""
+         
+         for recommendation in recommendations:
+             result += f"   🚀 {recommendation}\\n"
         
         return result
         
