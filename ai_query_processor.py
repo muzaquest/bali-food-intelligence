@@ -23,19 +23,8 @@ class AIQueryProcessor:
         except:
             self.weather_intelligence = None
             
-        # Загружаем координаты ресторанов (ИСПРАВЛЕННАЯ СТРУКТУРА)
-        try:
-            with open('data/bali_restaurant_locations.json', 'r', encoding='utf-8') as f:
-                location_data = json.load(f)
-                # Конвертируем структуру: список ресторанов в словарь по названиям
-                self.restaurant_locations = {}
-                if 'restaurants' in location_data:
-                    for restaurant in location_data['restaurants']:
-                        name = restaurant.get('name', '')
-                        self.restaurant_locations[name] = restaurant
-        except Exception as e:
-            print(f"Ошибка загрузки координат: {e}")
-            self.restaurant_locations = {}
+        # Путь к координатам ресторанов (загружаются динамически)
+        self.locations_file = 'data/bali_restaurant_locations.json'
             
         # Загружаем туристические коэффициенты
         try:
@@ -43,9 +32,6 @@ class AIQueryProcessor:
                 self.tourist_data = json.load(f)
         except:
             self.tourist_data = {}
-        self.locations_path = 'data/bali_restaurant_locations.json'
-        self.tourist_path = 'data/scientific_tourist_coefficients.json'
-        self.weather_intelligence_path = 'weather_intelligence.py'
         
     def process_query(self, user_query, context=""):
         """Основная функция обработки запроса"""
@@ -1046,6 +1032,34 @@ if __name__ == "__main__":
         except:
             return []
     
+    def _get_restaurant_location(self, restaurant_name):
+        """Динамическая загрузка координат ресторана"""
+        try:
+            with open(self.locations_file, 'r', encoding='utf-8') as f:
+                location_data = json.load(f)
+                
+            if 'restaurants' in location_data:
+                for restaurant in location_data['restaurants']:
+                    if restaurant.get('name', '').lower() == restaurant_name.lower():
+                        return restaurant
+            
+            # Если не найден, возвращаем координаты центра Бали
+            return {
+                'latitude': -8.4095,
+                'longitude': 115.1889,
+                'location': 'Denpasar',
+                'area': 'Denpasar',
+                'zone': 'Central'
+            }
+        except:
+            return {
+                'latitude': -8.4095,
+                'longitude': 115.1889,
+                'location': 'Denpasar',
+                'area': 'Denpasar',
+                'zone': 'Central'
+            }
+    
     def _get_weather_intelligence_data(self):
         """Получение данных о влиянии погоды"""
         # Здесь можно загрузить актуальные коэффициенты из weather_intelligence.py
@@ -1516,8 +1530,8 @@ if __name__ == "__main__":
         """Получает анализ погоды для конкретной даты"""
         try:
             # Получаем координаты ресторана
-            location = self.restaurant_locations.get(restaurant_name, {})
-            if not location:
+            location = self._get_restaurant_location(restaurant_name)
+            if not location or not location.get('latitude'):
                 return "GPS координаты ресторана не найдены для анализа погоды"
             
             # Интегрируем с weather_intelligence если доступен
@@ -1605,7 +1619,7 @@ if __name__ == "__main__":
                 'period': {'from': date_from, 'to': date_to},
                 'grab_data': grab_data,
                 'gojek_data': gojek_data,
-                'location': self.restaurant_locations.get(actual_name, {}),
+                'location': self._get_restaurant_location(actual_name),
                 'total_records': len(grab_data) + len(gojek_data)
             }
             
@@ -1620,8 +1634,8 @@ if __name__ == "__main__":
             
         try:
             # Получаем координаты ресторана
-            location = self.restaurant_locations.get(restaurant_name, {})
-            if not location:
+            location = self._get_restaurant_location(restaurant_name)
+            if not location or not location.get('latitude'):
                 return f"GPS координаты для {restaurant_name} не найдены"
             
             # Здесь можно интегрировать с weather_intelligence

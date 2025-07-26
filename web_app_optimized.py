@@ -60,7 +60,7 @@ st.markdown('<h1 class="main-header">🎯 MUZAQUEST Analytics Dashboard</h1>', u
 st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">Профессиональная аналитика ресторанов Бали • AI-Powered • Real-time</p>', unsafe_allow_html=True)
 
 # Функции для работы с данными
-@st.cache_data
+@st.cache_data(ttl=300)  # Кеш на 5 минут для обновляемой БД
 def load_restaurants():
     """Загрузка списка ресторанов"""
     try:
@@ -80,7 +80,7 @@ def load_restaurants():
         st.error(f"Ошибка загрузки ресторанов: {e}")
         return []
 
-@st.cache_data
+@st.cache_data(ttl=300)  # Кеш на 5 минут для обновляемой БД
 def get_market_overview():
     """Получение обзорных данных по рынку"""
     try:
