@@ -1,0 +1,175 @@
+{
+  "analysis_period": {
+    "start": "2023-01-01",
+    "end": "2025-06-22"
+  },
+  "baseline_average": 64373706.200453,
+  "total_holidays": 21,
+  "holidays_with_data": 21,
+  "results": {
+    "2025-01-01": {
+      "name": "New Year Day",
+      "type": "national",
+      "category": "Новый год",
+      "sales": 167369150.0,
+      "impact_percent": 159.99613798657165
+    },
+    "2025-01-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Новолуние",
+      "sales": 148982590.0,
+      "impact_percent": 131.43391734520267
+    },
+    "2025-03-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Новолуние",
+      "sales": 494626.0,
+      "impact_percent": -99.23163348951856
+    },
+    "2025-03-31": {
+      "name": "Eid al-Fitr",
+      "type": "national",
+      "category": "Ураза-байрам",
+      "sales": 163234760.0,
+      "impact_percent": 153.57365551037873
+    },
+    "2025-04-01": {
+      "name": "Eid al-Fitr Holiday",
+      "type": "national",
+      "category": "Ураза-байрам",
+      "sales": 162556596.0,
+      "impact_percent": 152.52017569691535
+    },
+    "2025-04-18": {
+      "name": "Good Friday",
+      "type": "national",
+      "category": "Страстная пятница",
+      "sales": 177036423.0,
+      "impact_percent": 175.01356291142702
+    },
+    "2025-05-01": {
+      "name": "Labor Day",
+      "type": "national",
+      "category": "День труда",
+      "sales": 203450578.0,
+      "impact_percent": 216.0460846645619
+    },
+    "2025-05-12": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Полнолуние",
+      "sales": 198706546.0,
+      "impact_percent": 208.6765664559511
+    },
+    "2025-05-29": {
+      "name": "Ascension Day",
+      "type": "national",
+      "category": "Вознесение",
+      "sales": 191887890.0,
+      "impact_percent": 198.08426658313124
+    },
+    "2025-06-01": {
+      "name": "Pancasila Day",
+      "type": "national",
+      "category": "День Панчасила",
+      "sales": 210005480.0,
+      "impact_percent": 226.2286613513674
+    },
+    "2025-06-06": {
+      "name": "Eid al-Adha",
+      "type": "national",
+      "category": "Курбан-байрам",
+      "sales": 178570712.0,
+      "impact_percent": 177.39697236624755
+    },
+    "2025-04-16": {
+      "name": "Galungan",
+      "type": "balinese",
+      "category": "Galungan",
+      "sales": 156291750.0,
+      "impact_percent": 142.78818049301654
+    },
+    "2025-04-26": {
+      "name": "Kuningan",
+      "type": "balinese",
+      "category": "Kuningan",
+      "sales": 190085447.0,
+      "impact_percent": 195.2842988534694
+    },
+    "2025-01-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Полнолуние",
+      "sales": 131753200.0,
+      "impact_percent": 104.66927846244288
+    },
+    "2025-02-12": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Полнолуние",
+      "sales": 103369639.0,
+      "impact_percent": 60.57742376696121
+    },
+    "2025-03-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Полнолуние",
+      "sales": 157429533.0,
+      "impact_percent": 144.55564591819657
+    },
+    "2025-04-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Полнолуние",
+      "sales": 168647604.0,
+      "impact_percent": 161.9821258618371
+    },
+    "2025-06-11": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Полнолуние",
+      "sales": 166803828.0,
+      "impact_percent": 159.11795023979246
+    },
+    "2025-02-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Новолуние",
+      "sales": 148388966.0,
+      "impact_percent": 130.51176444297343
+    },
+    "2025-04-27": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Новолуние",
+      "sales": 208140818.0,
+      "impact_percent": 223.3320408054047
+    },
+    "2025-05-27": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Новолуние",
+      "sales": 179067143.0,
+      "impact_percent": 178.16814281657733
+    }
+  },
+  "category_averages": {
+    "Новый год": 159.99613798657165,
+    "Новолуние": 112.84284638412791,
+    "Ураза-байрам": 153.04691560364705,
+    "Страстная пятница": 175.01356291142702,
+    "День труда": 216.0460846645619,
+    "Полнолуние": 139.92983178419686,
+    "Вознесение": 198.08426658313124,
+    "День Панчасила": 226.2286613513674,
+    "Курбан-байрам": 177.39697236624755,
+    "Galungan": 142.78818049301654,
+    "Kuningan": 195.2842988534694
+  },
+  "type_averages": {
+    "national": 182.3574396338251,
+    "balinese": 133.98966938248515
+  }
+}
