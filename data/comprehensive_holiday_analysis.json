@@ -1,0 +1,1502 @@
+{
+  "analysis_period": {
+    "start": "2023-01-01",
+    "end": "2025-06-22"
+  },
+  "baseline_average": 78765362.61213236,
+  "total_holidays": 164,
+  "holidays_with_data": 123,
+  "results": {
+    "2023-01-01": {
+      "name": "New Year's Day",
+      "type": "international",
+      "category": "Международный",
+      "religion": "secular",
+      "description": "Новый год по григорианскому календарю",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-12-25": {
+      "name": "Christmas Day",
+      "type": "international",
+      "category": "Христианский",
+      "religion": "christian",
+      "description": "Рождество Христово",
+      "sales": 52946550.0,
+      "impact_percent": -32.779399162133025
+    },
+    "2023-12-31": {
+      "name": "New Year's Eve",
+      "type": "international",
+      "category": "Международный",
+      "religion": "secular",
+      "description": "Канун Нового года",
+      "sales": 35546550.0,
+      "impact_percent": -54.870327741594494
+    },
+    "2023-01-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-01-23": {
+      "name": "Chinese New Year Holiday",
+      "type": "chinese",
+      "category": "Китайский",
+      "religion": "traditional",
+      "description": "Второй день китайского Нового года",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-04-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-04-23": {
+      "name": "Eid al-Fitr Holiday",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Второй день Ураза-байрама",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-06-29": {
+      "name": "Eid al-Adha",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Курбан-байрам",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-07-19": {
+      "name": "Islamic New Year",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Мусульманский Новый год",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-09-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 6108200.0,
+      "impact_percent": -92.24506839373181
+    },
+    "2023-02-18": {
+      "name": "Isra and Miraj",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Вознесение пророка Мухаммеда",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-08-17": {
+      "name": "Independence Day",
+      "type": "national",
+      "category": "Национальный",
+      "religion": "secular",
+      "description": "День независимости Индонезии",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-05-01": {
+      "name": "Labor Day",
+      "type": "national",
+      "category": "Национальный",
+      "religion": "secular",
+      "description": "День труда",
+      "sales": 1084000.0,
+      "impact_percent": -98.62376054137148
+    },
+    "2023-06-01": {
+      "name": "Pancasila Day",
+      "type": "national",
+      "category": "Национальный",
+      "religion": "secular",
+      "description": "День Панчасилы",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-03-22": {
+      "name": "Nyepi (Day of Silence)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новый год по балийскому календарю, день тишины",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-05-02": {
+      "name": "Kuningan",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Завершение Galungan, религиозные церемонии",
+      "sales": 199500.0,
+      "impact_percent": -99.7467160774941
+    },
+    "2023-11-18": {
+      "name": "Galungan",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Победа добра над злом, семейные застолья",
+      "sales": 25595600.0,
+      "impact_percent": -67.5039901408929
+    },
+    "2023-11-28": {
+      "name": "Kuningan",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Завершение Galungan, религиозные церемонии",
+      "sales": 38839464.0,
+      "impact_percent": -50.689665213300884
+    },
+    "2023-06-04": {
+      "name": "Vesak Day",
+      "type": "buddhist",
+      "category": "Буддистский",
+      "religion": "buddhist",
+      "description": "День рождения, просветления и смерти Будды",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-01-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-01-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-02-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-02-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-03-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-03-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-04-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-04-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-05-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-05-30": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-06-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-06-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-07-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-07-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-08-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-08-30": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-09-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 1807000.0,
+      "impact_percent": -97.70584437108695
+    },
+    "2023-10-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 31570090.0,
+      "impact_percent": -59.91881589441549
+    },
+    "2023-10-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 35447450.0,
+      "impact_percent": -54.9961444670097
+    },
+    "2023-11-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 30061950.0,
+      "impact_percent": -61.83354078107233
+    },
+    "2023-11-30": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 40776279.0,
+      "impact_percent": -48.2306972916555
+    },
+    "2023-12-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 38255405.0,
+      "impact_percent": -51.43118277969121
+    },
+    "2023-12-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 47601800.0,
+      "impact_percent": -39.56505953713744
+    },
+    "2023-01-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-02-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-02-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-03-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-03-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-04-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-05-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 3970500.0,
+      "impact_percent": -94.95907862501427
+    },
+    "2023-05-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-06-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-06-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-07-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-07-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-08-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-08-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 0,
+      "impact_percent": 0
+    },
+    "2023-09-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 336000.0,
+      "impact_percent": -99.57341655156901
+    },
+    "2023-09-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 3622000.0,
+      "impact_percent": -95.40153199340176
+    },
+    "2023-10-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 35969512.0,
+      "impact_percent": -54.333337894822876
+    },
+    "2023-10-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 36547400.0,
+      "impact_percent": -53.599654990516676
+    },
+    "2023-11-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 41704450.0,
+      "impact_percent": -47.05229733357922
+    },
+    "2023-11-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 44185730.0,
+      "impact_percent": -43.90208013440415
+    },
+    "2023-12-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 38376390.0,
+      "impact_percent": -51.27758099841615
+    },
+    "2023-12-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 49861280.0,
+      "impact_percent": -36.69643819767068
+    },
+    "2024-01-01": {
+      "name": "New Year's Day",
+      "type": "international",
+      "category": "Международный",
+      "religion": "secular",
+      "description": "Новый год по григорианскому календарю",
+      "sales": 52325950.0,
+      "impact_percent": -33.56730894813382
+    },
+    "2024-12-25": {
+      "name": "Christmas Day",
+      "type": "international",
+      "category": "Христианский",
+      "religion": "christian",
+      "description": "Рождество Христово",
+      "sales": 98886840.0,
+      "impact_percent": 25.546098844174303
+    },
+    "2024-12-31": {
+      "name": "Galungan",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Победа добра над злом, семейные застолья",
+      "sales": 113157550.0,
+      "impact_percent": 43.66410087797928
+    },
+    "2024-02-10": {
+      "name": "Chinese New Year",
+      "type": "chinese",
+      "category": "Китайский",
+      "religion": "traditional",
+      "description": "Китайский Новый год (Весенний фестиваль)",
+      "sales": 61402860.0,
+      "impact_percent": -22.043322135938446
+    },
+    "2024-02-11": {
+      "name": "Chinese New Year Holiday",
+      "type": "chinese",
+      "category": "Китайский",
+      "religion": "traditional",
+      "description": "Второй день китайского Нового года",
+      "sales": 56108660.0,
+      "impact_percent": -28.764804554638722
+    },
+    "2024-04-10": {
+      "name": "Eid al-Fitr",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Ураза-байрам (окончание Рамадана)",
+      "sales": 62598267.0,
+      "impact_percent": -20.525641063502338
+    },
+    "2024-04-11": {
+      "name": "Eid al-Fitr Holiday",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Второй день Ураза-байрама",
+      "sales": 62004470.0,
+      "impact_percent": -21.279521932335584
+    },
+    "2024-06-17": {
+      "name": "Eid al-Adha",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Курбан-байрам",
+      "sales": 66892790.0,
+      "impact_percent": -15.073342162591155
+    },
+    "2024-07-07": {
+      "name": "Islamic New Year",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Мусульманский Новый год",
+      "sales": 64973100.0,
+      "impact_percent": -17.510568293896117
+    },
+    "2024-09-16": {
+      "name": "Mawlid an-Nabi",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "День рождения пророка Мухаммеда",
+      "sales": 72246300.0,
+      "impact_percent": -8.276560147681227
+    },
+    "2024-02-08": {
+      "name": "Isra and Miraj",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Вознесение пророка Мухаммеда",
+      "sales": 74038660.0,
+      "impact_percent": -6.0009913690212535
+    },
+    "2024-08-17": {
+      "name": "Independence Day",
+      "type": "national",
+      "category": "Национальный",
+      "religion": "secular",
+      "description": "День независимости Индонезии",
+      "sales": 63681320.0,
+      "impact_percent": -19.15060391000972
+    },
+    "2024-05-01": {
+      "name": "Labor Day",
+      "type": "national",
+      "category": "Национальный",
+      "religion": "secular",
+      "description": "День труда",
+      "sales": 57062690.0,
+      "impact_percent": -27.55357417575001
+    },
+    "2024-06-01": {
+      "name": "Pancasila Day",
+      "type": "national",
+      "category": "Национальный",
+      "religion": "secular",
+      "description": "День Панчасилы",
+      "sales": 75322000.0,
+      "impact_percent": -4.371671122862283
+    },
+    "2024-03-11": {
+      "name": "Nyepi (Day of Silence)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новый год по балийскому календарю, день тишины",
+      "sales": 0.0,
+      "impact_percent": -100.0
+    },
+    "2024-06-05": {
+      "name": "Galungan",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Победа добра над злом, семейные застолья",
+      "sales": 52406700.0,
+      "impact_percent": -33.46478926521477
+    },
+    "2024-06-15": {
+      "name": "Kuningan",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Завершение Galungan, религиозные церемонии",
+      "sales": 69100400.0,
+      "impact_percent": -12.270574642975928
+    },
+    "2024-05-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 72514310.0,
+      "impact_percent": -7.936296367877695
+    },
+    "2024-01-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 53680960.0,
+      "impact_percent": -31.84699692891221
+    },
+    "2024-01-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 38129470.0,
+      "impact_percent": -51.59106904926906
+    },
+    "2024-02-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 67933440.0,
+      "impact_percent": -13.752139586371811
+    },
+    "2024-02-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 84531895.0,
+      "impact_percent": 7.321152593766408
+    },
+    "2024-03-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 61403666.0,
+      "impact_percent": -22.04229884349965
+    },
+    "2024-03-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 66099685.0,
+      "impact_percent": -16.080263191959762
+    },
+    "2024-04-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 58389760.0,
+      "impact_percent": -25.86873460161519
+    },
+    "2024-04-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 53896920.0,
+      "impact_percent": -31.572815495807582
+    },
+    "2024-05-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 56210480.0,
+      "impact_percent": -28.635534534640982
+    },
+    "2024-05-30": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 69041550.0,
+      "impact_percent": -12.345290226131176
+    },
+    "2024-06-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 58309990.0,
+      "impact_percent": -25.97001008280965
+    },
+    "2024-06-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 65013720.0,
+      "impact_percent": -17.458997402005444
+    },
+    "2024-07-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 53766240.0,
+      "impact_percent": -31.738725987000915
+    },
+    "2024-07-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 51548120.0,
+      "impact_percent": -34.55483693531558
+    },
+    "2024-08-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 65011490.0,
+      "impact_percent": -17.461828595725688
+    },
+    "2024-08-30": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 63631550.0,
+      "impact_percent": -19.213791583308563
+    },
+    "2024-09-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 52850610.0,
+      "impact_percent": -32.90120397178323
+    },
+    "2024-09-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 44647530.0,
+      "impact_percent": -43.31578181153086
+    },
+    "2024-10-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 56532750.0,
+      "impact_percent": -28.22638260629023
+    },
+    "2024-10-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 73235660.0,
+      "impact_percent": -7.020475027027434
+    },
+    "2024-11-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 72759650.0,
+      "impact_percent": -7.624814274907288
+    },
+    "2024-11-30": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 73160720.0,
+      "impact_percent": -7.115618371150701
+    },
+    "2024-12-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 81953720.0,
+      "impact_percent": 4.047918123056462
+    },
+    "2024-12-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 103192440.0,
+      "impact_percent": 31.01246103335415
+    },
+    "2024-01-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 49100660.0,
+      "impact_percent": -37.66211647905631
+    },
+    "2024-01-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 67559350.0,
+      "impact_percent": -14.227081854894266
+    },
+    "2024-02-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 62245290.0,
+      "impact_percent": -20.973778402421452
+    },
+    "2024-02-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 61268440.0,
+      "impact_percent": -22.21398090718277
+    },
+    "2024-03-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 74082667.0,
+      "impact_percent": -5.945120363619163
+    },
+    "2024-03-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 63923097.0,
+      "impact_percent": -18.84364537902372
+    },
+    "2024-04-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 60846740.0,
+      "impact_percent": -22.74936852683558
+    },
+    "2024-04-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 59245790.0,
+      "impact_percent": -24.781924395185513
+    },
+    "2024-05-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 64623250.0,
+      "impact_percent": -17.95473561363891
+    },
+    "2024-06-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 53189930.0,
+      "impact_percent": -32.4704054726118
+    },
+    "2024-06-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 60118470.0,
+      "impact_percent": -23.67397545537376
+    },
+    "2024-07-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 58002110.0,
+      "impact_percent": -26.360892559306464
+    },
+    "2024-07-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 59806680.0,
+      "impact_percent": -24.069822042832975
+    },
+    "2024-08-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 63846420.0,
+      "impact_percent": -18.940994007224145
+    },
+    "2024-08-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 57156850.0,
+      "impact_percent": -27.434029242701612
+    },
+    "2024-09-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 64729810.0,
+      "impact_percent": -17.819447719993658
+    },
+    "2024-09-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 61598570.0,
+      "impact_percent": -21.794849973163366
+    },
+    "2024-10-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 61318480.0,
+      "impact_percent": -22.15045044361287
+    },
+    "2024-10-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 66952610.0,
+      "impact_percent": -14.997395073647283
+    },
+    "2024-11-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 78718430.0,
+      "impact_percent": -0.05958534383123181
+    },
+    "2024-11-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 78006790.0,
+      "impact_percent": -0.9630789308592753
+    },
+    "2024-12-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 65665950.0,
+      "impact_percent": -16.6309303705467
+    },
+    "2024-12-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 80115420.0,
+      "impact_percent": 1.714024214572324
+    },
+    "2025-01-01": {
+      "name": "New Year's Day",
+      "type": "international",
+      "category": "Международный",
+      "religion": "secular",
+      "description": "Новый год по григорианскому календарю",
+      "sales": 135101000.0,
+      "impact_percent": 71.52336448355304
+    },
+    "2025-01-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 144773390.0,
+      "impact_percent": 83.80336889060462
+    },
+    "2025-01-30": {
+      "name": "Chinese New Year Holiday",
+      "type": "chinese",
+      "category": "Китайский",
+      "religion": "traditional",
+      "description": "Второй день китайского Нового года",
+      "sales": 145490070.0,
+      "impact_percent": 84.71326122935913
+    },
+    "2025-03-31": {
+      "name": "Eid al-Fitr",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Ураза-байрам (окончание Рамадана)",
+      "sales": 161110760.0,
+      "impact_percent": 104.54518922659521
+    },
+    "2025-04-01": {
+      "name": "Eid al-Fitr Holiday",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Второй день Ураза-байрама",
+      "sales": 159818596.0,
+      "impact_percent": 102.90466608654054
+    },
+    "2025-06-06": {
+      "name": "Eid al-Adha",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Курбан-байрам",
+      "sales": 178483712.0,
+      "impact_percent": 126.60177783845799
+    },
+    "2025-01-27": {
+      "name": "Isra and Miraj",
+      "type": "islamic",
+      "category": "Мусульманский",
+      "religion": "islam",
+      "description": "Вознесение пророка Мухаммеда",
+      "sales": 147636400.0,
+      "impact_percent": 87.43822805337955
+    },
+    "2025-05-01": {
+      "name": "Labor Day",
+      "type": "national",
+      "category": "Национальный",
+      "religion": "secular",
+      "description": "День труда",
+      "sales": 203445578.0,
+      "impact_percent": 158.2932030692676
+    },
+    "2025-06-01": {
+      "name": "Pancasila Day",
+      "type": "national",
+      "category": "Национальный",
+      "religion": "secular",
+      "description": "День Панчасилы",
+      "sales": 208059970.0,
+      "impact_percent": 164.15160560430428
+    },
+    "2025-03-29": {
+      "name": "Nyepi (Day of Silence)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новый год по балийскому календарю, день тишины",
+      "sales": 494626.0,
+      "impact_percent": -99.37202599772732
+    },
+    "2025-04-16": {
+      "name": "Galungan",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Победа добра над злом, семейные застолья",
+      "sales": 154890750.0,
+      "impact_percent": 96.64830436030003
+    },
+    "2025-04-26": {
+      "name": "Kuningan",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Завершение Galungan, религиозные церемонии",
+      "sales": 189213127.0,
+      "impact_percent": 140.2237744168719
+    },
+    "2025-05-12": {
+      "name": "Vesak Day",
+      "type": "buddhist",
+      "category": "Буддистский",
+      "religion": "buddhist",
+      "description": "День рождения, просветления и смерти Будды",
+      "sales": 198479546.0,
+      "impact_percent": 151.98836064195035
+    },
+    "2025-01-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 106597790.0,
+      "impact_percent": 35.33587158726617
+    },
+    "2025-02-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 64920420.0,
+      "impact_percent": -17.577450484560835
+    },
+    "2025-02-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 142323716.0,
+      "impact_percent": 80.69327846664119
+    },
+    "2025-03-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 170371335.0,
+      "impact_percent": 116.30235594669558
+    },
+    "2025-03-28": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 138297721.0,
+      "impact_percent": 75.58190099501653
+    },
+    "2025-04-14": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 167799025.0,
+      "impact_percent": 113.03656764242922
+    },
+    "2025-04-29": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 187998647.0,
+      "impact_percent": 138.68187838576935
+    },
+    "2025-05-15": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 188762963.0,
+      "impact_percent": 139.65224908508773
+    },
+    "2025-05-30": {
+      "name": "Tilem (New Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Новолуние, день очищения",
+      "sales": 189246469.0,
+      "impact_percent": 140.2661052065671
+    },
+    "2025-06-13": {
+      "name": "Purnama (Full Moon)",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Полнолуние, религиозный день",
+      "sales": 173882089.0,
+      "impact_percent": 120.75958674405527
+    },
+    "2025-01-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 109110270.0,
+      "impact_percent": 38.52570010665268
+    },
+    "2025-01-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 120815360.0,
+      "impact_percent": 53.386407417352025
+    },
+    "2025-02-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 69056285.0,
+      "impact_percent": -12.326582764486444
+    },
+    "2025-02-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 152557894.0,
+      "impact_percent": 93.68652532109496
+    },
+    "2025-03-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 151198274.0,
+      "impact_percent": 91.96036047539339
+    },
+    "2025-03-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 170332174.0,
+      "impact_percent": 116.25263739186222
+    },
+    "2025-04-08": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 150730077.0,
+      "impact_percent": 91.36594056228316
+    },
+    "2025-04-22": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 178478585.0,
+      "impact_percent": 126.5952686320886
+    },
+    "2025-05-09": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 181565567.0,
+      "impact_percent": 130.5144812118635
+    },
+    "2025-05-23": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 195835346.0,
+      "impact_percent": 148.63130125403012
+    },
+    "2025-06-07": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 191528748.0,
+      "impact_percent": 143.16367201044093
+    },
+    "2025-06-21": {
+      "name": "Odalan Temple Festival",
+      "type": "balinese",
+      "category": "Балийский",
+      "religion": "hindu",
+      "description": "Праздник храма, день рождения храма",
+      "sales": 189599796.0,
+      "impact_percent": 140.714686903245
+    }
+  },
+  "type_averages": {
+    "international": -4.829514504826799,
+    "balinese": 0.21302858165293978,
+    "national": 28.790866487263063,
+    "chinese": 11.301711512927321,
+    "islamic": 33.282323623594564,
+    "buddhist": 151.98836064195035
+  },
+  "methodology": {
+    "baseline_calculation": "Average sales on non-holiday days",
+    "impact_formula": "((Holiday_Sales - Baseline) / Baseline) * 100",
+    "data_source": "database.sqlite (Grab + Gojek combined)",
+    "regular_days_count": 544,
+    "holiday_days_count": 164
+  }
+}
