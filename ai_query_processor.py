@@ -80,9 +80,18 @@ class AIQueryProcessor:
     
     def _is_sales_drop_analysis(self, query):
         """Проверяет, является ли запрос анализом падения продаж"""
-        drop_keywords = ['почему упали', 'почему снизились', 'причина падения', 'что случилось', 'анализ дня']
-        sales_keywords = ['продажи', 'sales', 'доходы', 'выручка']
-        return any(drop in query for drop in drop_keywords) and any(sales in query for sales in sales_keywords)
+        drop_keywords = ['почему упали', 'почему снизились', 'причина падения', 'что случилось', 'анализ дня',
+                        'что случилось с', 'анализируй падение', 'проанализируй падение', 'разбери падение',
+                        'почему провал', 'причина спада', 'анализ продаж', 'что с продажами']
+        sales_keywords = ['продаж', 'sales', 'доход', 'выручк']  # Используем корни слов
+        date_keywords = ['мая', 'may', 'апреля', 'april', 'июня', 'june', '2025', '2024', 'числа']
+        
+        # Проверяем наличие ключевых слов падения и продаж, а также даты
+        has_drop = any(drop in query.lower() for drop in drop_keywords)
+        has_sales = any(sales in query.lower() for sales in sales_keywords)
+        has_date = any(date in query.lower() for date in date_keywords)
+        
+        return has_drop and has_sales and has_date
     
     def _is_weather_query(self, query):
         """Проверяет, касается ли запрос погоды"""
@@ -1020,7 +1029,7 @@ class AIQueryProcessor:
                 conn.close()
                 return f"❌ Ресторан '{restaurant_name}' не найден в базе данных"
             
-            restaurant_id = restaurant_data.iloc[0]['id']
+            restaurant_id = int(restaurant_data.iloc[0]['id'])  # КРИТИЧНО: конвертируем numpy.int64 в int
             actual_name = restaurant_data.iloc[0]['name']
             
             # Получаем данные за целевой день (правильный запрос)
