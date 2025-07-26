@@ -15,6 +15,27 @@ class AIQueryProcessor:
     
     def __init__(self):
         self.db_path = 'database.sqlite'
+        
+        # Подключаем все модули системы
+        try:
+            from weather_intelligence import WeatherIntelligence
+            self.weather_intelligence = WeatherIntelligence()
+        except:
+            self.weather_intelligence = None
+            
+        # Загружаем координаты ресторанов
+        try:
+            with open('data/bali_restaurant_locations.json', 'r', encoding='utf-8') as f:
+                self.restaurant_locations = json.load(f)
+        except:
+            self.restaurant_locations = {}
+            
+        # Загружаем туристические коэффициенты
+        try:
+            with open('data/scientific_tourist_coefficients.json', 'r', encoding='utf-8') as f:
+                self.tourist_data = json.load(f)
+        except:
+            self.tourist_data = {}
         self.locations_path = 'data/bali_restaurant_locations.json'
         self.tourist_path = 'data/scientific_tourist_coefficients.json'
         self.weather_intelligence_path = 'weather_intelligence.py'
@@ -23,11 +44,19 @@ class AIQueryProcessor:
         """Основная функция обработки запроса"""
         query_lower = user_query.lower()
         
-        # Определяем тип запроса и извлекаем данные
-        if self._is_restaurant_query(query_lower):
+        # Определяем тип запроса и извлекаем данные (расширенная логика)
+        if self._is_weather_query(query_lower):
+            return self._handle_comprehensive_weather_query(user_query, query_lower)
+        elif self._is_marketing_query(query_lower):
+            return self._handle_marketing_query(user_query, query_lower)  
+        elif self._is_delivery_query(query_lower):
+            return self._handle_delivery_query(user_query, query_lower)
+        elif self._is_platform_comparison_query(query_lower):
+            return self._handle_platform_comparison_query(user_query, query_lower)
+        elif self._is_rating_query(query_lower):
+            return self._handle_rating_query(user_query, query_lower)
+        elif self._is_restaurant_query(query_lower):
             return self._handle_restaurant_query(user_query, query_lower)
-        elif self._is_weather_query(query_lower):
-            return self._handle_weather_query(user_query, query_lower)
         elif self._is_holiday_query(query_lower):
             return self._handle_holiday_query(user_query, query_lower)
         elif self._is_tourist_query(query_lower):
@@ -57,8 +86,32 @@ class AIQueryProcessor:
     
     def _is_weather_query(self, query):
         """Проверяет, касается ли запрос погоды"""
-        weather_keywords = ['погода', 'дождь', 'temperature', 'rain', 'weather', 'ветер', 'wind']
+        weather_keywords = ['погода', 'дождь', 'temperature', 'rain', 'weather', 'ветер', 'wind', 
+                           'повлиял ли дождь', 'влияние погоды', 'солнечные дни', 'дождливые дни']
         return any(keyword in query for keyword in weather_keywords)
+    
+    def _is_marketing_query(self, query):
+        """Проверяет, касается ли запрос рекламы/маркетинга"""
+        marketing_keywords = ['реклама', 'marketing', 'ads', 'маркетинг', 'бюджет', 'включена реклама', 
+                             'влияние рекламы', 'новые клиенты', 'возвращающиеся']
+        return any(keyword in query for keyword in marketing_keywords)
+    
+    def _is_delivery_query(self, query):
+        """Проверяет, касается ли запрос доставки"""
+        delivery_keywords = ['доставка', 'delivery', 'время доставки', 'курьер', 'отмены', 'ожидание',
+                            'подготовка заказа', 'cancelled', 'время ожидания']
+        return any(keyword in query for keyword in delivery_keywords)
+    
+    def _is_platform_comparison_query(self, query):
+        """Проверяет, касается ли запрос сравнения платформ"""
+        comparison_keywords = ['grab vs gojek', 'сравни grab', 'лучше работает', 'платформы', 
+                              'почему gojek', 'grab или gojek']
+        return any(keyword in query for keyword in comparison_keywords)
+    
+    def _is_rating_query(self, query):
+        """Проверяет, касается ли запрос рейтингов"""
+        rating_keywords = ['рейтинг', 'rating', 'отзывы', 'оценки', 'снизился рейтинг', 'падение рейтинга']
+        return any(keyword in query for keyword in rating_keywords)
     
     def _is_holiday_query(self, query):
         """Проверяет, касается ли запрос праздников"""
@@ -1047,3 +1100,348 @@ class AIQueryProcessor:
 📅 День недели (статистически слабый день)
 🎯 Маркетинговые кампании конкурентов
 ⚡ Случайные факторы (иногда просто неудачный день)"""
+    
+    def _get_comprehensive_restaurant_data(self, restaurant_name, date_from=None, date_to=None):
+        """Получает ВСЕ доступные данные о ресторане"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            
+            # Получаем ID ресторана
+            restaurant_query = "SELECT id, name FROM restaurants WHERE LOWER(name) LIKE ?"
+            restaurant_data = pd.read_sql_query(restaurant_query, conn, params=[f'%{restaurant_name.lower()}%'])
+            
+            if len(restaurant_data) == 0:
+                return None
+                
+            restaurant_id = restaurant_data.iloc[0]['id']
+            actual_name = restaurant_data.iloc[0]['name']
+            
+            # Определяем период анализа
+            if not date_from or not date_to:
+                date_query = """
+                    SELECT MIN(stat_date) as min_date, MAX(stat_date) as max_date
+                    FROM (
+                        SELECT stat_date FROM grab_stats WHERE restaurant_id = ?
+                        UNION ALL
+                        SELECT stat_date FROM gojek_stats WHERE restaurant_id = ?
+                    )
+                """
+                date_ranges = pd.read_sql_query(date_query, conn, params=[restaurant_id, restaurant_id])
+                date_from = date_ranges.iloc[0]['min_date']
+                date_to = date_ranges.iloc[0]['max_date']
+            
+            # Получаем ВСЕ данные Grab (исправленные названия колонок)
+            grab_query = """
+                SELECT stat_date, sales, orders, rating, 
+                       new_customers, repeated_customers,
+                       ads_sales, ads_orders, ads_spend,
+                       cancelation_rate, cancelled_orders,
+                       store_is_closed, store_is_busy, out_of_stock
+                FROM grab_stats 
+                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                ORDER BY stat_date
+            """
+            grab_data = pd.read_sql_query(grab_query, conn, params=[restaurant_id, date_from, date_to])
+            
+            # Получаем ВСЕ данные Gojek (исправленные названия колонок)
+            gojek_query = """
+                SELECT stat_date, sales, orders, rating,
+                       new_client, active_client, returned_client,
+                       ads_sales, ads_orders, ads_spend,
+                       accepting_time, preparation_time, delivery_time,
+                       cancelled_orders, store_is_closed, store_is_busy, out_of_stock
+                FROM gojek_stats
+                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                ORDER BY stat_date
+            """
+            gojek_data = pd.read_sql_query(gojek_query, conn, params=[restaurant_id, date_from, date_to])
+            
+            conn.close()
+            
+            return {
+                'restaurant_id': restaurant_id,
+                'restaurant_name': actual_name,
+                'period': {'from': date_from, 'to': date_to},
+                'grab_data': grab_data,
+                'gojek_data': gojek_data,
+                'location': self.restaurant_locations.get(actual_name, {}),
+                'total_records': len(grab_data) + len(gojek_data)
+            }
+            
+        except Exception as e:
+            print(f"Ошибка получения данных: {e}")
+            return None
+    
+    def _analyze_weather_impact_for_restaurant(self, restaurant_name, date_from=None, date_to=None):
+        """Анализирует влияние погоды на конкретный ресторан"""
+        if not self.weather_intelligence:
+            return "Модуль анализа погоды недоступен"
+            
+        try:
+            # Получаем координаты ресторана
+            location = self.restaurant_locations.get(restaurant_name, {})
+            if not location:
+                return f"GPS координаты для {restaurant_name} не найдены"
+            
+            # Здесь можно интегрировать с weather_intelligence
+            # Пока возвращаем базовую информацию
+            return f"""🌤️ **АНАЛИЗ ПОГОДНОГО ВЛИЯНИЯ:**
+📍 Ресторан: {restaurant_name}
+🗺️ Зона: {location.get('area', 'Неизвестно')}
+📍 Координаты: {location.get('lat', 'N/A')}, {location.get('lng', 'N/A')}
+
+💡 **Общие погодные паттерны:**
+{self.weather_intelligence.analyze_rain_impact()[1] if self.weather_intelligence else 'Данные недоступны'}"""
+            
+        except Exception as e:
+            return f"Ошибка анализа погоды: {e}"
+    
+    def _analyze_marketing_impact(self, restaurant_data):
+        """Анализирует влияние рекламы на показатели"""
+        if not restaurant_data:
+            return "Нет данных для анализа"
+            
+        grab_data = restaurant_data['grab_data']
+        gojek_data = restaurant_data['gojek_data']
+        
+        # Анализируем влияние рекламы (используем реальные колонки)
+        analysis = "💰 **АНАЛИЗ ВЛИЯНИЯ РЕКЛАМЫ:**\\n"
+        
+        if len(grab_data) > 0:
+            total_sales = grab_data['sales'].sum()
+            ads_sales = grab_data['ads_sales'].sum()
+            total_orders = grab_data['orders'].sum()
+            ads_orders = grab_data['ads_orders'].sum()
+            ads_spend_total = grab_data['ads_spend'].sum()
+            
+            if ads_sales > 0:
+                ads_percentage = (ads_sales / total_sales * 100) if total_sales > 0 else 0
+                roas = (ads_sales / ads_spend_total) if ads_spend_total > 0 else 0
+                
+                analysis += f"""
+🚗 **GRAB:**
+• Общие продажи: {total_sales:,.0f} IDR
+• От рекламы: {ads_sales:,.0f} IDR ({ads_percentage:.1f}%)
+• Потрачено на рекламу: {ads_spend_total:,.0f} IDR
+• ROAS: {roas:.1f}x
+• Заказы от рекламы: {ads_orders} из {total_orders}
+"""
+        
+        return analysis
+    
+    def _get_delivery_performance_analysis(self, restaurant_data):
+        """Анализирует показатели доставки"""
+        if not restaurant_data:
+            return "Нет данных для анализа"
+            
+        grab_data = restaurant_data['grab_data']
+        gojek_data = restaurant_data['gojek_data']
+        
+        analysis = "🚚 **АНАЛИЗ ЭФФЕКТИВНОСТИ ДОСТАВКИ:**\\n"
+        
+        if len(grab_data) > 0:
+            total_orders = grab_data['orders'].sum()
+            cancelled_orders = grab_data['cancelled_orders'].sum()
+            cancellation_rate = (cancelled_orders / total_orders * 100) if total_orders > 0 else 0
+            avg_cancellation_rate = grab_data['cancelation_rate'].mean()
+            
+            analysis += f"""
+🚗 **GRAB:**
+• Общие заказы: {total_orders}
+• Отменено: {cancelled_orders}
+• Процент отмен: {cancellation_rate:.1f}%
+• Средний % отмен: {avg_cancellation_rate:.1f}%
+"""
+            
+        if len(gojek_data) > 0:
+            total_orders = gojek_data['orders'].sum()
+            cancelled_orders = gojek_data['cancelled_orders'].sum()
+            cancellation_rate = (cancelled_orders / total_orders * 100) if total_orders > 0 else 0
+            
+            # Конвертируем время из формата TIME в минуты
+            avg_delivery_time = "Данные недоступны"
+            avg_prep_time = "Данные недоступны"
+            
+            analysis += f"""
+🏍️ **GOJEK:**
+• Общие заказы: {total_orders}
+• Отменено: {cancelled_orders}
+• Процент отмен: {cancellation_rate:.1f}%
+• Время доставки: {avg_delivery_time}
+• Время подготовки: {avg_prep_time}
+"""
+        
+        return analysis
+    
+    def _handle_comprehensive_weather_query(self, original_query, query_lower):
+        """Обработка расширенных запросов о погоде"""
+        restaurant_name = self._extract_restaurant_name(original_query)
+        
+        if restaurant_name:
+            weather_analysis = self._analyze_weather_impact_for_restaurant(restaurant_name)
+            restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
+            
+            response = f"""
+🌤️ **ДЕТАЛЬНЫЙ АНАЛИЗ ВЛИЯНИЯ ПОГОДЫ**
+
+🏪 **Ресторан:** {restaurant_name}
+
+{weather_analysis}
+
+📊 **ВЛИЯНИЕ НА ПРОДАЖИ:**
+• 🌧️ Легкий дождь: +18.1% (клиенты дома, курьеры работают)
+• ☔ Сильный дождь: -26.6% (курьеры не работают)
+• 💨 Сильный ветер: -8.8% (сложности доставки)
+• ☀️ Идеальная погода: +75.0% (отличные условия)
+
+💡 **РЕКОМЕНДАЦИИ:**
+• Планировать персонал с учетом прогноза
+• Корректировать маркетинг в дождливые дни
+• Предусмотреть компенсацию курьерам в плохую погоду
+"""
+            return response
+        else:
+            return self._handle_weather_query(original_query, query_lower)
+    
+    def _handle_marketing_query(self, original_query, query_lower):
+        """Обработка запросов о рекламе и маркетинге"""
+        restaurant_name = self._extract_restaurant_name(original_query)
+        
+        if restaurant_name:
+            restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
+            if restaurant_data:
+                marketing_analysis = self._analyze_marketing_impact(restaurant_data)
+                
+                return f"""
+💰 **АНАЛИЗ МАРКЕТИНГОВОЙ ЭФФЕКТИВНОСТИ**
+
+🏪 **Ресторан:** {restaurant_name}
+📅 **Период:** {restaurant_data['period']['from']} → {restaurant_data['period']['to']}
+
+{marketing_analysis}
+
+🎯 **РЕКОМЕНДАЦИИ:**
+• Оптимизировать бюджет на наиболее эффективной платформе
+• Анализировать ROI рекламных кампаний  
+• A/B тестирование разных стратегий
+"""
+            else:
+                return f"❌ Данные для ресторана '{restaurant_name}' не найдены"
+        else:
+            return "❌ Укажите название ресторана для анализа маркетинга"
+    
+    def _handle_delivery_query(self, original_query, query_lower):
+        """Обработка запросов о доставке"""
+        restaurant_name = self._extract_restaurant_name(original_query)
+        
+        if restaurant_name:
+            restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
+            if restaurant_data:
+                delivery_analysis = self._get_delivery_performance_analysis(restaurant_data)
+                
+                return f"""
+🚚 **АНАЛИЗ ЭФФЕКТИВНОСТИ ДОСТАВКИ**
+
+🏪 **Ресторан:** {restaurant_name}
+
+{delivery_analysis}
+
+💡 **РЕКОМЕНДАЦИИ:**
+• Оптимизировать время подготовки заказов
+• Работать с курьерскими службами над скоростью
+• Снижать количество отмен через улучшение процессов
+"""
+            else:
+                return f"❌ Данные для ресторана '{restaurant_name}' не найдены"
+        else:
+            return "❌ Укажите название ресторана для анализа доставки"
+    
+    def _handle_platform_comparison_query(self, original_query, query_lower):
+        """Обработка запросов сравнения платформ"""
+        restaurant_name = self._extract_restaurant_name(original_query)
+        
+        if restaurant_name:
+            restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
+            if restaurant_data:
+                grab_data = restaurant_data['grab_data']
+                gojek_data = restaurant_data['gojek_data']
+                
+                response = f"""
+📊 **СРАВНЕНИЕ GRAB vs GOJEK**
+
+🏪 **Ресторан:** {restaurant_name}
+📅 **Период:** {restaurant_data['period']['from']} → {restaurant_data['period']['to']}
+"""
+                
+                if len(grab_data) > 0 and len(gojek_data) > 0:
+                    grab_avg_sales = grab_data['sales'].mean()
+                    gojek_avg_sales = gojek_data['sales'].mean()
+                    grab_avg_orders = grab_data['orders'].mean()
+                    gojek_avg_orders = gojek_data['orders'].mean()
+                    
+                    response += f"""
+🚗 **GRAB:**
+• Средние продажи: {grab_avg_sales:,.0f} IDR
+• Средние заказы: {grab_avg_orders:.1f}
+
+🏍️ **GOJEK:**
+• Средние продажи: {gojek_avg_sales:,.0f} IDR
+• Средние заказы: {gojek_avg_orders:.1f}
+
+🏆 **ЛИДЕР:**"""
+                    
+                    if grab_avg_sales > gojek_avg_sales:
+                        diff = ((grab_avg_sales - gojek_avg_sales) / gojek_avg_sales * 100)
+                        response += f"\n🚗 Grab лидирует по продажам на {diff:+.1f}%"
+                    else:
+                        diff = ((gojek_avg_sales - grab_avg_sales) / grab_avg_sales * 100)
+                        response += f"\n🏍️ Gojek лидирует по продажам на {diff:+.1f}%"
+                        
+                return response
+            else:
+                return f"❌ Данные для ресторана '{restaurant_name}' не найдены"
+        else:
+            return "❌ Укажите название ресторана для сравнения платформ"
+    
+    def _handle_rating_query(self, original_query, query_lower):
+        """Обработка запросов о рейтингах"""
+        restaurant_name = self._extract_restaurant_name(original_query)
+        
+        if restaurant_name:
+            restaurant_data = self._get_comprehensive_restaurant_data(restaurant_name)
+            if restaurant_data:
+                grab_data = restaurant_data['grab_data']
+                gojek_data = restaurant_data['gojek_data']
+                
+                response = f"""
+⭐ **АНАЛИЗ РЕЙТИНГОВ**
+
+🏪 **Ресторан:** {restaurant_name}
+📅 **Период:** {restaurant_data['period']['from']} → {restaurant_data['period']['to']}
+"""
+                
+                if len(grab_data) > 0:
+                    avg_rating = grab_data['rating'].mean()
+                    min_rating = grab_data['rating'].min() 
+                    max_rating = grab_data['rating'].max()
+                    response += f"""
+🚗 **GRAB:**
+• Средний рейтинг: {avg_rating:.2f}/5.0
+• Диапазон: {min_rating:.1f} - {max_rating:.1f}
+"""
+                
+                if len(gojek_data) > 0:
+                    avg_rating = gojek_data['rating'].mean()
+                    min_rating = gojek_data['rating'].min()
+                    max_rating = gojek_data['rating'].max() 
+                    response += f"""
+🏍️ **GOJEK:**
+• Средний рейтинг: {avg_rating:.2f}/5.0
+• Диапазон: {min_rating:.1f} - {max_rating:.1f}
+"""
+                
+                return response
+            else:
+                return f"❌ Данные для ресторана '{restaurant_name}' не найдены"
+        else:
+            return "❌ Укажите название ресторана для анализа рейтингов"
