@@ -140,9 +140,10 @@ class AIQueryProcessor:
         return any(keyword in query for keyword in tourist_keywords)
     
     def _is_ml_query(self, query):
-        """Проверяет, касается ли запрос ML анализа"""
-        ml_keywords = ['ml', 'машинное обучение', 'прогноз', 'аномалия', 'shap', 'модель', 'предсказание']
-        return any(keyword in query for keyword in ml_keywords)
+        """Проверяет, касается ли запрос ML анализа или поиска аномалий"""
+        ml_keywords = ['ml', 'машинное обучение', 'прогноз', 'аномал', 'shap', 'модель', 'предсказание',
+                      'необычные дни', 'странные дни', 'выбросы', 'отклонения', 'провалы', 'пики']
+        return any(keyword in query.lower() for keyword in ml_keywords)
     
     def _is_location_query(self, query):
         """Проверяет, касается ли запрос локаций"""
@@ -421,8 +422,14 @@ class AIQueryProcessor:
             return f"❌ Ошибка при анализе туристических данных: {e}"
     
     def _handle_ml_query(self, original_query, query_lower):
-        """Обработка запросов о ML анализе"""
+        """Обработка запросов о ML анализе и поиске аномалий"""
         try:
+            # Если это запрос о поиске аномалий для ресторана
+            restaurant_name = self._extract_restaurant_name(original_query)
+            if restaurant_name and any(word in query_lower for word in ['аномал', 'необычные', 'странные', 'провалы', 'пики']):
+                return self._analyze_restaurant_anomalies(restaurant_name, original_query)
+            
+            # Иначе общая информация о ML
             ml_info = self._get_ml_model_info()
             
             response = f"""
@@ -474,6 +481,132 @@ class AIQueryProcessor:
             
         except Exception as e:
             return f"❌ Ошибка при анализе ML данных: {e}"
+    
+    def _analyze_restaurant_anomalies(self, restaurant_name, original_query):
+        """Анализирует аномальные дни для конкретного ресторана"""
+        try:
+            import sqlite3
+            import pandas as pd
+            import numpy as np
+            from datetime import datetime
+            
+            # Получаем период из запроса
+            month_period = None
+            if 'мае' in original_query.lower() or 'may' in original_query.lower():
+                month_period = '2025-05'
+            elif 'апреле' in original_query.lower() or 'april' in original_query.lower():
+                month_period = '2025-04'
+            elif 'июне' in original_query.lower() or 'june' in original_query.lower():
+                month_period = '2025-06'
+                
+            # Проверяем существование ресторана
+            if not self._restaurant_exists(restaurant_name):
+                return f"❌ Ресторан '{restaurant_name}' не найден в базе данных. Проверьте правильность названия."
+            
+            conn = sqlite3.connect(self.db_path)
+            
+            # Получаем ID ресторана
+            restaurant_query = "SELECT id, name FROM restaurants WHERE LOWER(name) LIKE ?"
+            restaurant_data = pd.read_sql_query(restaurant_query, conn, params=[f'%{restaurant_name.lower()}%'])
+            restaurant_id = int(restaurant_data.iloc[0]['id'])
+            actual_name = restaurant_data.iloc[0]['name']
+            
+            # Получаем данные за период
+            if month_period:
+                date_filter = f"AND stat_date LIKE '{month_period}%'"
+                period_text = f"в {month_period.split('-')[1]} месяце {month_period.split('-')[0]} года"
+            else:
+                date_filter = ""
+                period_text = "за весь доступный период"
+            
+            # Получаем объединенные данные
+            query = f"""
+                SELECT 
+                    stat_date,
+                    COALESCE(grab_sales, 0) + COALESCE(gojek_sales, 0) as total_sales,
+                    COALESCE(grab_orders, 0) + COALESCE(gojek_orders, 0) as total_orders
+                FROM (
+                    SELECT stat_date, sales as grab_sales, orders as grab_orders, 0 as gojek_sales, 0 as gojek_orders
+                    FROM grab_stats WHERE restaurant_id = ? {date_filter}
+                    UNION ALL
+                    SELECT stat_date, 0 as grab_sales, 0 as grab_orders, sales as gojek_sales, orders as gojek_orders  
+                    FROM gojek_stats WHERE restaurant_id = ? {date_filter}
+                )
+                GROUP BY stat_date
+                HAVING total_sales > 0
+                ORDER BY stat_date
+            """
+            
+            data = pd.read_sql_query(query, conn, params=[restaurant_id, restaurant_id])
+            conn.close()
+            
+            if len(data) == 0:
+                return f"❌ Нет данных для ресторана '{actual_name}' {period_text}"
+            
+            # Анализируем аномалии
+            data['total_sales'] = pd.to_numeric(data['total_sales'], errors='coerce').fillna(0)
+            data['total_orders'] = pd.to_numeric(data['total_orders'], errors='coerce').fillna(0)
+            
+            # Вычисляем статистики
+            mean_sales = data['total_sales'].mean()
+            std_sales = data['total_sales'].std()
+            
+            # Находим аномалии (более 2 стандартных отклонений)
+            data['z_score'] = np.abs((data['total_sales'] - mean_sales) / std_sales)
+            anomalies = data[data['z_score'] > 2].sort_values('z_score', ascending=False)
+            
+            # Находим лучшие и худшие дни
+            best_days = data.nlargest(3, 'total_sales')
+            worst_days = data.nsmallest(3, 'total_sales')
+            
+            response = f"""
+🔍 **АНАЛИЗ АНОМАЛЬНЫХ ДНЕЙ**
+
+🏪 **Ресторан:** {actual_name}
+📅 **Период:** {period_text}
+📊 **Проанализировано дней:** {len(data)}
+
+📈 **СТАТИСТИКА ПРОДАЖ:**
+• 💰 Средние продажи: {mean_sales:,.0f} IDR
+• 📊 Стандартное отклонение: {std_sales:,.0f} IDR
+• 🎯 Диапазон нормы: {mean_sales-2*std_sales:,.0f} - {mean_sales+2*std_sales:,.0f} IDR
+
+🚨 **НАЙДЕНО АНОМАЛИЙ:** {len(anomalies)}
+
+"""
+            
+            if len(anomalies) > 0:
+                response += "⚠️ **АНОМАЛЬНЫЕ ДНИ:**\n"
+                for idx, row in anomalies.head(5).iterrows():
+                    deviation = ((row['total_sales'] - mean_sales) / mean_sales * 100)
+                    anomaly_type = "🔺 ПИКОВЫЙ" if row['total_sales'] > mean_sales else "🔻 ПРОВАЛЬНЫЙ"
+                    response += f"• {row['stat_date']}: {row['total_sales']:,.0f} IDR ({deviation:+.1f}%) - {anomaly_type}\n"
+                response += "\n"
+            
+            response += f"""
+🏆 **ТОП-3 ЛУЧШИХ ДНЯ:**
+"""
+            for idx, row in best_days.iterrows():
+                response += f"• {row['stat_date']}: {row['total_sales']:,.0f} IDR ({row['total_orders']:.0f} заказов)\n"
+            
+            response += f"""
+📉 **ТОП-3 ХУДШИХ ДНЯ:**
+"""
+            for idx, row in worst_days.iterrows():
+                response += f"• {row['stat_date']}: {row['total_sales']:,.0f} IDR ({row['total_orders']:.0f} заказов)\n"
+            
+            response += f"""
+💡 **РЕКОМЕНДАЦИИ:**
+• 🔍 Изучить причины аномальных дней
+• 📊 Проанализировать паттерны пиковых дней
+• 🔄 Применить успешные практики пиковых дней
+• ⚠️ Избегать факторов провальных дней
+"""
+            
+            return response
+            
+        except Exception as e:
+            return f"❌ Ошибка анализа аномалий: {e}"
     
     def _handle_location_query(self, original_query, query_lower):
         """Обработка запросов о локациях"""
