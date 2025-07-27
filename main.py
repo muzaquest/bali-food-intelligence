@@ -3426,16 +3426,16 @@ def analyze_tourist_data():
         import pandas as pd
         
         # Читаем файлы
-        df_2024 = pd.read_excel('Kunjungan_Wisatawan_Bali_2024.xls', engine='xlrd', skiprows=4)
-        df_2025 = pd.read_excel('Kunjungan_Wisatawan_Bali_2025.xls', engine='xlrd', skiprows=4)
+        df_2024 = pd.read_csv('data/Kunjungan_Wisatawan_Bali_2024.xls', skiprows=2)
+        df_2025 = pd.read_csv('data/Kunjungan_Wisatawan_Bali_2025.xls', skiprows=2)
         
         # Анализ 2024
         countries_2024 = []
         for i, row in df_2024.iterrows():
-            if i < 200 and pd.notna(row.iloc[1]) and isinstance(row.iloc[1], str):
-                country = row.iloc[1].strip()
+            if i < 200 and pd.notna(row.iloc[0]) and isinstance(row.iloc[0], str):
+                country = row.iloc[0].strip()
                 if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS', '', 'NO', 'I']:
-                    total_col = df_2024.columns[-3]
+                    total_col = df_2024.columns[-1]  # Последняя колонка - Total
                     total_value = row[total_col]
                     if pd.notna(total_value) and isinstance(total_value, (int, float)) and total_value > 0:
                         countries_2024.append({
@@ -3446,10 +3446,10 @@ def analyze_tourist_data():
         # Анализ 2025
         countries_2025 = []
         for i, row in df_2025.iterrows():
-            if i < 200 and pd.notna(row.iloc[1]) and isinstance(row.iloc[1], str):
-                country = row.iloc[1].strip()
+            if i < 200 and pd.notna(row.iloc[0]) and isinstance(row.iloc[0], str):
+                country = row.iloc[0].strip()
                 if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS', '', 'NO', 'I']:
-                    total_col = df_2025.columns[-4]
+                    total_col = df_2025.columns[-1]  # Последняя колонка - Total
                     total_value = row[total_col]
                     if pd.notna(total_value) and isinstance(total_value, (int, float)) and total_value > 0:
                         countries_2025.append({
