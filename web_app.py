@@ -450,12 +450,21 @@ elif page == "💬 Свободный запрос":
                 st.info(f"Запрос: {user_query}")
                 st.info(f"Тип анализа: {query_type}")
                 
-                # Заглушка для демонстрации
-                st.text_area(
-                    "Результат:",
-                    f"Анализ по запросу '{user_query}' выполняется...\n\nЭта функция будет полностью реализована в следующей версии.",
-                    height=300
-                )
+                # Вызов реального анализа через main.py
+                try:
+                    import subprocess
+                    import sys
+                    result = subprocess.run([
+                        sys.executable, 'main.py', 'analyze', selected_restaurant, 
+                        '--start', '2025-01-01', '--end', '2025-06-30'
+                    ], capture_output=True, text=True, cwd='.')
+                    
+                    if result.returncode == 0:
+                        st.text_area("📊 Результат анализа:", result.stdout, height=400)
+                    else:
+                        st.error(f"Ошибка анализа: {result.stderr}")
+                except Exception as e:
+                    st.error(f"Ошибка выполнения анализа: {str(e)}")
 
 # ===== УПРАВЛЕНИЕ ЛОКАЦИЯМИ =====
 elif page == "📍 Управление локациями":
@@ -609,14 +618,19 @@ elif page == "🗓️ Балийский календарь":
             with st.spinner("Анализируем влияние праздников..."):
                 st.markdown("### 📈 Влияние праздников на продажи")
                 
-                # Заглушка для анализа
-                holiday_impact = {
-                    "Galungan": "+15.2%",
-                    "Kuningan": "+12.8%", 
-                    "Purnama": "+8.3%",
-                    "Nyepi": "-45.6%",
-                    "Национальные": "+6.7%"
-                }
+                # Реальный анализ праздников из базы данных
+                try:
+                    import json
+                    with open('data/comprehensive_holiday_analysis.json', 'r', encoding='utf-8') as f:
+                        holiday_data = json.load(f)
+                    
+                    holiday_impact = {}
+                    for date, info in list(holiday_data.items())[:5]:  # Топ-5 праздников
+                        if 'impact_percent' in info:
+                            holiday_impact[info.get('name', date)] = f"{info['impact_percent']:+.1f}%"
+                except Exception as e:
+                    st.error(f"Ошибка загрузки данных о праздниках: {e}")
+                    holiday_impact = {"Данные": "Недоступны"}
                 
                 for holiday, impact in holiday_impact.items():
                     color = "success" if impact.startswith('+') else "danger"
@@ -649,14 +663,34 @@ elif page == "🌍 Туристическая аналитика":
         # Топ-10 стран
         st.markdown("### 🏆 ТОП-10 стран по туристам")
         
-        # Заглушка для данных (в реальности загружаем из XLS)
-        top_countries = [
-            {"Страна": "🇦🇺 Австралия", "2024": "892,543", "2025": "645,234", "Доля": "25.4%"},
-            {"Страна": "🇮🇳 Индия", "2024": "567,234", "2025": "423,567", "Доля": "16.1%"},
-            {"Страна": "🇺🇸 США", "2024": "445,123", "2025": "334,567", "Доля": "12.6%"},
-            {"Страна": "🇯🇵 Япония", "2024": "234,567", "2025": "178,234", "Доля": "6.8%"},
-            {"Страна": "🇷🇺 Россия", "2024": "68,572", "2025": "28,672", "Доля": "1.95%"},
-        ]
+        # Реальные данные из XLS файлов
+        try:
+            import sys
+            sys.path.append('.')
+            from main import analyze_tourist_data
+            
+            tourist_data = analyze_tourist_data()
+            if tourist_data and 'top_countries_2024' in tourist_data:
+                top_countries = []
+                for country in tourist_data['top_countries_2024'][:5]:
+                    country_2025 = next((c for c in tourist_data.get('top_countries_2025', []) 
+                                       if c['country'] == country['country']), 
+                                      {'tourists': 0})
+                    
+                    total_2024 = tourist_data['total_2024']
+                    share = (country['tourists'] / total_2024 * 100) if total_2024 > 0 else 0
+                    
+                    top_countries.append({
+                        "Страна": f"🏳️ {country['country']}",
+                        "2024": f"{country['tourists']:,}",
+                        "2025": f"{country_2025['tourists']:,}",
+                        "Доля": f"{share:.1f}%"
+                    })
+            else:
+                top_countries = [{"Страна": "Данные недоступны", "2024": "-", "2025": "-", "Доля": "-"}]
+        except Exception as e:
+            st.error(f"Ошибка загрузки туристических данных: {e}")
+            top_countries = [{"Страна": "Ошибка загрузки", "2024": "-", "2025": "-", "Доля": "-"}]
         
         df_countries = pd.DataFrame(top_countries)
         st.dataframe(df_countries, use_container_width=True)
