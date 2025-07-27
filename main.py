@@ -3424,6 +3424,20 @@ def analyze_tourist_data():
     """Анализ туристических данных из наших XLS файлов"""
     try:
         import pandas as pd
+        import os
+        
+        # ⚠️ КРИТИЧЕСКАЯ ПРОВЕРКА: Наличие туристических файлов
+        required_files = [
+            'data/Kunjungan_Wisatawan_Bali_2024.xls',
+            'data/Kunjungan_Wisatawan_Bali_2025.xls'
+        ]
+        
+        for file in required_files:
+            if not os.path.exists(file):
+                print(f"🚨 КРИТИЧНО: Отсутствует файл {file}")
+                print(f"   📋 Восстановите файл из git: git checkout HEAD -- {file}")
+                print(f"   🔧 Или проверьте .gitignore (строка *.xls должна быть закомментирована)")
+                return None
         
         # Читаем файлы
         df_2024 = pd.read_csv('data/Kunjungan_Wisatawan_Bali_2024.xls', skiprows=2)
