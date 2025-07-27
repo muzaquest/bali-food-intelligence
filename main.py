@@ -1037,8 +1037,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Используем новую функцию для корректного отображения ROAS
     try:
         # Получаем данные по GOJEK для корректного расчета
-        gojek_marketing_sales = restaurant_data['gojek_ads_sales'].sum() if 'gojek_ads_sales' in restaurant_data.columns else 0
-        gojek_marketing_spend = restaurant_data['gojek_ads_spend'].sum() if 'gojek_ads_spend' in restaurant_data.columns else 0
+        gojek_marketing_sales = data['gojek_ads_sales'].sum() if 'gojek_ads_sales' in data.columns else 0
+        gojek_marketing_spend = data['gojek_ads_spend'].sum() if 'gojek_ads_spend' in data.columns else 0
         
         if USE_COLORS:
             roas_breakdown = generate_colored_roas_breakdown(marketing_sales, total_marketing, 
@@ -1474,6 +1474,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Анализируем ВСЕ дни с данными
     all_dates = data['date'].unique()
     weather_sales_data = []
+    weather_groups = {}  # Группировка продаж по погодным условиям
     
     print(f"  🔍 Анализируем погоду для {len(all_dates)} дней по точным координатам...")
     
@@ -1485,14 +1486,21 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             lon=restaurant_location['longitude']
         )
         day_sales = data[data['date'] == date]['total_sales'].sum()
+        condition = weather['condition']
+        
         weather_sales_data.append({
             'date': date,
-            'condition': weather['condition'],
+            'condition': condition,
             'temperature': weather['temperature'],
             'rain': weather.get('rain', 0),
             'wind': weather.get('wind_speed', 10),
             'sales': day_sales
         })
+        
+        # Группируем продажи по погодным условиям
+        if condition not in weather_groups:
+            weather_groups[condition] = []
+        weather_groups[condition].append(day_sales)
     
     # Применяем интеллектуальный анализ к каждому дню
     print(f"  🧠 Применяем научно обоснованные коэффициенты влияния...")
@@ -1534,6 +1542,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     
     # Средний эффект погоды за период
     avg_weather_impact = total_weather_impact / len(weather_sales_data) if weather_sales_data else 0
+    weather_impact = avg_weather_impact  # Для совместимости с остальным кодом
     
     print(f"  📊 ИТОГОВЫЙ АНАЛИЗ ВЛИЯНИЯ ПОГОДЫ:")
     print(f"    💰 Средний эффект погоды за период: {avg_weather_impact:+.1f}%")
@@ -1911,10 +1920,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write("🌐 ВНЕШНИЕ ФАКТОРЫ\n")
             f.write("-" * 50 + "\n")
             f.write("Погодные условия и их влияние:\n")
-            for condition, sales_list in weather_groups.items():
-                avg_sales = sum(sales_list) / len(sales_list)
-                emoji = {"Clear": "☀️", "Rain": "🌧️", "Clouds": "☁️", "Thunderstorm": "⛈️"}.get(condition, "🌤️")
-                f.write(f"{emoji} {condition}: {avg_sales:,.0f} IDR ({len(sales_list)} дней)\n")
+            if 'weather_groups' in locals() and weather_groups:
+                for condition, sales_list in weather_groups.items():
+                    avg_sales = sum(sales_list) / len(sales_list)
+                    emoji = {"Clear": "☀️", "Rain": "🌧️", "Clouds": "☁️", "Thunderstorm": "⛈️"}.get(condition, "🌤️")
+                    f.write(f"{emoji} {condition}: {avg_sales:,.0f} IDR ({len(sales_list)} дней)\n")
+            else:
+                f.write("  📊 Данные о погодных условиях недоступны\n")
             if 'weather_impact' in locals():
                 f.write(f"💧 Влияние дождя: {weather_impact:+.1f}%\n")
             if 'holiday_effect' in locals():
