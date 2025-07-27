@@ -183,10 +183,10 @@ cython_debug/
 # Data files
 *.csv
 *.tsv
-*.json
+# *.json  # Комментируем - нужны JSON файлы настроек
 *.xml
 *.xlsx
-*.xls
+# *.xls  # Комментируем - нужны туристические XLS файлы!
 *.parquet
 *.feather
 *.arrow
