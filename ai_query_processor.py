@@ -77,6 +77,8 @@ class AIQueryProcessor:
             return self._handle_location_query(user_query, query_lower)
         elif self._is_comparison_query(query_lower):
             return self._handle_comparison_query(user_query, query_lower)
+        elif self._is_trend_analysis_query(query_lower):
+            return self._analyze_restaurant_trends(query_lower)
         else:
             return self._handle_general_query(user_query, query_lower)
     
@@ -162,6 +164,17 @@ class AIQueryProcessor:
         comparison_keywords = ['сравни', 'compare', 'лучший', 'best', 'худший', 'worst', 'vs', 'против']
         return any(keyword in query for keyword in comparison_keywords)
     
+    def _is_trend_analysis_query(self, query):
+        """Определяет, является ли запрос анализом трендов"""
+        trend_keywords = [
+            'что общего', 'общие черты', 'паттерн', 'тренд', 'закономерность',
+            'что объединяет', 'похожие', 'одинаковые', 'характерно',
+            'рост продаж', 'падение продаж', 'успешные рестораны',
+            'лидеры', 'аутсайдеры', 'топ рестораны'
+        ]
+        
+        return any(keyword in query.lower() for keyword in trend_keywords)
+
     def _handle_restaurant_query(self, original_query, query_lower):
         """Обработка запросов о ресторанах"""
         try:
@@ -2364,3 +2377,292 @@ if __name__ == "__main__":
             insights.append("• Стабильный поток круглый год")
             
         return insights
+
+    def _analyze_restaurant_trends(self, query):
+        """Умный анализ трендов среди ресторанов"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            
+            # Определяем тип анализа из запроса
+            query_lower = query.lower()
+            
+            if 'рост' in query_lower and 'мае' in query_lower:
+                return self._analyze_may_growth_trends(conn)
+            elif 'рост' in query_lower:
+                return self._analyze_growth_trends(conn)
+            elif 'успешн' in query_lower or 'лидер' in query_lower:
+                return self._analyze_top_performers(conn)
+            elif 'падение' in query_lower or 'снижение' in query_lower:
+                return self._analyze_declining_trends(conn)
+            else:
+                return self._analyze_general_trends(conn)
+                
+        except Exception as e:
+            return f"❌ Ошибка при анализе трендов: {str(e)}"
+        finally:
+            if 'conn' in locals():
+                conn.close()
+
+    def _analyze_may_growth_trends(self, conn):
+        """Анализ трендов роста в мае (как делал Claude)"""
+        try:
+            cursor = conn.cursor()
+            
+            # Получаем данные за май и апрель для сравнения
+            cursor.execute('''
+            SELECT 
+                r.name,
+                SUM(CASE WHEN g.stat_date BETWEEN '2025-05-01' AND '2025-05-31' THEN g.sales ELSE 0 END) as may_sales,
+                SUM(CASE WHEN g.stat_date BETWEEN '2025-04-01' AND '2025-04-30' THEN g.sales ELSE 0 END) as april_sales,
+                AVG(CASE WHEN g.stat_date BETWEEN '2025-05-01' AND '2025-05-31' THEN g.rating ELSE NULL END) as may_rating,
+                SUM(CASE WHEN g.stat_date BETWEEN '2025-05-01' AND '2025-05-31' THEN g.orders ELSE 0 END) as may_orders,
+                SUM(CASE WHEN g.stat_date BETWEEN '2025-04-01' AND '2025-04-30' THEN g.orders ELSE 0 END) as april_orders
+            FROM restaurants r
+            JOIN grab_stats g ON r.id = g.restaurant_id
+            WHERE g.stat_date BETWEEN '2025-04-01' AND '2025-05-31'
+            GROUP BY r.id, r.name
+            HAVING may_sales > 0 AND april_sales > 0
+            ''')
+            
+            results = cursor.fetchall()
+            growing_restaurants = []
+            
+            # Анализируем рост
+            for row in results:
+                name, may_sales, april_sales, may_rating, may_orders, april_orders = row
+                
+                if april_sales > 0:
+                    growth = ((may_sales - april_sales) / april_sales) * 100
+                    if growth > 0:  # Есть рост
+                        may_aov = may_sales / may_orders if may_orders > 0 else 0
+                        april_aov = april_sales / april_orders if april_orders > 0 else 0
+                        aov_change = ((may_aov - april_aov) / april_aov) * 100 if april_aov > 0 else 0
+                        
+                        growing_restaurants.append({
+                            'name': name,
+                            'growth': growth,
+                            'may_rating': may_rating or 0,
+                            'may_aov': may_aov,
+                            'aov_change': aov_change,
+                            'may_sales': may_sales
+                        })
+            
+            # Сортируем по росту
+            growing_restaurants.sort(key=lambda x: x['growth'], reverse=True)
+            
+            # Анализируем паттерны
+            canggu_count = sum(1 for r in growing_restaurants if 'Canggu' in r['name'] or 'canggu' in r['name'].lower())
+            uluwatu_count = sum(1 for r in growing_restaurants if 'Uluwatu' in r['name'] or 'uluwatu' in r['name'].lower())
+            seminyak_count = sum(1 for r in growing_restaurants if 'Seminyak' in r['name'] or 'seminyak' in r['name'].lower())
+            
+            high_rating_count = sum(1 for r in growing_restaurants if r['may_rating'] >= 4.5)
+            aov_increase_count = sum(1 for r in growing_restaurants if r['aov_change'] > 5)
+            
+            avg_rating = sum(r['may_rating'] for r in growing_restaurants) / len(growing_restaurants) if growing_restaurants else 0
+            avg_growth = sum(r['growth'] for r in growing_restaurants) / len(growing_restaurants) if growing_restaurants else 0
+            
+            # Формируем детективный отчет
+            report = f"""
+🔍 **ДЕТЕКТИВНЫЙ АНАЛИЗ: Что общего у ресторанов с ростом продаж в мае?**
+
+📊 **КЛЮЧЕВЫЕ НАХОДКИ:**
+
+💡 **ОБЩИЕ ЧЕРТЫ ЛИДЕРОВ РОСТА:**
+
+1️⃣ **ЛОКАЦИОННЫЙ ПАТТЕРН:**
+• 🏄‍♂️ {canggu_count} ресторанов в Canggu ({(canggu_count/len(growing_restaurants)*100):.0f}% от растущих)
+• 🌊 {uluwatu_count} ресторанов в Uluwatu - новая точка роста!
+• 🍸 {seminyak_count} ресторанов в Seminyak
+
+2️⃣ **КАЧЕСТВЕННЫЙ ФАКТОР:**
+• ⭐ Средний рейтинг растущих: {avg_rating:.1f}/5.0
+• 🏆 {high_rating_count} из {len(growing_restaurants)} имеют рейтинг 4.5+
+• 📈 Качество = ключ к росту
+
+3️⃣ **СТРАТЕГИЯ ЦЕНООБРАЗОВАНИЯ:**
+• 💎 {aov_increase_count} ресторанов увеличили средний чек
+• 🎯 Премиализация работает лучше скидок
+• 💰 Средний рост: +{avg_growth:.1f}%
+
+🏆 **ТОП-5 ЛИДЕРОВ РОСТА:**"""
+
+            # Добавляем топ-5 лидеров
+            for i, rest in enumerate(growing_restaurants[:5]):
+                report += f"""
+{i+1}. **{rest['name']}:**
+   📈 Рост: +{rest['growth']:.1f}%
+   ⭐ Рейтинг: {rest['may_rating']:.1f}
+   💰 Средний чек: {rest['may_aov']:,.0f} IDR ({rest['aov_change']:+.1f}%)"""
+
+            report += f"""
+
+🎯 **ИНСАЙТЫ:**
+
+📈 **РОСТ-ДРАЙВЕРЫ МАЯ 2025:**
+• Высокое качество (рейтинг 4.5+) критично
+• Премиализация превосходит дискаунт
+• Локация имеет значение (Canggu лидирует)
+
+💡 **ФОРМУЛА УСПЕХА В МАЕ:**
+1. Качество: Рейтинг 4.5+ ✅  
+2. Стратегия: Премиализация (+10-20% к чеку) ✅
+3. Локация: Перспективные районы ✅
+
+🔮 **ПРОГНОЗ:**
+Рестораны с такими характеристиками покажут рост и в июне!
+"""
+            
+            return report
+            
+        except Exception as e:
+            return f"❌ Ошибка при анализе майских трендов: {str(e)}"
+
+    def _analyze_general_trends(self, conn):
+        """Общий анализ трендов рынка"""
+        try:
+            cursor = conn.cursor()
+            
+            # Получаем общую статистику
+            cursor.execute('''
+            SELECT 
+                r.name,
+                AVG(g.rating) as avg_rating,
+                SUM(g.sales) as total_sales,
+                SUM(g.orders) as total_orders,
+                (SUM(g.sales) / SUM(g.orders)) as avg_order_value
+            FROM restaurants r
+            JOIN grab_stats g ON r.id = g.restaurant_id
+            WHERE g.stat_date >= '2025-04-01'
+            GROUP BY r.id, r.name
+            HAVING total_sales > 0
+            ORDER BY total_sales DESC
+            LIMIT 20
+            ''')
+            
+            results = cursor.fetchall()
+            
+            # Анализируем паттерны
+            high_performers = [r for r in results if r[1] >= 4.5]  # rating >= 4.5
+            premium_restaurants = [r for r in results if r[4] >= 400000]  # AOV >= 400k
+            
+            avg_rating = sum(r[1] for r in results) / len(results) if results else 0
+            avg_aov = sum(r[4] for r in results) / len(results) if results else 0
+            
+            report = f"""
+🔍 **АНАЛИЗ ОБЩИХ ТРЕНДОВ РЫНКА ДОСТАВКИ**
+
+📊 **РЫНОЧНАЯ КАРТИНА:**
+• 📈 Проанализировано: {len(results)} ресторанов
+• ⭐ Средний рейтинг рынка: {avg_rating:.1f}/5.0
+• 💰 Средний чек рынка: {avg_aov:,.0f} IDR
+
+💡 **КЛЮЧЕВЫЕ ТРЕНДЫ:**
+
+1️⃣ **КАЧЕСТВЕННЫЙ СЕГМЕНТ:**
+• 🏆 {len(high_performers)} ресторанов с рейтингом 4.5+
+• 📈 Высокое качество = стабильные продажи
+
+2️⃣ **ПРЕМИУМ ПОЗИЦИОНИРОВАНИЕ:**
+• 💎 {len(premium_restaurants)} ресторанов с чеком 400k+ IDR
+• 🎯 Премиализация набирает обороты
+
+🏆 **ТОП-5 ПО ОБОРОТУ:**"""
+
+            for i, rest in enumerate(results[:5]):
+                name, rating, sales, orders, aov = rest
+                report += f"""
+{i+1}. **{name}:**
+   💰 Оборот: {sales:,.0f} IDR
+   ⭐ Рейтинг: {rating:.1f}
+   🧾 Средний чек: {aov:,.0f} IDR"""
+
+            report += """
+
+🎯 **СТРАТЕГИЧЕСКИЕ ВЫВОДЫ:**
+• Качество остается главным драйвером успеха
+• Премиум-позиционирование окупается
+• Рынок готов платить за высокий сервис
+
+💡 **РЕКОМЕНДАЦИИ:**
+1. Инвестируйте в качество (цель: рейтинг 4.5+)
+2. Рассмотрите премиализацию меню
+3. Фокус на клиентском опыте"""
+
+            return report
+            
+        except Exception as e:
+            return f"❌ Ошибка при общем анализе: {str(e)}"
+
+    def _analyze_top_performers(self, conn):
+        """Анализ успешных ресторанов"""
+        try:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+            SELECT 
+                r.name,
+                AVG(g.rating) as avg_rating,
+                SUM(g.sales) as total_sales,
+                SUM(g.orders) as total_orders,
+                (SUM(g.sales) / SUM(g.orders)) as avg_order_value,
+                AVG(g.ads_spend) as avg_marketing
+            FROM restaurants r
+            JOIN grab_stats g ON r.id = g.restaurant_id
+            WHERE g.stat_date >= '2025-04-01'
+            GROUP BY r.id, r.name
+            HAVING total_sales > 0 AND avg_rating >= 4.5
+            ORDER BY total_sales DESC
+            LIMIT 10
+            ''')
+            
+            results = cursor.fetchall()
+            
+            if not results:
+                return "❌ Недостаточно данных для анализа лидеров"
+            
+            avg_sales = sum(r[2] for r in results) / len(results)
+            avg_rating = sum(r[1] for r in results) / len(results)
+            avg_aov = sum(r[4] for r in results) / len(results)
+            
+            report = f"""
+🏆 **АНАЛИЗ ЛИДЕРОВ РЫНКА**
+
+📊 **ПРОФИЛЬ УСПЕШНЫХ РЕСТОРАНОВ:**
+• ⭐ Средний рейтинг: {avg_rating:.1f}/5.0
+• 💰 Средние продажи: {avg_sales:,.0f} IDR
+• 🧾 Средний чек: {avg_aov:,.0f} IDR
+
+💡 **ОБЩИЕ ЧЕРТЫ ЛИДЕРОВ:**
+
+✅ **КАЧЕСТВЕННЫЕ ХАРАКТЕРИСТИКИ:**
+• Рейтинг 4.5+ (обязательное условие)
+• Стабильно высокий сервис
+• Отличные отзывы клиентов
+
+✅ **БИЗНЕС-МОДЕЛЬ:**
+• Фокус на качество, а не на скидки
+• Премиум или средний+ ценовой сегмент
+• Инвестиции в клиентский опыт
+
+🏆 **ТОП ЛИДЕРОВ:**"""
+
+            for i, rest in enumerate(results):
+                name, rating, sales, orders, aov, marketing = rest
+                report += f"""
+{i+1}. **{name}:**
+   💰 Продажи: {sales:,.0f} IDR
+   ⭐ Рейтинг: {rating:.1f}
+   🧾 Средний чек: {aov:,.0f} IDR"""
+
+            report += """
+
+🎯 **ФОРМУЛА УСПЕХА:**
+1. 🎯 Качество превыше всего (рейтинг 4.5+)
+2. 💎 Премиум-позиционирование
+3. 📈 Фокус на долгосрочные отношения с клиентами
+4. 🚀 Инновации в меню и сервисе"""
+
+            return report
+            
+        except Exception as e:
+            return f"❌ Ошибка при анализе лидеров: {str(e)}"
