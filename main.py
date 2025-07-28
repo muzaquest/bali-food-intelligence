@@ -1099,7 +1099,26 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     
     print(f"\n🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR")
     print(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR")
-    print(f"📊 Разброс продаж: {((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100):.1f}%")
+    
+    # Безопасный расчет разброса продаж
+    if worst_day['total_sales'] > 0:
+        sales_variance = ((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100)
+        print(f"📊 Разброс продаж: {sales_variance:.1f}%")
+    else:
+        # Альтернативный расчет когда минимум = 0
+        avg_sales = data['total_sales'].mean()
+        if avg_sales > 0:
+            sales_variance = (best_day['total_sales'] / avg_sales - 1) * 100
+            print(f"📊 Разброс продаж: {sales_variance:.1f}% (от среднего)")
+        else:
+            print("📊 Разброс продаж: Недостаточно данных для расчета")
+    
+    # Дополнительная диагностика для дней с нулевыми продажами
+    zero_sales_days = data[data['total_sales'] == 0]
+    if len(zero_sales_days) > 0:
+        print(f"⚠️ Обнаружено {len(zero_sales_days)} дней с нулевыми продажами:")
+        for _, day in zero_sales_days.iterrows():
+            print(f"   📅 {day['date']} - возможно ресторан был закрыт")
     print()
     
     # 3. УГЛУБЛЕННЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ
