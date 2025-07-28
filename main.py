@@ -1530,8 +1530,17 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         day_impact = weather_analysis['total_impact']
         total_weather_impact += day_impact
         
-        # Сохраняем детали для критических дней
-        if abs(day_impact) > 15:  # Критическое влияние
+        # Сохраняем детали для дней с заметным влиянием
+        impact_details.append({
+            'date': item['date'],
+            'sales': item['sales'],
+            'impact': day_impact,
+            'primary_factor': weather_analysis['primary_factor'],
+            'weather': day_weather
+        })
+        
+        # Критическими считаем только дни с экстремальным влиянием
+        if abs(day_impact) > 40:  # Только действительно критические дни
             critical_days.append({
                 'date': item['date'],
                 'sales': item['sales'],
@@ -1553,24 +1562,57 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     else:
         print(f"    ✅ Оценка: Умеренное влияние")
     
-    # Анализ критических дней
-    if critical_days:
-        print(f"  🚨 КРИТИЧЕСКИЕ ПОГОДНЫЕ ДНИ ({len(critical_days)} из {len(weather_sales_data)}):")
+    # Классификация дней по влиянию погоды
+    if impact_details:
+        # Сортируем все дни по влиянию
+        impact_details.sort(key=lambda x: abs(x['impact']), reverse=True)
         
-        # Сортируем по силе влияния
-        critical_days.sort(key=lambda x: abs(x['impact']), reverse=True)
+        # Классифицируем дни
+        strong_positive = [d for d in impact_details if d['impact'] > 40]
+        moderate_positive = [d for d in impact_details if 15 <= d['impact'] <= 40]
+        neutral = [d for d in impact_details if -15 < d['impact'] < 15]
+        moderate_negative = [d for d in impact_details if -40 <= d['impact'] <= -15]
+        strong_negative = [d for d in impact_details if d['impact'] < -40]
         
-        for i, day in enumerate(critical_days[:5]):  # Показываем топ-5
-            impact_emoji = "📈" if day['impact'] > 0 else "📉"
-            print(f"    {i+1}. {day['date']}: {impact_emoji} {day['impact']:+.1f}% ({day['primary_factor']})")
-            print(f"       💰 Продажи: {day['sales']:,.0f} IDR")
+        print(f"  📊 КЛАССИФИКАЦИЯ ПОГОДНОГО ВЛИЯНИЯ:")
+        print(f"    📈 Сильно положительное (>+40%): {len(strong_positive)} дней")
+        print(f"    🟢 Умеренно положительное (+15% до +40%): {len(moderate_positive)} дней")
+        print(f"    ⚪ Нейтральное (-15% до +15%): {len(neutral)} дней")
+        print(f"    🟠 Умеренно негативное (-40% до -15%): {len(moderate_negative)} дней")
+        print(f"    🔴 Сильно негативное (<-40%): {len(strong_negative)} дней")
+        
+        # Показываем только топ-5 дней с самым сильным влиянием
+        top_impact_days = impact_details[:5]
+        if top_impact_days:
+            print(f"  🔥 ТОП-5 ДНЕЙ С НАИБОЛЬШИМ ПОГОДНЫМ ВЛИЯНИЕМ:")
             
-            # Детали погоды
-            w = day['weather']
-            print(f"       🌤️ Погода: {w['temperature']:.1f}°C, дождь {w['rain']:.1f}мм, ветер {w['wind']:.1f}км/ч")
-        
-        if len(critical_days) > 5:
-            print(f"    ... и еще {len(critical_days) - 5} критических дней")
+            for i, day in enumerate(top_impact_days):
+                impact_emoji = "📈" if day['impact'] > 0 else "📉"
+                
+                # Определяем категорию
+                if abs(day['impact']) > 40:
+                    category = "🚨 Экстремальное"
+                elif abs(day['impact']) > 15:
+                    category = "⚠️ Заметное"
+                else:
+                    category = "ℹ️ Умеренное"
+                
+                print(f"    {i+1}. {day['date']}: {impact_emoji} {day['impact']:+.1f}% ({category})")
+                print(f"       🎯 Фактор: {day['primary_factor']}")
+                print(f"       💰 Продажи: {day['sales']:,.0f} IDR")
+                
+                # Детали погоды
+                w = day['weather']
+                print(f"       🌤️ Погода: {w['temperature']:.1f}°C, дождь {w['rain']:.1f}мм, ветер {w['wind']:.1f}км/ч")
+    
+    # Отдельно выводим критические дни (если есть)
+    if critical_days:
+        print(f"  🚨 ЭКСТРЕМАЛЬНЫЕ ПОГОДНЫЕ ДНИ (влияние >40%): {len(critical_days)} из {len(weather_sales_data)}")
+        for day in critical_days[:3]:  # Показываем топ-3 критических
+            impact_emoji = "📈" if day['impact'] > 0 else "📉"
+            print(f"    • {day['date']}: {impact_emoji} {day['impact']:+.1f}% - {day['primary_factor']}")
+    else:
+        print(f"  ✅ ЭКСТРЕМАЛЬНЫХ ПОГОДНЫХ ДНЕЙ НЕ ОБНАРУЖЕНО (все дни в пределах нормы)")
     
     # Рекомендации на основе анализа
     print(f"  💡 РЕКОМЕНДАЦИИ ПО ПОГОДЕ:")
