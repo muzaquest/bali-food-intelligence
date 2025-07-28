@@ -80,15 +80,15 @@ def load_restaurants():
         st.error(f"Ошибка загрузки ресторанов: {e}")
         return []
 
-@st.cache_data(ttl=300)  # Кеш на 5 минут для обновляемой БД
+@st.cache_data(ttl=60)  # Кеш на 1 минуту для быстрого обновления после исправления
 def get_market_overview():
     """Получение обзорных данных по рынку"""
     try:
         conn = sqlite3.connect('database.sqlite')
         
-        # Основные метрики
-        grab_query = "SELECT SUM(sales) as total_sales, COUNT(DISTINCT restaurant_name) as restaurants FROM grab_stats"
-        gojek_query = "SELECT SUM(sales) as total_sales, COUNT(DISTINCT restaurant_name) as restaurants FROM gojek_stats"
+        # Основные метрики - ИСПРАВЛЕНО: используем restaurant_id вместо restaurant_name
+        grab_query = "SELECT SUM(sales) as total_sales, COUNT(DISTINCT restaurant_id) as restaurants FROM grab_stats"
+        gojek_query = "SELECT SUM(sales) as total_sales, COUNT(DISTINCT restaurant_id) as restaurants FROM gojek_stats"
         
         grab_data = pd.read_sql_query(grab_query, conn)
         gojek_data = pd.read_sql_query(gojek_query, conn)
