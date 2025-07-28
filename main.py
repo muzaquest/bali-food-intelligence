@@ -846,7 +846,7 @@ def get_restaurant_data_full(restaurant_name, start_date, end_date, db_path="dat
         data = pd.DataFrame()
     
     conn.close()
-    return data
+    return data, all_data
 
 def calculate_market_benchmark(metric_type):
     """Рассчитывает реальные рыночные бенчмарки из всех данных в базе"""
@@ -997,7 +997,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     openai_analyzer = OpenAIAnalyzer()
     
     # Получаем данные
-    data = get_restaurant_data_full(restaurant_name, start_date, end_date)
+    data, platform_data = get_restaurant_data_full(restaurant_name, start_date, end_date)
     
     if data.empty:
         print("❌ Нет данных для анализа")
@@ -1034,22 +1034,28 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0 (GRAB + GOJEK)")
     print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB + GOJEK)")
     print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (только GRAB)")
-    # Используем новую функцию для корректного отображения ROAS
+    # Получаем данные по платформам отдельно для корректного ROAS анализа
     try:
-        # Получаем данные по GOJEK для корректного расчета
-        gojek_marketing_sales = data['gojek_ads_sales'].sum() if 'gojek_ads_sales' in data.columns else 0
-        gojek_marketing_spend = data['gojek_ads_spend'].sum() if 'gojek_ads_spend' in data.columns else 0
+        # Получаем отдельные данные по платформам из исходных данных
+        grab_platform_data = platform_data[platform_data['platform'] == 'grab'] if not platform_data.empty else pd.DataFrame()
+        gojek_platform_data = platform_data[platform_data['platform'] == 'gojek'] if not platform_data.empty else pd.DataFrame()
+        
+        # Вычисляем суммы по платформам
+        grab_marketing_sales = grab_platform_data['marketing_sales'].sum() if not grab_platform_data.empty else 0
+        grab_marketing_spend = grab_platform_data['marketing_spend'].sum() if not grab_platform_data.empty else 0
+        gojek_marketing_sales = gojek_platform_data['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+        gojek_marketing_spend = gojek_platform_data['marketing_spend'].sum() if not gojek_platform_data.empty else 0
         
         if USE_COLORS:
-            roas_breakdown = generate_colored_roas_breakdown(marketing_sales, total_marketing, 
+            roas_breakdown = generate_colored_roas_breakdown(grab_marketing_sales, grab_marketing_spend, 
                                                            gojek_marketing_sales, gojek_marketing_spend)
         else:
-            roas_breakdown = generate_roas_breakdown(marketing_sales, total_marketing, 
+            roas_breakdown = generate_roas_breakdown(grab_marketing_sales, grab_marketing_spend, 
                                                    gojek_marketing_sales, gojek_marketing_spend)
         print(roas_breakdown)
         
         # Обновляем avg_roas для корректного сравнения
-        total_roas = (marketing_sales + gojek_marketing_sales) / (total_marketing + gojek_marketing_spend) if (total_marketing + gojek_marketing_spend) > 0 else avg_roas
+        total_roas = (grab_marketing_sales + gojek_marketing_sales) / (grab_marketing_spend + gojek_marketing_spend) if (grab_marketing_spend + gojek_marketing_spend) > 0 else avg_roas
         avg_roas = total_roas
         
     except:
