@@ -165,9 +165,13 @@ class AIQueryProcessor:
     def _handle_restaurant_query(self, original_query, query_lower):
         """Обработка запросов о ресторанах"""
         try:
-            # Специальная обработка для анализа падения продаж
+            # Специальная обработка для анализа падения продаж - ДЕТЕКТИВНЫЙ РЕЖИМ
             if self._is_sales_drop_analysis(query_lower):
-                return self._analyze_sales_drop(original_query)
+                restaurant_name = self._extract_restaurant_name(original_query)
+                if restaurant_name:
+                    return self._analyze_sales_drop_detective(restaurant_name, original_query)
+                else:
+                    return "❌ Укажите название ресторана для детективного анализа"
             
             # Извлекаем название ресторана из запроса
             restaurant_name = self._extract_restaurant_name(original_query)
@@ -1969,7 +1973,7 @@ if __name__ == "__main__":
             return "❌ Укажите название ресторана для анализа рейтингов"
 
     def _generate_period_comparison(self, restaurant_name, current_start, current_end):
-        """Сравнивает текущий период с предыдущим и генерирует инсайты"""
+        """Сравнивает текущий период с предыдущим и генерирует детективный анализ"""
         try:
             # Определяем предыдущий период (такой же длительности)
             from datetime import datetime, timedelta
@@ -1984,47 +1988,126 @@ if __name__ == "__main__":
             previous_start = previous_start_dt.strftime("%Y-%m-%d")
             previous_end = previous_end_dt.strftime("%Y-%m-%d")
             
-            # Получаем данные за предыдущий период
+            # Получаем данные за оба периода
             previous_data = self._get_restaurant_data(restaurant_name, previous_start, previous_end)
-            
-            if not previous_data:
-                return ""
-                
-            # Получаем текущие данные
             current_data = self._get_restaurant_data(restaurant_name, current_start, current_end)
             
-            if not current_data:
+            if not previous_data or not current_data:
                 return ""
-                
-            # Сравнение продаж
-            sales_change = ((current_data['total_sales'] - previous_data['total_sales']) / previous_data['total_sales']) * 100
             
-            # Сравнение среднего чека
+            # Определяем названия периодов
+            current_period_name = self._get_period_name(current_start, current_end)
+            previous_period_name = self._get_period_name(previous_start, previous_end)
+            
+            # Вычисляем изменения
+            sales_change = ((current_data['total_sales'] - previous_data['total_sales']) / previous_data['total_sales']) * 100
+            orders_change = ((current_data['total_orders'] - previous_data['total_orders']) / previous_data['total_orders']) * 100
             aov_change = ((current_data['avg_order_value'] - previous_data['avg_order_value']) / previous_data['avg_order_value']) * 100
             
-            # Генерируем инсайты
-            comparison_insights = []
+            # Детективный анализ
+            if sales_change > 0:
+                verdict = f"📈 ПРОДАЖИ ВЫРОСЛИ НА +{sales_change:.1f}%!"
+                analysis_type = "🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ: РОСТ ПОДТВЕРЖДЕН!"
+            else:
+                verdict = f"📉 Продажи снизились на {sales_change:.1f}%"
+                analysis_type = "🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ: РАЗБИРАЕМ ПРИЧИНЫ СНИЖЕНИЯ"
             
+            detective_analysis = f"""
+
+🔄 **{analysis_type}**
+
+📊 **ФАКТЫ:**
+• {current_period_name}: {current_data['total_sales']:,.0f} IDR
+• {previous_period_name}: {previous_data['total_sales']:,.0f} IDR  
+• {verdict}
+
+📈 **ДЕТАЛЬНЫЙ РАЗБОР:**
+• Заказы: {current_data['total_orders']:,.0f} vs {previous_data['total_orders']:,.0f} ({orders_change:+.1f}%)
+• Средний чек: {current_data['avg_order_value']:,.0f} vs {previous_data['avg_order_value']:,.0f} IDR ({aov_change:+.1f}%)"""
+
+            # Инсайты на основе данных
+            insights = []
+            
+            if aov_change > 5 and orders_change < 0:
+                insights.append("💎 **ИНСАЙТ: ПРЕМИАЛИЗАЦИЯ**")
+                insights.append(f"• Средний чек вырос на {aov_change:+.1f}%")
+                insights.append(f"• Меньше заказов ({orders_change:+.1f}%), но дороже = умная стратегия")
+                
+            elif sales_change > 0 and orders_change > 0:
+                insights.append("🚀 **ИНСАЙТ: МАСШТАБИРОВАНИЕ**")
+                insights.append(f"• Рост и по заказам (+{orders_change:.1f}%) и по чеку (+{aov_change:.1f}%)")
+                insights.append("• Успешное расширение клиентской базы")
+                
+            elif sales_change < 0:
+                reasons = []
+                if orders_change < -10:
+                    reasons.append(f"• Сильное снижение заказов ({orders_change:+.1f}%)")
+                if aov_change < -5:
+                    reasons.append(f"• Падение среднего чека ({aov_change:+.1f}%)")
+                
+                if reasons:
+                    insights.append("🎯 **ПРИЧИНЫ СНИЖЕНИЯ:**")
+                    insights.extend(reasons)
+            
+            # Сезонный контекст
+            seasonal_context = self._get_seasonal_context(current_start, current_end, previous_start, previous_end)
+            if seasonal_context:
+                insights.append(f"🌤️ **СЕЗОННЫЙ ФАКТОР:** {seasonal_context}")
+            
+            # Вывод
             if sales_change > 10:
-                comparison_insights.append(f"📈 СИЛЬНЫЙ РОСТ: Продажи выросли на {sales_change:+.1f}% к предыдущему периоду")
+                conclusion = "💡 **ВЫВОД:** Отличная динамика роста!"
             elif sales_change > 0:
-                comparison_insights.append(f"📊 УМЕРЕННЫЙ РОСТ: +{sales_change:.1f}% к предыдущему периоду")
-            elif sales_change > -10:
-                comparison_insights.append(f"📉 НЕБОЛЬШОЕ СНИЖЕНИЕ: {sales_change:+.1f}% к предыдущему периоду")
+                conclusion = "💡 **ВЫВОД:** Позитивная динамика развития"
+            elif sales_change > -5:
+                conclusion = "💡 **ВЫВОД:** Стабильная работа с небольшими колебаниями"
             else:
-                comparison_insights.append(f"🚨 КРИТИЧЕСКОЕ ПАДЕНИЕ: {sales_change:+.1f}% к предыдущему периоду")
-                
-            if aov_change > 5:
-                comparison_insights.append(f"💎 ПРЕМИАЛИЗАЦИЯ: Средний чек вырос на {aov_change:+.1f}%")
-            elif aov_change < -5:
-                comparison_insights.append(f"⚠️ СНИЖЕНИЕ ЧЕКА: Средний чек упал на {aov_change:+.1f}%")
-                
-            if comparison_insights:
-                return f"\n\n🔄 **СРАВНЕНИЕ С ПРЕДЫДУЩИМ ПЕРИОДОМ:**\n" + "\n".join([f"• {insight}" for insight in comparison_insights])
-            else:
-                return ""
+                conclusion = "💡 **ВЫВОД:** Требуется анализ причин снижения"
+            
+            if insights:
+                detective_analysis += "\n\n" + "\n".join(insights)
+            
+            detective_analysis += f"\n\n{conclusion}"
+            
+            return detective_analysis
                 
         except Exception as e:
+            return ""
+
+    def _get_period_name(self, start_date, end_date):
+        """Определяет название периода по датам"""
+        try:
+            start_month = int(start_date.split('-')[1])
+            end_month = int(end_date.split('-')[1])
+            
+            if start_month == 12 or end_month <= 2:
+                return "Зима 2024-25"
+            elif start_month >= 3 and end_month <= 5:
+                return "Весна 2025"
+            elif start_month >= 6 and end_month <= 8:
+                return "Лето 2025"
+            elif start_month >= 9 and end_month <= 11:
+                return "Осень 2025"
+            else:
+                return f"Период {start_date} - {end_date}"
+        except:
+            return f"Период {start_date} - {end_date}"
+    
+    def _get_seasonal_context(self, current_start, current_end, previous_start, previous_end):
+        """Добавляет сезонный контекст к анализу"""
+        try:
+            current_period = self._get_period_name(current_start, current_end)
+            previous_period = self._get_period_name(previous_start, previous_end)
+            
+            seasonal_effects = {
+                ("Зима 2024-25", "Осень 2024"): "Переход в пик туристического сезона (+15-25% норма)",
+                ("Весна 2025", "Зима 2024-25"): "Переход в межсезонье (стабилизация ожидаема)",
+                ("Лето 2025", "Весна 2025"): "Начало сухого сезона (+10-20% ожидается)",
+                ("Осень 2025", "Лето 2025"): "Начало сезона дождей (-10-15% норма)"
+            }
+            
+            return seasonal_effects.get((current_period, previous_period), "")
+        except:
             return ""
 
     def _generate_smart_business_insights(self, restaurant_data, restaurant_name):
@@ -2139,3 +2222,145 @@ if __name__ == "__main__":
                 
         except Exception as e:
             return ""
+
+    def _analyze_sales_drop_detective(self, restaurant_name, query):
+        """Детективный анализ 'падения' продаж с полным разбором"""
+        try:
+            # Определяем периоды для сравнения из запроса
+            query_lower = query.lower()
+            
+            # Если упоминается конкретный период
+            if "весн" in query_lower:
+                current_period = ("2025-04-01", "2025-06-30", "Весна 2025")
+                previous_period = ("2024-12-01", "2025-02-28", "Зима 2024-25")
+            elif "зим" in query_lower:
+                current_period = ("2024-12-01", "2025-02-28", "Зима 2024-25")
+                previous_period = ("2024-09-01", "2024-11-30", "Осень 2024")
+            else:
+                # По умолчанию сравниваем последние два квартала
+                current_period = ("2025-04-01", "2025-06-30", "Весна 2025")
+                previous_period = ("2024-12-01", "2025-02-28", "Зима 2024-25")
+            
+            # Получаем данные за оба периода
+            current_data = self._get_restaurant_data(restaurant_name, current_period[0], current_period[1])
+            previous_data = self._get_restaurant_data(restaurant_name, previous_period[0], previous_period[1])
+            
+            if not current_data or not previous_data:
+                return f"❌ Недостаточно данных для анализа {restaurant_name}"
+            
+            # Вычисляем изменения
+            sales_change = ((current_data['total_sales'] - previous_data['total_sales']) / previous_data['total_sales']) * 100
+            orders_change = ((current_data['total_orders'] - previous_data['total_orders']) / previous_data['total_orders']) * 100
+            aov_change = ((current_data['avg_order_value'] - previous_data['avg_order_value']) / previous_data['avg_order_value']) * 100
+            
+            # Детективный вердикт
+            if sales_change > 0:
+                main_verdict = f"🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ: Продажи {restaurant_name} НЕ УПАЛИ!"
+                sales_verdict = f"📈 РОСТ: +{sales_change:.1f}% (а не падение!)"
+            else:
+                main_verdict = f"🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ: Разбираем снижение продаж {restaurant_name}"
+                sales_verdict = f"📉 СНИЖЕНИЕ: {sales_change:.1f}%"
+            
+            detective_report = f"""
+{main_verdict}
+
+📊 **ФАКТЫ:**
+• {current_period[2]}: {current_data['total_sales']:,.0f} IDR
+• {previous_period[2]}: {previous_data['total_sales']:,.0f} IDR  
+• {sales_verdict}
+
+📈 **ДЕТАЛЬНАЯ КАРТИНА:**
+• Заказы: {current_data['total_orders']:,.0f} vs {previous_data['total_orders']:,.0f} ({orders_change:+.1f}%)
+• Средний чек: {current_data['avg_order_value']:,.0f} vs {previous_data['avg_order_value']:,.0f} IDR ({aov_change:+.1f}%)
+• Рейтинг: {current_data.get('avg_rating', 'N/A')} vs {previous_data.get('avg_rating', 'N/A')}
+"""
+
+            # Бизнес-инсайты
+            insights = []
+            
+            if aov_change > 5:
+                insights.append("💎 **ИНСАЙТ: ПРЕМИАЛИЗАЦИЯ**")
+                insights.append(f"• Средний чек вырос с {previous_data['avg_order_value']:,.0f} до {current_data['avg_order_value']:,.0f} IDR (+{aov_change:.1f}%)")
+                insights.append("• Меньше заказов, но дороже = умная стратегия")
+                
+            if orders_change < -5 and sales_change > -5:
+                insights.append("🎯 **ПРИЧИНЫ 'КАЖУЩЕГОСЯ' ПАДЕНИЯ:**")
+                insights.append(f"• Снижение количества заказов ({orders_change:+.1f}%)")
+                insights.append("• Но повышение среднего чека компенсирует потери")
+                
+            # Сезонный анализ
+            seasonal_factors = self._get_detailed_seasonal_analysis(current_period[0], current_period[1])
+            if seasonal_factors:
+                insights.extend(seasonal_factors)
+            
+            # Локационный анализ
+            location_insights = self._get_location_specific_insights(restaurant_name, sales_change, aov_change)
+            if location_insights:
+                insights.extend(location_insights)
+            
+            # Финальный вывод
+            if sales_change > 0 and aov_change > 5:
+                conclusion = "💡 **ВЫВОД:** Это не падение, а эволюция в премиум!"
+            elif sales_change > 0:
+                conclusion = "💡 **ВЫВОД:** Продажи растут, никакого падения нет!"
+            elif sales_change > -10 and aov_change > 0:
+                conclusion = "💡 **ВЫВОД:** Стратегическая оптимизация - фокус на прибыльность"
+            else:
+                conclusion = "💡 **ВЫВОД:** Требуется детальный анализ операционных проблем"
+            
+            if insights:
+                detective_report += "\n" + "\n".join(insights)
+            
+            detective_report += f"\n\n{conclusion}"
+            
+            return detective_report
+            
+        except Exception as e:
+            return f"❌ Ошибка при анализе: {str(e)}"
+    
+    def _get_detailed_seasonal_analysis(self, start_date, end_date):
+        """Детальный сезонный анализ"""
+        try:
+            period_name = self._get_period_name(start_date, end_date)
+            seasonal_insights = []
+            
+            if "Весна" in period_name:
+                seasonal_insights.append("🌤️ **СЕЗОННЫЙ ФАКТОР:**")
+                seasonal_insights.append("• Переход в межсезонье (март-май)")
+                seasonal_insights.append("• Снижение туристического потока - норма")
+                seasonal_insights.append("• Фокус смещается на локальных клиентов")
+                
+            elif "Зима" in period_name:
+                seasonal_insights.append("🎉 **СЕЗОННЫЙ ФАКТОР:**")
+                seasonal_insights.append("• Пик туристического сезона")
+                seasonal_insights.append("• Новогодние праздники (+50-80%)")
+                seasonal_insights.append("• Максимальный поток иностранных гостей")
+                
+            return seasonal_insights
+        except:
+            return []
+    
+    def _get_location_specific_insights(self, restaurant_name, sales_change, aov_change):
+        """Инсайты специфичные для локации"""
+        insights = []
+        
+        if "Canggu" in restaurant_name:
+            insights.append("🏄‍♂️ **CANGGU СПЕЦИФИКА:**")
+            if sales_change > 0:
+                insights.append("• Успешная адаптация к digital nomads")
+                insights.append("• Премиум-позиционирование работает")
+            else:
+                insights.append("• Сезонный отток серферов")
+                insights.append("• Конкуренция среди кафе растет")
+                
+        elif "Seminyak" in restaurant_name:
+            insights.append("🍸 **SEMINYAK СПЕЦИФИКА:**")
+            insights.append("• Премиум-аудитория готова платить больше")
+            insights.append("• Фокус на nightlife и weekend traffic")
+            
+        elif "Ubud" in restaurant_name:
+            insights.append("🌿 **UBUD СПЕЦИФИКА:**")
+            insights.append("• Wellness-туризм и эко-аудитория")
+            insights.append("• Стабильный поток круглый год")
+            
+        return insights
