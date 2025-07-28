@@ -211,6 +211,9 @@ class AIQueryProcessor:
 • Новые клиенты: {restaurant_data.get('new_customers', 'N/A')}
 • Повторные клиенты: {restaurant_data.get('returning_customers', 'N/A')}
 
+💡 **УМНЫЕ ИНСАЙТЫ:**
+{chr(10).join([f"• {insight}" for insight in self._generate_smart_business_insights(restaurant_data, restaurant_name)])}
+
 📍 **Локация и особенности:**
 {self._get_restaurant_location_info(restaurant_name)}
 
@@ -219,6 +222,8 @@ class AIQueryProcessor:
 
 💡 **Рекомендации:**
 Для получения детального анализа запустите полный отчет в разделе "Анализ ресторана".
+{self._generate_period_comparison(restaurant_name, start_date, end_date)}
+{self._generate_seasonal_predictions(restaurant_name, start_date, end_date)}
 """
                 else:
                     response = f"❌ Ресторан '{restaurant_name}' не найден в базе данных."
@@ -1962,3 +1967,175 @@ if __name__ == "__main__":
                 return f"❌ Данные для ресторана '{restaurant_name}' не найдены"
         else:
             return "❌ Укажите название ресторана для анализа рейтингов"
+
+    def _generate_period_comparison(self, restaurant_name, current_start, current_end):
+        """Сравнивает текущий период с предыдущим и генерирует инсайты"""
+        try:
+            # Определяем предыдущий период (такой же длительности)
+            from datetime import datetime, timedelta
+            
+            current_start_dt = datetime.strptime(current_start, "%Y-%m-%d")
+            current_end_dt = datetime.strptime(current_end, "%Y-%m-%d")
+            period_length = (current_end_dt - current_start_dt).days
+            
+            previous_end_dt = current_start_dt - timedelta(days=1)
+            previous_start_dt = previous_end_dt - timedelta(days=period_length)
+            
+            previous_start = previous_start_dt.strftime("%Y-%m-%d")
+            previous_end = previous_end_dt.strftime("%Y-%m-%d")
+            
+            # Получаем данные за предыдущий период
+            previous_data = self._get_restaurant_data(restaurant_name, previous_start, previous_end)
+            
+            if not previous_data:
+                return ""
+                
+            # Получаем текущие данные
+            current_data = self._get_restaurant_data(restaurant_name, current_start, current_end)
+            
+            if not current_data:
+                return ""
+                
+            # Сравнение продаж
+            sales_change = ((current_data['total_sales'] - previous_data['total_sales']) / previous_data['total_sales']) * 100
+            
+            # Сравнение среднего чека
+            aov_change = ((current_data['avg_order_value'] - previous_data['avg_order_value']) / previous_data['avg_order_value']) * 100
+            
+            # Генерируем инсайты
+            comparison_insights = []
+            
+            if sales_change > 10:
+                comparison_insights.append(f"📈 СИЛЬНЫЙ РОСТ: Продажи выросли на {sales_change:+.1f}% к предыдущему периоду")
+            elif sales_change > 0:
+                comparison_insights.append(f"📊 УМЕРЕННЫЙ РОСТ: +{sales_change:.1f}% к предыдущему периоду")
+            elif sales_change > -10:
+                comparison_insights.append(f"📉 НЕБОЛЬШОЕ СНИЖЕНИЕ: {sales_change:+.1f}% к предыдущему периоду")
+            else:
+                comparison_insights.append(f"🚨 КРИТИЧЕСКОЕ ПАДЕНИЕ: {sales_change:+.1f}% к предыдущему периоду")
+                
+            if aov_change > 5:
+                comparison_insights.append(f"💎 ПРЕМИАЛИЗАЦИЯ: Средний чек вырос на {aov_change:+.1f}%")
+            elif aov_change < -5:
+                comparison_insights.append(f"⚠️ СНИЖЕНИЕ ЧЕКА: Средний чек упал на {aov_change:+.1f}%")
+                
+            if comparison_insights:
+                return f"\n\n🔄 **СРАВНЕНИЕ С ПРЕДЫДУЩИМ ПЕРИОДОМ:**\n" + "\n".join([f"• {insight}" for insight in comparison_insights])
+            else:
+                return ""
+                
+        except Exception as e:
+            return ""
+
+    def _generate_smart_business_insights(self, restaurant_data, restaurant_name):
+        """Генерирует умные бизнес-инсайты на основе данных"""
+        insights = []
+        
+        try:
+            # Анализ ROAS
+            roas = restaurant_data.get('roas', 0)
+            if roas > 10:
+                insights.append("🚀 ОТЛИЧНЫЙ МАРКЕТИНГ: ROAS значительно выше рыночного стандарта")
+            elif roas > 5:
+                insights.append("📈 ХОРОШИЙ МАРКЕТИНГ: ROAS выше среднего")
+            elif roas > 2:
+                insights.append("📊 СРЕДНИЙ МАРКЕТИНГ: ROAS в пределах нормы")
+            else:
+                insights.append("⚠️ СЛАБЫЙ МАРКЕТИНГ: Низкий ROAS требует оптимизации")
+            
+            # Анализ рейтинга
+            rating = restaurant_data.get('avg_rating', 0)
+            if rating >= 4.8:
+                insights.append("⭐ ПРЕВОСХОДНОЕ КАЧЕСТВО: Рейтинг 4.8+ - клиенты в восторге")
+            elif rating >= 4.5:
+                insights.append("🌟 ХОРОШЕЕ КАЧЕСТВО: Стабильно высокий рейтинг")
+            elif rating >= 4.0:
+                insights.append("📊 СРЕДНЕЕ КАЧЕСТВО: Есть потенциал для улучшения")
+            else:
+                insights.append("🚨 ПРОБЛЕМЫ С КАЧЕСТВОМ: Критически низкий рейтинг")
+            
+            # Анализ среднего чека
+            aov = restaurant_data.get('avg_order_value', 0)
+            if aov > 400000:
+                insights.append("💎 ПРЕМИУМ-СЕГМЕНТ: Высокий средний чек указывает на успешную премиализацию")
+            elif aov > 300000:
+                insights.append("🎯 СРЕДНИЙ+ СЕГМЕНТ: Хороший средний чек")
+            elif aov > 200000:
+                insights.append("📊 МАССОВЫЙ СЕГМЕНТ: Средний чек в норме")
+            else:
+                insights.append("💰 БЮДЖЕТНЫЙ СЕГМЕНТ: Низкий средний чек")
+            
+            # Персонализированные инсайты по локации
+            if "Canggu" in restaurant_name:
+                insights.append("🏄‍♂️ CANGGU СПЕЦИФИКА: Фокус на туристов и digital nomads, учитывайте сезонность")
+            elif "Seminyak" in restaurant_name:
+                insights.append("🍸 SEMINYAK СПЕЦИФИКА: Премиум-аудитория, активная ночная жизнь")
+            elif "Ubud" in restaurant_name:
+                insights.append("🌿 UBUD СПЕЦИФИКА: Эко-туризм и wellness-аудитория")
+            elif "Uluwatu" in restaurant_name:
+                insights.append("🌊 ULUWATU СПЕЦИФИКА: Серферы и пляжный туризм")
+            
+            # Анализ клиентской базы
+            new_customers = restaurant_data.get('new_customers', 0)
+            returning_customers = restaurant_data.get('returning_customers', 0)
+            
+            if returning_customers > 0 and new_customers > 0:
+                loyalty_ratio = returning_customers / (new_customers + returning_customers)
+                if loyalty_ratio > 0.4:
+                    insights.append("❤️ ВЫСОКАЯ ЛОЯЛЬНОСТЬ: Много повторных клиентов")
+                elif loyalty_ratio > 0.2:
+                    insights.append("👥 СРЕДНЯЯ ЛОЯЛЬНОСТЬ: Баланс новых и постоянных клиентов")
+                else:
+                    insights.append("🆕 ФОКУС НА ПРИВЛЕЧЕНИЕ: Много новых клиентов, работайте с удержанием")
+            
+            return insights
+            
+        except Exception as e:
+            return ["💡 Для получения детального анализа используйте полный отчет"]
+
+    def _generate_seasonal_predictions(self, restaurant_name, current_start, current_end):
+        """Генерирует сезонные прогнозы и предупреждения"""
+        predictions = []
+        
+        try:
+            from datetime import datetime
+            
+            current_date = datetime.now()
+            current_month = current_date.month
+            
+            # Сезонные прогнозы для Бали
+            if current_month in [6, 7, 8]:  # Сухой сезон
+                predictions.append("☀️ СУХОЙ СЕЗОН: Ожидается пик туристического сезона (+15-25% к продажам)")
+            elif current_month in [12, 1, 2]:  # Пик сезона
+                predictions.append("🎉 ПИК СЕЗОН: Максимальный поток туристов, готовьтесь к высокой нагрузке")
+            elif current_month in [9, 10, 11]:  # Начало дождей
+                predictions.append("🌧️ СЕЗОН ДОЖДЕЙ: Ожидается снижение продаж на 10-20%, усильте доставку")
+            elif current_month in [3, 4, 5]:  # Межсезонье
+                predictions.append("🌤️ МЕЖСЕЗОНЬЕ: Стабильный период, фокус на локальных клиентов")
+            
+            # Праздничные предупреждения
+            upcoming_holidays = {
+                1: "🎊 Новый год: +50-80% к продажам",
+                3: "🕉️ Nyepi (День тишины): Полная остановка на 1 день",
+                4: "🎋 Galungan: +80-120% к продажам", 
+                8: "🇮🇩 День независимости: +30-50% к продажам",
+                12: "🎄 Рождество: +40-70% к продажам"
+            }
+            
+            if current_month in upcoming_holidays:
+                predictions.append(upcoming_holidays[current_month])
+            
+            # Предупреждения по локации
+            if "Canggu" in restaurant_name:
+                if current_month in [6, 7, 8]:
+                    predictions.append("🏄‍♂️ CANGGU ALERT: Пик серф-сезона, готовьте меню для иностранцев")
+                elif current_month in [9, 10, 11]:
+                    predictions.append("🌧️ CANGGU RAIN: Туристы уезжают, фокус на локальных жителей")
+            
+            if predictions:
+                return f"\n\n🔮 **СЕЗОННЫЕ ПРОГНОЗЫ:**\n" + "\n".join([f"• {pred}" for pred in predictions])
+            else:
+                return ""
+                
+        except Exception as e:
+            return ""
