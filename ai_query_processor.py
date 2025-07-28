@@ -2379,23 +2379,21 @@ if __name__ == "__main__":
         return insights
 
     def _analyze_restaurant_trends(self, query):
-        """Умный анализ трендов среди ресторанов"""
+        """Универсальный умный анализ трендов для ЛЮБОГО периода"""
         try:
             conn = sqlite3.connect(self.db_path)
-            
-            # Определяем тип анализа из запроса
             query_lower = query.lower()
             
-            if 'рост' in query_lower and 'мае' in query_lower:
-                return self._analyze_may_growth_trends(conn)
-            elif 'рост' in query_lower:
-                return self._analyze_growth_trends(conn)
-            elif 'успешн' in query_lower or 'лидер' in query_lower:
-                return self._analyze_top_performers(conn)
-            elif 'падение' in query_lower or 'снижение' in query_lower:
-                return self._analyze_declining_trends(conn)
+            # УМНОЕ ОПРЕДЕЛЕНИЕ ПЕРИОДА из запроса
+            period_info = self._extract_period_from_query(query_lower)
+            
+            if period_info:
+                return self._analyze_period_growth_trends(conn, period_info['current_start'], 
+                                                        period_info['current_end'], 
+                                                        period_info['period_name'])
             else:
-                return self._analyze_general_trends(conn)
+                # По умолчанию анализируем последний доступный период
+                return self._analyze_period_growth_trends(conn, '2025-04-01', '2025-06-30', 'Последний период')
                 
         except Exception as e:
             return f"❌ Ошибка при анализе трендов: {str(e)}"
@@ -2403,119 +2401,178 @@ if __name__ == "__main__":
             if 'conn' in locals():
                 conn.close()
 
-    def _analyze_may_growth_trends(self, conn):
-        """Анализ трендов роста в мае (как делал Claude)"""
+    def _extract_period_from_query(self, query_lower):
+        """Извлекает период из запроса пользователя"""
+        
+        # Зимний период
+        if any(word in query_lower for word in ['январ', 'февр', 'декабр', 'зим']):
+            return {
+                'current_start': '2024-12-01',
+                'current_end': '2025-02-28', 
+                'period_name': 'Зима 2024-25'
+            }
+        
+        # Весенний период
+        elif any(word in query_lower for word in ['март', 'апрел', 'май', 'весн']):
+            return {
+                'current_start': '2025-03-01',
+                'current_end': '2025-05-31',
+                'period_name': 'Весна 2025'
+            }
+        
+        # Конкретно май
+        elif 'мае' in query_lower or 'май' in query_lower:
+            return {
+                'current_start': '2025-05-01',
+                'current_end': '2025-05-31',
+                'period_name': 'Май 2025'
+            }
+        
+        # Конкретно апрель
+        elif 'апрел' in query_lower:
+            return {
+                'current_start': '2025-04-01', 
+                'current_end': '2025-04-30',
+                'period_name': 'Апрель 2025'
+            }
+        
+        # Летний период
+        elif any(word in query_lower for word in ['июн', 'июл', 'август', 'лет']):
+            return {
+                'current_start': '2025-06-01',
+                'current_end': '2025-08-31',
+                'period_name': 'Лето 2025'
+            }
+        
+        # Осенний период
+        elif any(word in query_lower for word in ['сентябр', 'октябр', 'ноябр', 'осен']):
+            return {
+                'current_start': '2025-09-01',
+                'current_end': '2025-11-30', 
+                'period_name': 'Осень 2025'
+            }
+        
+        # Последний месяц, текущий период
+        elif any(word in query_lower for word in ['последн', 'текущ', 'сейчас']):
+            return {
+                'current_start': '2025-04-01',
+                'current_end': '2025-06-30',
+                'period_name': 'Последний период'
+            }
+        
+        return None
+
+    def _analyze_period_growth_trends(self, conn, current_start, current_end, period_name):
+        """Универсальный детективный анализ для ЛЮБОГО периода"""
         try:
+            from datetime import datetime, timedelta
+            
+            # Вычисляем предыдущий период той же длительности
+            current_start_dt = datetime.strptime(current_start, "%Y-%m-%d")
+            current_end_dt = datetime.strptime(current_end, "%Y-%m-%d")
+            period_length = (current_end_dt - current_start_dt).days
+            
+            previous_end_dt = current_start_dt - timedelta(days=1)
+            previous_start_dt = previous_end_dt - timedelta(days=period_length)
+            
+            previous_start = previous_start_dt.strftime("%Y-%m-%d")
+            previous_end = previous_end_dt.strftime("%Y-%m-%d")
+            previous_period_name = self._get_period_name(previous_start, previous_end)
+            
             cursor = conn.cursor()
             
-            # Получаем данные за май и апрель для сравнения
+            # УМНЫЙ SQL ЗАПРОС для любого периода
             cursor.execute('''
             SELECT 
                 r.name,
-                SUM(CASE WHEN g.stat_date BETWEEN '2025-05-01' AND '2025-05-31' THEN g.sales ELSE 0 END) as may_sales,
-                SUM(CASE WHEN g.stat_date BETWEEN '2025-04-01' AND '2025-04-30' THEN g.sales ELSE 0 END) as april_sales,
-                AVG(CASE WHEN g.stat_date BETWEEN '2025-05-01' AND '2025-05-31' THEN g.rating ELSE NULL END) as may_rating,
-                SUM(CASE WHEN g.stat_date BETWEEN '2025-05-01' AND '2025-05-31' THEN g.orders ELSE 0 END) as may_orders,
-                SUM(CASE WHEN g.stat_date BETWEEN '2025-04-01' AND '2025-04-30' THEN g.orders ELSE 0 END) as april_orders
+                SUM(CASE WHEN g.stat_date BETWEEN ? AND ? THEN g.sales ELSE 0 END) as current_sales,
+                SUM(CASE WHEN g.stat_date BETWEEN ? AND ? THEN g.sales ELSE 0 END) as previous_sales,
+                AVG(CASE WHEN g.stat_date BETWEEN ? AND ? THEN g.rating ELSE NULL END) as current_rating,
+                SUM(CASE WHEN g.stat_date BETWEEN ? AND ? THEN g.orders ELSE 0 END) as current_orders,
+                SUM(CASE WHEN g.stat_date BETWEEN ? AND ? THEN g.orders ELSE 0 END) as previous_orders
             FROM restaurants r
             JOIN grab_stats g ON r.id = g.restaurant_id
-            WHERE g.stat_date BETWEEN '2025-04-01' AND '2025-05-31'
+            WHERE g.stat_date BETWEEN ? AND ?
             GROUP BY r.id, r.name
-            HAVING may_sales > 0 AND april_sales > 0
-            ''')
+            HAVING current_sales > 0 AND previous_sales > 0
+            ''', [current_start, current_end, previous_start, previous_end, 
+                  current_start, current_end, current_start, current_end, 
+                  previous_start, previous_end, previous_start, current_end])
             
             results = cursor.fetchall()
             growing_restaurants = []
             
-            # Анализируем рост
+            # Анализируем рост (работает для любого периода!)
             for row in results:
-                name, may_sales, april_sales, may_rating, may_orders, april_orders = row
+                name, current_sales, previous_sales, current_rating, current_orders, previous_orders = row
                 
-                if april_sales > 0:
-                    growth = ((may_sales - april_sales) / april_sales) * 100
+                if previous_sales > 0:
+                    growth = ((current_sales - previous_sales) / previous_sales) * 100
                     if growth > 0:  # Есть рост
-                        may_aov = may_sales / may_orders if may_orders > 0 else 0
-                        april_aov = april_sales / april_orders if april_orders > 0 else 0
-                        aov_change = ((may_aov - april_aov) / april_aov) * 100 if april_aov > 0 else 0
+                        current_aov = current_sales / current_orders if current_orders > 0 else 0
+                        previous_aov = previous_sales / previous_orders if previous_orders > 0 else 0
+                        aov_change = ((current_aov - previous_aov) / previous_aov) * 100 if previous_aov > 0 else 0
                         
                         growing_restaurants.append({
                             'name': name,
                             'growth': growth,
-                            'may_rating': may_rating or 0,
-                            'may_aov': may_aov,
+                            'rating': current_rating or 0,
+                            'aov': current_aov,
                             'aov_change': aov_change,
-                            'may_sales': may_sales
+                            'sales': current_sales
                         })
             
-            # Сортируем по росту
+            if not growing_restaurants:
+                return f"❌ Нет данных о росте продаж в период {period_name}"
+            
+            # Сортируем и анализируем (универсально!)
             growing_restaurants.sort(key=lambda x: x['growth'], reverse=True)
             
-            # Анализируем паттерны
-            canggu_count = sum(1 for r in growing_restaurants if 'Canggu' in r['name'] or 'canggu' in r['name'].lower())
-            uluwatu_count = sum(1 for r in growing_restaurants if 'Uluwatu' in r['name'] or 'uluwatu' in r['name'].lower())
-            seminyak_count = sum(1 for r in growing_restaurants if 'Seminyak' in r['name'] or 'seminyak' in r['name'].lower())
+            # УМНЫЙ АНАЛИЗ ПАТТЕРНОВ
+            location_analysis = self._analyze_location_patterns(growing_restaurants)
+            quality_analysis = self._analyze_quality_patterns(growing_restaurants)
+            pricing_analysis = self._analyze_pricing_patterns(growing_restaurants)
             
-            high_rating_count = sum(1 for r in growing_restaurants if r['may_rating'] >= 4.5)
-            aov_increase_count = sum(1 for r in growing_restaurants if r['aov_change'] > 5)
-            
-            avg_rating = sum(r['may_rating'] for r in growing_restaurants) / len(growing_restaurants) if growing_restaurants else 0
-            avg_growth = sum(r['growth'] for r in growing_restaurants) / len(growing_restaurants) if growing_restaurants else 0
-            
-            # Формируем детективный отчет
+            # ФОРМИРУЕМ ДЕТЕКТИВНЫЙ ОТЧЕТ
             report = f"""
-🔍 **ДЕТЕКТИВНЫЙ АНАЛИЗ: Что общего у ресторанов с ростом продаж в мае?**
+🔍 **ДЕТЕКТИВНЫЙ АНАЛИЗ: Тренды роста в {period_name}**
 
 📊 **КЛЮЧЕВЫЕ НАХОДКИ:**
 
 💡 **ОБЩИЕ ЧЕРТЫ ЛИДЕРОВ РОСТА:**
 
-1️⃣ **ЛОКАЦИОННЫЙ ПАТТЕРН:**
-• 🏄‍♂️ {canggu_count} ресторанов в Canggu ({(canggu_count/len(growing_restaurants)*100):.0f}% от растущих)
-• 🌊 {uluwatu_count} ресторанов в Uluwatu - новая точка роста!
-• 🍸 {seminyak_count} ресторанов в Seminyak
+{location_analysis}
 
-2️⃣ **КАЧЕСТВЕННЫЙ ФАКТОР:**
-• ⭐ Средний рейтинг растущих: {avg_rating:.1f}/5.0
-• 🏆 {high_rating_count} из {len(growing_restaurants)} имеют рейтинг 4.5+
-• 📈 Качество = ключ к росту
+{quality_analysis}
 
-3️⃣ **СТРАТЕГИЯ ЦЕНООБРАЗОВАНИЯ:**
-• 💎 {aov_increase_count} ресторанов увеличили средний чек
-• 🎯 Премиализация работает лучше скидок
-• 💰 Средний рост: +{avg_growth:.1f}%
+{pricing_analysis}
 
 🏆 **ТОП-5 ЛИДЕРОВ РОСТА:**"""
 
-            # Добавляем топ-5 лидеров
+            # Топ-5 лидеров
             for i, rest in enumerate(growing_restaurants[:5]):
                 report += f"""
 {i+1}. **{rest['name']}:**
-   📈 Рост: +{rest['growth']:.1f}%
-   ⭐ Рейтинг: {rest['may_rating']:.1f}
-   💰 Средний чек: {rest['may_aov']:,.0f} IDR ({rest['aov_change']:+.1f}%)"""
+   📈 Рост: +{rest['growth']:.1f}% (vs {previous_period_name})
+   ⭐ Рейтинг: {rest['rating']:.1f}
+   💰 Средний чек: {rest['aov']:,.0f} IDR ({rest['aov_change']:+.1f}%)"""
 
             report += f"""
 
-🎯 **ИНСАЙТЫ:**
+🎯 **ИНСАЙТЫ ДЛЯ {period_name.upper()}:**
+{self._generate_period_insights(period_name, growing_restaurants)}
 
-📈 **РОСТ-ДРАЙВЕРЫ МАЯ 2025:**
-• Высокое качество (рейтинг 4.5+) критично
-• Премиализация превосходит дискаунт
-• Локация имеет значение (Canggu лидирует)
+💡 **ФОРМУЛА УСПЕХА В {period_name.upper()}:**
+{self._generate_success_formula(growing_restaurants)}
 
-💡 **ФОРМУЛА УСПЕХА В МАЕ:**
-1. Качество: Рейтинг 4.5+ ✅  
-2. Стратегия: Премиализация (+10-20% к чеку) ✅
-3. Локация: Перспективные районы ✅
-
-🔮 **ПРОГНОЗ:**
-Рестораны с такими характеристиками покажут рост и в июне!
+🔮 **ПРОГНОЗЫ:**
+{self._generate_predictions(period_name, growing_restaurants)}
 """
             
             return report
             
         except Exception as e:
-            return f"❌ Ошибка при анализе майских трендов: {str(e)}"
+            return f"❌ Ошибка при анализе {period_name}: {str(e)}"
 
     def _analyze_general_trends(self, conn):
         """Общий анализ трендов рынка"""
@@ -2666,3 +2723,234 @@ if __name__ == "__main__":
             
         except Exception as e:
             return f"❌ Ошибка при анализе лидеров: {str(e)}"
+
+    def _analyze_location_patterns(self, growing_restaurants):
+        """Анализирует локационные паттерны растущих ресторанов"""
+        try:
+            # Подсчитываем рестораны по локациям
+            canggu_count = sum(1 for r in growing_restaurants if 'canggu' in r['name'].lower())
+            seminyak_count = sum(1 for r in growing_restaurants if 'seminyak' in r['name'].lower())
+            uluwatu_count = sum(1 for r in growing_restaurants if 'uluwatu' in r['name'].lower())
+            ubud_count = sum(1 for r in growing_restaurants if 'ubud' in r['name'].lower())
+            
+            total = len(growing_restaurants)
+            
+            location_insights = []
+            
+            if canggu_count > 0:
+                percentage = (canggu_count / total) * 100
+                location_insights.append(f"🏄‍♂️ {canggu_count} ресторанов в Canggu ({percentage:.0f}% от растущих)")
+                
+            if seminyak_count > 0:
+                percentage = (seminyak_count / total) * 100
+                location_insights.append(f"🍸 {seminyak_count} ресторанов в Seminyak ({percentage:.0f}% от растущих)")
+                
+            if uluwatu_count > 0:
+                percentage = (uluwatu_count / total) * 100
+                location_insights.append(f"🌊 {uluwatu_count} ресторанов в Uluwatu ({percentage:.0f}% от растущих)")
+                
+            if ubud_count > 0:
+                percentage = (ubud_count / total) * 100
+                location_insights.append(f"🌿 {ubud_count} ресторанов в Ubud ({percentage:.0f}% от растущих)")
+            
+            # Определяем лидирующую локацию
+            locations = [
+                ('Canggu', canggu_count, '🏄‍♂️'),
+                ('Seminyak', seminyak_count, '🍸'),
+                ('Uluwatu', uluwatu_count, '🌊'),
+                ('Ubud', ubud_count, '🌿')
+            ]
+            
+            locations.sort(key=lambda x: x[1], reverse=True)
+            
+            if locations[0][1] > 0:
+                leader_location = locations[0]
+                leader_insight = f"• {leader_location[2]} {leader_location[0]} лидирует по количеству растущих ресторанов"
+                location_insights.append(leader_insight)
+            
+            if len(location_insights) == 0:
+                location_insights.append("• Рост распределен равномерно по всем локациям")
+            
+            return f"""1️⃣ **ЛОКАЦИОННЫЙ ПАТТЕРН:**
+• {chr(10).join(location_insights)}"""
+            
+        except Exception as e:
+            return "1️⃣ **ЛОКАЦИОННЫЙ ПАТТЕРН:** Ошибка анализа локаций"
+
+    def _analyze_quality_patterns(self, growing_restaurants):
+        """Анализирует паттерны качества растущих ресторанов"""
+        try:
+            ratings = [r['rating'] for r in growing_restaurants if r['rating'] > 0]
+            
+            if not ratings:
+                return "2️⃣ **КАЧЕСТВЕННЫЙ ФАКТОР:** Данные о рейтингах недоступны"
+            
+            avg_rating = sum(ratings) / len(ratings)
+            high_rating_count = sum(1 for rating in ratings if rating >= 4.5)
+            excellent_rating_count = sum(1 for rating in ratings if rating >= 4.8)
+            
+            quality_insights = []
+            quality_insights.append(f"⭐ Средний рейтинг растущих: {avg_rating:.1f}/5.0")
+            quality_insights.append(f"🏆 {high_rating_count} из {len(ratings)} имеют рейтинг 4.5+")
+            
+            if excellent_rating_count > 0:
+                quality_insights.append(f"🌟 {excellent_rating_count} ресторанов с отличным рейтингом 4.8+")
+            
+            # Анализ влияния качества
+            if avg_rating >= 4.5:
+                quality_insights.append("📈 Высокое качество = ключ к росту")
+            elif avg_rating >= 4.0:
+                quality_insights.append("📊 Стабильное качество поддерживает рост")
+            else:
+                quality_insights.append("⚠️ Низкое качество может ограничить рост")
+            
+            return f"""2️⃣ **КАЧЕСТВЕННЫЙ ФАКТОР:**
+• {chr(10).join(quality_insights)}"""
+            
+        except Exception as e:
+            return "2️⃣ **КАЧЕСТВЕННЫЙ ФАКТОР:** Ошибка анализа качества"
+
+    def _analyze_pricing_patterns(self, growing_restaurants):
+        """Анализирует ценовые паттерны растущих ресторанов"""
+        try:
+            aov_increases = [r for r in growing_restaurants if r['aov_change'] > 5]
+            aov_decreases = [r for r in growing_restaurants if r['aov_change'] < -5]
+            
+            avg_aov = sum(r['aov'] for r in growing_restaurants) / len(growing_restaurants) if growing_restaurants else 0
+            avg_growth = sum(r['growth'] for r in growing_restaurants) / len(growing_restaurants) if growing_restaurants else 0
+            
+            # Категоризация по среднему чеку
+            premium_restaurants = [r for r in growing_restaurants if r['aov'] >= 400000]
+            mid_tier_restaurants = [r for r in growing_restaurants if 200000 <= r['aov'] < 400000]
+            budget_restaurants = [r for r in growing_restaurants if r['aov'] < 200000]
+            
+            pricing_insights = []
+            pricing_insights.append(f"💰 Средний чек растущих: {avg_aov:,.0f} IDR")
+            pricing_insights.append(f"📈 Средний рост: +{avg_growth:.1f}%")
+            
+            if len(aov_increases) > 0:
+                pricing_insights.append(f"💎 {len(aov_increases)} ресторанов увеличили средний чек")
+                pricing_insights.append("🎯 Премиализация работает эффективно")
+            
+            if len(premium_restaurants) > 0:
+                premium_pct = (len(premium_restaurants) / len(growing_restaurants)) * 100
+                pricing_insights.append(f"👑 {len(premium_restaurants)} премиум-ресторанов ({premium_pct:.0f}% от растущих)")
+            
+            # Стратегический вывод
+            if len(aov_increases) > len(aov_decreases):
+                pricing_insights.append("✅ Стратегия повышения цен окупается")
+            else:
+                pricing_insights.append("📊 Смешанные стратегии ценообразования")
+            
+            return f"""3️⃣ **СТРАТЕГИЯ ЦЕНООБРАЗОВАНИЯ:**
+• {chr(10).join(pricing_insights)}"""
+            
+        except Exception as e:
+            return "3️⃣ **СТРАТЕГИЯ ЦЕНООБРАЗОВАНИЯ:** Ошибка анализа цен"
+
+    def _generate_period_insights(self, period_name, growing_restaurants):
+        """Генерирует инсайты специфичные для периода"""
+        insights = []
+        
+        period_lower = period_name.lower()
+        
+        if 'зим' in period_lower:
+            insights.append("❄️ Пик туристического сезона - максимальный поток клиентов")
+            insights.append("🎉 Новогодние праздники дают дополнительный буст продажам")
+            insights.append("💎 Туристы готовы платить премиум-цены")
+            
+        elif 'весн' in period_lower:
+            insights.append("🌸 Переходный период - туристический поток стабилизируется")
+            insights.append("🏄‍♂️ Серф-сезон привлекает активных туристов")
+            insights.append("🎯 Важность локального маркетинга возрастает")
+            
+        elif 'лет' in period_lower:
+            insights.append("☀️ Сухой сезон - комфортные условия для доставки")
+            insights.append("🌴 Пик европейского туризма на Бали")
+            insights.append("🍹 Высокий спрос на освежающие блюда и напитки")
+            
+        elif 'осен' in period_lower:
+            insights.append("🌧️ Начало сезона дождей - вызов для доставки")
+            insights.append("🏠 Рост спроса на доставку из-за погоды")
+            insights.append("💪 Устойчивые рестораны показывают силу")
+            
+        elif 'май' in period_lower:
+            insights.append("🌤️ Межсезонье - время для оптимизации операций")
+            insights.append("🎯 Фокус на качество важнее количества")
+            insights.append("📈 Премиализация как ключевая стратегия")
+            
+        elif 'апрел' in period_lower:
+            insights.append("🌺 Весенний туристический бум")
+            insights.append("🎋 Влияние балийских праздников (Galungan)")
+            insights.append("🏖️ Активизация пляжных локаций")
+            
+        else:
+            insights.append("📊 Стабильный период для анализа трендов")
+            insights.append("🎯 Качество остается главным фактором успеха")
+            insights.append("💡 Инновации в меню дают конкурентное преимущество")
+        
+        return "\n• ".join(insights)
+
+    def _generate_success_formula(self, growing_restaurants):
+        """Генерирует формулу успеха на основе данных"""
+        formula_points = []
+        
+        # Анализ рейтингов
+        avg_rating = sum(r['rating'] for r in growing_restaurants if r['rating'] > 0) / len([r for r in growing_restaurants if r['rating'] > 0])
+        if avg_rating >= 4.5:
+            formula_points.append("🎯 Качество: Рейтинг 4.5+ (обязательно)")
+        else:
+            formula_points.append("📈 Качество: Стремиться к рейтингу 4.5+")
+        
+        # Анализ ценообразования
+        aov_increases = len([r for r in growing_restaurants if r['aov_change'] > 5])
+        if aov_increases > len(growing_restaurants) / 2:
+            formula_points.append("💎 Стратегия: Премиализация (+10-20% к чеку)")
+        else:
+            formula_points.append("📊 Стратегия: Сбалансированное ценообразование")
+        
+        # Локационный анализ
+        canggu_count = sum(1 for r in growing_restaurants if 'canggu' in r['name'].lower())
+        if canggu_count > 0:
+            formula_points.append("🏄‍♂️ Локация: Перспективные туристические зоны")
+        else:
+            formula_points.append("📍 Локация: Адаптация под местную аудиторию")
+        
+        formula_points.append("🚀 Инновации: Постоянное развитие меню и сервиса")
+        
+        return "\n".join([f"{i+1}. {point}" for i, point in enumerate(formula_points)])
+
+    def _generate_predictions(self, period_name, growing_restaurants):
+        """Генерирует прогнозы на основе трендов"""
+        predictions = []
+        
+        period_lower = period_name.lower()
+        avg_growth = sum(r['growth'] for r in growing_restaurants) / len(growing_restaurants)
+        
+        if 'зим' in period_lower:
+            predictions.append("🌸 Весной ожидается стабилизация роста")
+            predictions.append("📉 Возможно снижение на 10-15% после праздничного пика")
+            
+        elif 'весн' in period_lower:
+            predictions.append("☀️ Летом рост может ускориться на 15-25%")
+            predictions.append("🏄‍♂️ Серф-сезон даст дополнительный импульс")
+            
+        elif 'лет' in period_lower:
+            predictions.append("🌧️ Осенью рост замедлится из-за дождей")
+            predictions.append("🏠 Доставка станет более важной")
+            
+        elif 'май' in period_lower or 'апрел' in period_lower:
+            predictions.append("☀️ Летний сезон принесет дополнительный рост")
+            predictions.append("🌴 Европейские туристы увеличат спрос")
+            
+        # Общие прогнозы на основе текущих трендов
+        if avg_growth > 50:
+            predictions.append(f"🚀 Тренд роста (+{avg_growth:.0f}%) продолжится")
+        elif avg_growth > 20:
+            predictions.append(f"📈 Умеренный рост (+{avg_growth:.0f}%) сохранится")
+        else:
+            predictions.append("📊 Стабилизация роста в следующем периоде")
+        
+        predictions.append("💡 Лидеры покажут устойчивый рост и в следующем периоде")
+        
+        return "\n• ".join(predictions)
