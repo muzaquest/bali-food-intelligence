@@ -1011,13 +1011,14 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     avg_roas = marketing_sales / total_marketing if total_marketing > 0 else 0
     total_customers = data['total_customers'].sum()
     
-    # Расчет дневной динамики
-    daily_avg_sales = total_sales / len(data) if len(data) > 0 else 0
+    # Расчет дневной динамики (исключаем аномальные дни с нулевыми продажами)
+    working_days_count = len(data[data['total_sales'] > 0])
+    daily_avg_sales = total_sales / working_days_count if working_days_count > 0 else 0
     
     print(f"💰 Общая выручка: {total_sales:,.0f} IDR (GRAB + GOJEK)")
     print(f"📦 Общие заказы: {total_orders:,.0f} (GRAB + GOJEK)")
     print(f"💵 Средний чек: {avg_order_value:,.0f} IDR")
-    print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR")
+    print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (средняя по рабочим дням)")
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
     print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB: {data['new_customers'].sum() + data['repeated_customers'].sum():,.0f} + GOJEK: {total_customers - (data['new_customers'].sum() + data['repeated_customers'].sum()):,.0f})")
     print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (только GRAB)")
@@ -1093,32 +1094,41 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"  📅 Средние продажи в будни: {weekday_avg:,.0f} IDR")
         print(f"  📊 Эффект выходных: {weekend_effect:+.1f}%")
     
-    # Лучшие и худшие дни
-    best_day = data.loc[data['total_sales'].idxmax()]
-    worst_day = data.loc[data['total_sales'].idxmin()]
-    
-    print(f"\n🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR")
-    print(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR")
-    
-    # Безопасный расчет разброса продаж
-    if worst_day['total_sales'] > 0:
-        sales_variance = ((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100)
-        print(f"📊 Разброс продаж: {sales_variance:.1f}%")
-    else:
-        # Альтернативный расчет когда минимум = 0
-        avg_sales = data['total_sales'].mean()
-        if avg_sales > 0:
-            sales_variance = (best_day['total_sales'] / avg_sales - 1) * 100
-            print(f"📊 Разброс продаж: {sales_variance:.1f}% (от среднего)")
-        else:
-            print("📊 Разброс продаж: Недостаточно данных для расчета")
-    
-    # Дополнительная диагностика для дней с нулевыми продажами
+    # Отделяем аномальные дни (нулевые продажи) от рабочих дней
     zero_sales_days = data[data['total_sales'] == 0]
+    working_days = data[data['total_sales'] > 0]
+    
     if len(zero_sales_days) > 0:
-        print(f"⚠️ Обнаружено {len(zero_sales_days)} дней с нулевыми продажами:")
+        print(f"\n⚠️ ОБНАРУЖЕНЫ АНОМАЛЬНЫЕ ДНИ ({len(zero_sales_days)} из {len(data)}):")
         for _, day in zero_sales_days.iterrows():
-            print(f"   📅 {day['date']} - возможно ресторан был закрыт")
+            print(f"   📅 {day['date']} - 0 IDR (ресторан закрыт/технический сбой)")
+        print(f"   💡 Эти дни исключены из статистического анализа")
+        print()
+    
+    if len(working_days) > 1:
+        # Анализ только рабочих дней
+        best_day = working_days.loc[working_days['total_sales'].idxmax()]
+        worst_day = working_days.loc[working_days['total_sales'].idxmin()]
+        
+        print(f"📊 АНАЛИЗ РАБОЧИХ ДНЕЙ ({len(working_days)} дней):")
+        print(f"🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR")
+        print(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR")
+        
+        # Корректный расчет разброса для рабочих дней
+        sales_variance = ((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100)
+        print(f"📊 Разброс продаж: {sales_variance:.1f}% (только рабочие дни)")
+        
+        # Дополнительная статистика рабочих дней
+        avg_working = working_days['total_sales'].mean()
+        std_working = working_days['total_sales'].std()
+        cv_working = (std_working / avg_working) * 100 if avg_working > 0 else 0
+        print(f"📈 Средние продажи: {avg_working:,.0f} IDR/день")
+        print(f"📊 Коэффициент вариации: {cv_working:.1f}% (стабильность продаж)")
+    else:
+        print(f"\n⚠️ Недостаточно рабочих дней для анализа ({len(working_days)} дней)")
+        if len(data) > 0:
+            total_day = data.iloc[0]  # Берем любой день для показа
+            print(f"📅 Единственный день с данными: {total_day['date']} - {total_day['total_sales']:,.0f} IDR")
     print()
     
     # 3. УГЛУБЛЕННЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ
