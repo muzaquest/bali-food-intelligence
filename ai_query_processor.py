@@ -188,12 +188,14 @@ class AIQueryProcessor:
 💡 Для получения полного списка используйте: "Покажи все рестораны"
 """
                 
-                # Получаем данные ресторана
-                restaurant_data = self._get_restaurant_data(restaurant_name)
+                # Определяем период из запроса и получаем данные ресторана
+                start_date, end_date = self._get_smart_period(original_query)
+                restaurant_data = self._get_restaurant_data(restaurant_name, start_date, end_date)
                 
                 if restaurant_data:
                     response = f"""
-🏪 **Анализ ресторана: {restaurant_name}**
+🏪 **УМНЫЙ АНАЛИЗ: {restaurant_name}** 
+📅 **Период:** {start_date} - {end_date}
 
 📊 **Основные показатели:**
 • Общие продажи: {restaurant_data.get('total_sales', 'N/A'):,.0f} IDR
@@ -922,8 +924,28 @@ if __name__ == "__main__":
     
     # Вспомогательные методы для извлечения данных
     
-    def _get_restaurant_data(self, restaurant_name):
-        """Получение данных ресторана из базы"""
+    def _get_smart_period(self, query):
+        """Определяет период из запроса пользователя"""
+        query_lower = query.lower()
+        
+        # Зимний период
+        if any(word in query_lower for word in ['зим', 'декабр', 'январ', 'февр']):
+            return "2024-12-01", "2025-02-28"
+        
+        # Весенний период  
+        elif any(word in query_lower for word in ['весн', 'апрел', 'май', 'июн']):
+            return "2025-04-01", "2025-06-30"
+        
+        # Последние месяцы
+        elif any(word in query_lower for word in ['последн', 'текущ', 'сейчас']):
+            return "2025-04-01", "2025-06-30"  # Последний доступный период
+        
+        # По умолчанию - последний квартал
+        else:
+            return "2025-04-01", "2025-06-30"
+
+    def _get_restaurant_data(self, restaurant_name, start_date=None, end_date=None):
+        """Получение данных ресторана из базы с фильтрацией по периоду"""
         try:
             conn = sqlite3.connect(self.db_path)
             
@@ -937,21 +959,31 @@ if __name__ == "__main__":
                 
             restaurant_id = int(restaurant_result.iloc[0]['id'])  # КРИТИЧНО: конвертируем numpy.int64 в int
             
-            # Grab данные (МАКСИМАЛЬНО ПРОСТЫЕ запросы)
-            grab_query = "SELECT SUM(sales) as sales, SUM(orders) as orders, AVG(rating) as rating FROM grab_stats WHERE restaurant_id = ?"
-            grab_data = pd.read_sql_query(grab_query, conn, params=[restaurant_id])
+            # Подготавливаем фильтр по датам
+            date_filter = ""
+            grab_params = [restaurant_id]
+            gojek_params = [restaurant_id]
+            
+            if start_date and end_date:
+                date_filter = " AND stat_date BETWEEN ? AND ?"
+                grab_params.extend([start_date, end_date])
+                gojek_params.extend([start_date, end_date])
+            
+            # Grab данные с фильтрацией по датам
+            grab_query = f"SELECT SUM(sales) as sales, SUM(orders) as orders, AVG(rating) as rating FROM grab_stats WHERE restaurant_id = ?{date_filter}"
+            grab_data = pd.read_sql_query(grab_query, conn, params=grab_params)
             
             # Дополнительные данные Grab
-            grab_extra_query = "SELECT SUM(new_customers) as new_customers, SUM(repeated_customers) as repeated_customers, SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales FROM grab_stats WHERE restaurant_id = ?"
-            grab_extra = pd.read_sql_query(grab_extra_query, conn, params=[restaurant_id])
+            grab_extra_query = f"SELECT SUM(new_customers) as new_customers, SUM(repeated_customers) as repeated_customers, SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales FROM grab_stats WHERE restaurant_id = ?{date_filter}"
+            grab_extra = pd.read_sql_query(grab_extra_query, conn, params=grab_params)
             
-            # Gojek данные (МАКСИМАЛЬНО ПРОСТЫЕ запросы)
-            gojek_query = "SELECT SUM(sales) as sales, SUM(orders) as orders, AVG(rating) as rating FROM gojek_stats WHERE restaurant_id = ?"
-            gojek_data = pd.read_sql_query(gojek_query, conn, params=[restaurant_id])
+            # Gojek данные с фильтрацией по датам
+            gojek_query = f"SELECT SUM(sales) as sales, SUM(orders) as orders, AVG(rating) as rating FROM gojek_stats WHERE restaurant_id = ?{date_filter}"
+            gojek_data = pd.read_sql_query(gojek_query, conn, params=gojek_params)
             
             # Дополнительные данные Gojek
-            gojek_extra_query = "SELECT SUM(new_client) as new_customers, SUM(returned_client) as returned_customers, SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales FROM gojek_stats WHERE restaurant_id = ?"
-            gojek_extra = pd.read_sql_query(gojek_extra_query, conn, params=[restaurant_id])
+            gojek_extra_query = f"SELECT SUM(new_client) as new_customers, SUM(returned_client) as returned_customers, SUM(ads_spend) as marketing_spend, SUM(ads_sales) as ads_sales FROM gojek_stats WHERE restaurant_id = ?{date_filter}"
+            gojek_extra = pd.read_sql_query(gojek_extra_query, conn, params=gojek_params)
             
             conn.close()
             
@@ -1306,7 +1338,9 @@ if __name__ == "__main__":
         comparison_result = ""
         
         for restaurant in restaurants:
-            data = self._get_restaurant_data(restaurant)
+            # Используем период по умолчанию для сравнения
+            start_date, end_date = self._get_smart_period("")
+            data = self._get_restaurant_data(restaurant, start_date, end_date)
             if data:
                 comparison_result += f"""
 📊 **{restaurant}:**
