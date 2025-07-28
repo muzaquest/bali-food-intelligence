@@ -196,7 +196,7 @@ class ProperMLDetectiveAnalysis:
             return self._fallback_weather_data(date)
                 
         except Exception as e:
-            print(f"⚠️ Open-Meteo API error для {date}: {e}")
+            # Тихо переходим к fallback данным без спама в консоль
             return self._fallback_weather_data(date)
     
     def _fallback_weather_data(self, date):

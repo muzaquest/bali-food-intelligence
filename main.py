@@ -129,7 +129,7 @@ class WeatherAPI:
             return self._simulate_weather(date)
                 
         except Exception as e:
-            print(f"⚠️ Open-Meteo API error: {e}")
+            # Тихо переходим к симуляции без спама в консоль
             return self._simulate_weather(date)
     
     def _weather_code_to_condition(self, code):
@@ -1467,13 +1467,31 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     
     print(f"  🔍 Анализируем погоду для {len(all_dates)} дней по точным координатам...")
     
+    # Проверяем доступность API на первом запросе
+    first_date = all_dates[0]
+    test_weather = weather_api.get_weather_data(
+        first_date, 
+        lat=restaurant_location['latitude'], 
+        lon=restaurant_location['longitude']
+    )
+    
+    api_available = test_weather.get('source', '').startswith('Open-Meteo')
+    if not api_available:
+        print("  ⚠️ Open-Meteo API недоступен, используем симуляцию погоды...")
+    else:
+        print("  🧠 Применяем научно обоснованные коэффициенты влияния...")
+    
     # Собираем данные о погоде для всех дней
-    for date in all_dates:
-        weather = weather_api.get_weather_data(
-            date, 
-            lat=restaurant_location['latitude'], 
-            lon=restaurant_location['longitude']
-        )
+    for i, date in enumerate(all_dates):
+        if api_available or i == 0:  # Делаем запрос только если API доступен или это первый запрос
+            weather = weather_api.get_weather_data(
+                date, 
+                lat=restaurant_location['latitude'], 
+                lon=restaurant_location['longitude']
+            )
+        else:
+            # Используем симуляцию для остальных дней если API недоступен
+            weather = weather_api._simulate_weather(date)
         day_sales = data[data['date'] == date]['total_sales'].sum()
         condition = weather['condition']
         
