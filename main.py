@@ -980,7 +980,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("🚨 ОГРАНИЧЕНИЯ ДАННЫХ:")
     print("• 📊 Воронка продаж: только GRAB (GOJEK API не предоставляет показы/клики)")
     print("• 👥 Демографика клиентов: только GRAB (возраст, пол, интересы)")
-    print("• 💰 Все финансовые метрики: GRAB + GOJEK (продажи, бюджеты, ROAS)")
+    print("• 💰 Финансовые метрики: GRAB + GOJEK (продажи, бюджеты, ROAS полностью доступны)")
     print("• 🏆 Сравнения с рынком: 54 из 59 ресторанов (у 5 нет рекламных данных)")
     print("• 📈 Тренды: данные доступны с разных дат для разных ресторанов")
     print()
@@ -1021,7 +1021,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (средняя по рабочим дням)")
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
     print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB: {data['new_customers'].sum() + data['repeated_customers'].sum():,.0f} + GOJEK: {total_customers - (data['new_customers'].sum() + data['repeated_customers'].sum()):,.0f})")
-    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (только GRAB)")
+    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (GRAB + GOJEK)")
     # Получаем данные по платформам отдельно для корректного ROAS анализа
     try:
         # Получаем отдельные данные по платформам из исходных данных
@@ -1046,15 +1046,15 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         total_roas = (grab_marketing_sales + gojek_marketing_sales) / (grab_marketing_spend + gojek_marketing_spend) if (grab_marketing_spend + gojek_marketing_spend) > 0 else avg_roas
         avg_roas = total_roas
         
-    except:
-        print(f"🎯 ROAS: {avg_roas:.2f}x (только GRAB - данные GOJEK недоступны)")
+    except Exception as e:
+        print(f"🎯 ROAS: {avg_roas:.2f}x (ошибка расчета по платформам: {e})")
     
     # Эффективность периода
     roi_percentage = ((marketing_sales - total_marketing) / total_marketing * 100) if total_marketing > 0 else 0
     print(f"📈 ROI маркетинга: {roi_percentage:+.1f}% (расчет по доступным данным)")
     
     print()
-    print("⚠️ ВАЖНО: Данные о доходности клиентов и маркетинге доступны только для GRAB")
+    print("⚠️ ВАЖНО: Данные о доходности клиентов доступны только для GRAB, маркетинг - GRAB + GOJEK")
     print(f"📅 Период: {len(data)} дней")
     print()
     
