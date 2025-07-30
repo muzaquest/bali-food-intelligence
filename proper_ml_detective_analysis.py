@@ -456,6 +456,75 @@ class ProperMLDetectiveAnalysis:
         
         return df
     
+    def analyze_restaurant_performance(self, restaurant_name, start_date, end_date):
+        """Анализирует производительность ресторана за период"""
+        
+        results = []
+        
+        try:
+            # 1. Загружаем и подготавливаем данные
+            results.append("🤖 Загружаем данные для ML анализа...")
+            df = self.load_external_factors_data()
+            
+            if df.empty:
+                results.append("❌ Нет данных для анализа")
+                return results
+            
+            # 2. Добавляем внешние факторы
+            results.append("🌍 Интегрируем внешние факторы...")
+            df = self.add_external_data(df)
+            df = self.create_feature_interactions(df)
+            df = self.prepare_features(df)
+            
+            # 3. Обучаем модель
+            results.append("🧠 Обучаем ML модель...")
+            df = self.train_proper_model(df)
+            
+            if self.model is None:
+                results.append("❌ Не удалось обучить модель")
+                return results
+            
+            # 4. Фильтруем данные по ресторану и периоду
+            restaurant_data = df[
+                (df['restaurant_name'] == restaurant_name) &
+                (df['stat_date'] >= start_date) &
+                (df['stat_date'] <= end_date)
+            ].copy()
+            
+            if restaurant_data.empty:
+                results.append(f"❌ Нет данных для {restaurant_name} в период {start_date} - {end_date}")
+                return results
+            
+            # 5. Анализируем аномалии
+            results.append(f"🔍 Анализируем {len(restaurant_data)} дней для {restaurant_name}...")
+            results.append("")
+            
+            anomalies_found = 0
+            for _, row in restaurant_data.iterrows():
+                date = row['stat_date']
+                analysis = self.explain_anomaly_properly(restaurant_name, date, df)
+                
+                if analysis and abs(analysis['deviation_pct']) > 20:  # Значительные отклонения >20%
+                    anomalies_found += 1
+                    if anomalies_found <= 5:  # Показываем топ-5 аномалий
+                        report = self.format_proper_analysis_report(analysis)
+                        results.append(report)
+                        results.append("")
+            
+            if anomalies_found == 0:
+                results.append("✅ Значительных аномалий не обнаружено")
+                results.append("📊 Продажи соответствуют ML прогнозам")
+            else:
+                results.append(f"📊 Обнаружено {anomalies_found} значительных отклонений")
+                if anomalies_found > 5:
+                    results.append("(показаны топ-5 наиболее значительных)")
+            
+        except Exception as e:
+            results.append(f"❌ Ошибка ML анализа: {e}")
+            results.append("🔄 Проверьте данные и зависимости")
+        
+        return results
+    
     def explain_anomaly_properly(self, restaurant_name, date, df):
         """Объясняет аномалию с помощью ПРАВИЛЬНОЙ модели"""
         
