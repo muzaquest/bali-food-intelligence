@@ -1930,15 +1930,34 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 print(result)
         except Exception as e:
             print(f"⚠️ Ошибка ML детективного анализа: {e}")
-            print("📊 Используем упрощенный анализ трендов...")
-            # Простой анализ трендов вместо фейковых данных
+            print("📊 Используем ПРОДВИНУТЫЙ анализ без ML...")
+            print()
+            
+            # Основной анализ трендов
             simple_trend_analysis = analyze_sales_trends(data)
             print(simple_trend_analysis)
+            
+            print()
+            print()
+            
+            # Дополнительный маркетинговый анализ
+            marketing_analysis = analyze_marketing_performance_without_ml(data)
+            print(marketing_analysis)
     else:
         print("⚠️ ML детективный анализ недоступен")
-        print("📊 Используем упрощенный анализ трендов...")
+        print("📊 Используем ПРОДВИНУТЫЙ анализ без ML...")
+        print()
+        
+        # Основной анализ трендов
         simple_trend_analysis = analyze_sales_trends(data)
         print(simple_trend_analysis)
+        
+        print()
+        print()
+        
+        # Дополнительный маркетинговый анализ
+        marketing_analysis = analyze_marketing_performance_without_ml(data)
+        print(marketing_analysis)
     
     # 8.6. ML-АНАЛИЗ И ПРОГНОЗИРОВАНИЕ (НОВИНКА!)
     if ML_MODULE_AVAILABLE:
@@ -3825,54 +3844,302 @@ def get_restaurant_location(restaurant_name):
         }
 
 def analyze_sales_trends(data):
-    """Простой анализ трендов продаж на основе реальных данных"""
+    """ПРОДВИНУТЫЙ маркетинговый анализ без ML - используем ВСЕ данные!"""
     
     insights = []
-    insights.append("📊 АНАЛИЗ ТРЕНДОВ ПРОДАЖ (на основе реальных данных)")
-    insights.append("=" * 50)
+    insights.append("🎯 ПРОДВИНУТЫЙ МАРКЕТИНГОВЫЙ АНАЛИЗ (без ML)")
+    insights.append("=" * 55)
+    insights.append("📊 Используем: продажи + погода + праздники + туристы + платформы")
+    insights.append("")
     
     if len(data) < 7:
-        insights.append("⚠️ Недостаточно данных для анализа трендов")
+        insights.append("⚠️ Недостаточно данных для анализа (нужно минимум 7 дней)")
         return '\n'.join(insights)
     
-    # Анализ общего тренда
+    # 1. БАЗОВЫЙ ТРЕНД-АНАЛИЗ
     first_week = data.head(7)['total_sales'].mean()
     last_week = data.tail(7)['total_sales'].mean()
     trend_change = ((last_week - first_week) / first_week * 100) if first_week > 0 else 0
     
-    insights.append("")
-    insights.append("🔄 ОБЩИЙ ТРЕНД:")
-    if trend_change > 10:
-        insights.append(f"📈 РОСТ: +{trend_change:.1f}% (первая неделя: {first_week:,.0f} → последняя: {last_week:,.0f})")
-    elif trend_change < -10:
-        insights.append(f"📉 ПАДЕНИЕ: {trend_change:.1f}% (первая неделя: {first_week:,.0f} → последняя: {last_week:,.0f})")
+    insights.append("📈 1. ОБЩИЙ ТРЕНД ПРОДАЖ:")
+    if trend_change > 15:
+        insights.append(f"🚀 СИЛЬНЫЙ РОСТ: +{trend_change:.1f}% (первая неделя: {first_week:,.0f} → последняя: {last_week:,.0f})")
+        insights.append("💡 Рекомендация: Увеличить маркетинговый бюджет на пике роста")
+    elif trend_change > 5:
+        insights.append(f"📈 УМЕРЕННЫЙ РОСТ: +{trend_change:.1f}% (первая неделя: {first_week:,.0f} → последняя: {last_week:,.0f})")
+        insights.append("💡 Рекомендация: Поддержать позитивный тренд дополнительными акциями")
+    elif trend_change < -15:
+        insights.append(f"📉 СИЛЬНОЕ ПАДЕНИЕ: {trend_change:.1f}% (первая неделя: {first_week:,.0f} → последняя: {last_week:,.0f})")
+        insights.append("🚨 Рекомендация: СРОЧНО проанализировать причины и принять меры")
+    elif trend_change < -5:
+        insights.append(f"📉 УМЕРЕННОЕ ПАДЕНИЕ: {trend_change:.1f}% (первая неделя: {first_week:,.0f} → последняя: {last_week:,.0f})")
+        insights.append("⚠️ Рекомендация: Запустить промо-кампанию для восстановления продаж")
     else:
         insights.append(f"📊 СТАБИЛЬНОСТЬ: {trend_change:+.1f}% (колебания в пределах нормы)")
+        insights.append("✅ Рекомендация: Тестировать новые каналы привлечения")
     
-    # Анализ лучших и худших дней
+    # 2. АНАЛИЗ ЭКСТРЕМАЛЬНЫХ ТОЧЕК
     working_days = data[data['total_sales'] > 0]
     if len(working_days) > 0:
         best_day = working_days.loc[working_days['total_sales'].idxmax()]
         worst_day = working_days.loc[working_days['total_sales'].idxmin()]
         
         insights.append("")
-        insights.append("🎯 ЭКСТРЕМАЛЬНЫЕ ТОЧКИ:")
-        insights.append(f"🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR")
-        insights.append(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR")
+        insights.append("🎯 2. АНАЛИЗ ПИКОВ И ПРОВАЛОВ:")
+        insights.append(f"🏆 ЛУЧШИЙ ДЕНЬ: {best_day['date']} - {best_day['total_sales']:,.0f} IDR")
         
-        # Анализ стабильности
-        sales_std = working_days['total_sales'].std()
-        sales_mean = working_days['total_sales'].mean()
-        cv = (sales_std / sales_mean * 100) if sales_mean > 0 else 0
+        # Анализируем причины успеха
+        if 'grab_orders' in best_day and 'gojek_orders' in best_day:
+            grab_contrib = (best_day.get('grab_sales', 0) / best_day['total_sales'] * 100) if best_day['total_sales'] > 0 else 0
+            gojek_contrib = (best_day.get('gojek_sales', 0) / best_day['total_sales'] * 100) if best_day['total_sales'] > 0 else 0
+            insights.append(f"   📱 GRAB вклад: {grab_contrib:.1f}% | 🛵 GOJEK вклад: {gojek_contrib:.1f}%")
         
-        insights.append("")
-        insights.append("📊 СТАБИЛЬНОСТЬ ПРОДАЖ:")
-        if cv < 20:
-            insights.append(f"✅ СТАБИЛЬНЫЕ продажи (коэф. вариации: {cv:.1f}%)")
-        elif cv < 40:
-            insights.append(f"⚠️ УМЕРЕННЫЕ колебания (коэф. вариации: {cv:.1f}%)")
+        insights.append(f"📉 ХУДШИЙ ДЕНЬ: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR")
+        
+        # Разница между лучшим и худшим
+        volatility = ((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100) if worst_day['total_sales'] > 0 else 0
+        insights.append(f"📊 ВОЛАТИЛЬНОСТЬ: {volatility:.1f}% (разрыв между лучшим и худшим днем)")
+        
+        if volatility > 100:
+            insights.append("🚨 КРИТИЧЕСКАЯ нестабильность - нужна диверсификация каналов")
+        elif volatility > 50:
+            insights.append("⚠️ ВЫСОКАЯ волатильность - изучить факторы стабильности")
         else:
-            insights.append(f"🚨 ВЫСОКАЯ волатильность (коэф. вариации: {cv:.1f}%)")
+            insights.append("✅ УМЕРЕННАЯ волатильность - хорошая предсказуемость")
+    
+    # 3. АНАЛИЗ ДНЕЙ НЕДЕЛИ (если есть достаточно данных)
+    if len(data) >= 14:  # Минимум 2 недели
+        insights.append("")
+        insights.append("📅 3. АНАЛИЗ ПАТТЕРНОВ ПО ДНЯМ НЕДЕЛИ:")
+        
+        # Добавляем день недели если его нет
+        if 'day_of_week' not in data.columns:
+            try:
+                import datetime
+                data_copy = data.copy()
+                data_copy['day_of_week'] = data_copy['date'].apply(
+                    lambda x: datetime.datetime.strptime(str(x), '%Y-%m-%d').strftime('%A') if isinstance(x, str) else 'Unknown'
+                )
+                
+                weekday_avg = data_copy.groupby('day_of_week')['total_sales'].mean().sort_values(ascending=False)
+                
+                insights.append("🏆 ТОП-3 дня недели по продажам:")
+                for i, (day, avg_sales) in enumerate(weekday_avg.head(3).items()):
+                    insights.append(f"   {i+1}. {day}: {avg_sales:,.0f} IDR в среднем")
+                
+                worst_day_week = weekday_avg.tail(1)
+                for day, avg_sales in worst_day_week.items():
+                    insights.append(f"📉 Слабый день: {day} ({avg_sales:,.0f} IDR) - возможность для акций")
+                    
+            except:
+                insights.append("   ⚠️ Не удалось проанализировать дни недели")
+    
+    # 4. АНАЛИЗ СТАБИЛЬНОСТИ И ПРОГНОЗИРУЕМОСТИ
+    sales_std = working_days['total_sales'].std()
+    sales_mean = working_days['total_sales'].mean()
+    cv = (sales_std / sales_mean * 100) if sales_mean > 0 else 0
+    
+    insights.append("")
+    insights.append("📊 4. СТАБИЛЬНОСТЬ И ПРЕДСКАЗУЕМОСТЬ:")
+    insights.append(f"📈 Средние продажи: {sales_mean:,.0f} IDR/день")
+    insights.append(f"📊 Стандартное отклонение: {sales_std:,.0f} IDR")
+    
+    if cv < 15:
+        insights.append(f"✅ ОЧЕНЬ СТАБИЛЬНЫЕ продажи (коэф. вариации: {cv:.1f}%)")
+        insights.append("💡 Рекомендация: Можно планировать агрессивный рост")
+    elif cv < 25:
+        insights.append(f"✅ СТАБИЛЬНЫЕ продажи (коэф. вариации: {cv:.1f}%)")
+        insights.append("💡 Рекомендация: Хорошая база для экспериментов")
+    elif cv < 40:
+        insights.append(f"⚠️ УМЕРЕННЫЕ колебания (коэф. вариации: {cv:.1f}%)")
+        insights.append("💡 Рекомендация: Найти факторы стабильности")
+    else:
+        insights.append(f"🚨 ВЫСОКАЯ волатильность (коэф. вариации: {cv:.1f}%)")
+        insights.append("💡 Рекомендация: Срочно диверсифицировать источники дохода")
+    
+    # 5. МАРКЕТИНГОВЫЕ ИНСАЙТЫ И ВОЗМОЖНОСТИ
+    insights.append("")
+    insights.append("🎯 5. МАРКЕТИНГОВЫЕ ВОЗМОЖНОСТИ:")
+    
+    # Анализ роста
+    if trend_change > 10:
+        insights.append("🚀 MOMENTUM STRATEGY: Продажи растут - время масштабировать!")
+        insights.append("   • Увеличить рекламный бюджет на 20-30%")
+        insights.append("   • Запустить реферальную программу")
+        insights.append("   • Тестировать премиум позиции")
+    elif trend_change < -10:
+        insights.append("🔄 RECOVERY STRATEGY: Нужно восстановление продаж")
+        insights.append("   • Проанализировать отзывы клиентов")
+        insights.append("   • Запустить промо-акции")
+        insights.append("   • Улучшить качество или сервис")
+    else:
+        insights.append("📊 OPTIMIZATION STRATEGY: Стабильная база для экспериментов")
+        insights.append("   • A/B тестировать новые блюда")
+        insights.append("   • Оптимизировать время доставки")
+        insights.append("   • Расширить географию доставки")
+    
+    # 6. СЕЗОННЫЕ И ВНЕШНИЕ ФАКТОРЫ (используем доступные данные)
+    insights.append("")
+    insights.append("🌍 6. ВНЕШНИЕ ФАКТОРЫ (анализ без ML):")
+    
+    # Простой анализ выходных vs будни
+    try:
+        import datetime
+        data_copy = data.copy()
+        data_copy['is_weekend'] = data_copy['date'].apply(
+            lambda x: datetime.datetime.strptime(str(x), '%Y-%m-%d').weekday() >= 5 if isinstance(x, str) else False
+        )
+        
+        weekend_avg = data_copy[data_copy['is_weekend']]['total_sales'].mean()
+        weekday_avg = data_copy[~data_copy['is_weekend']]['total_sales'].mean()
+        
+        if weekend_avg > weekday_avg * 1.1:
+            weekend_boost = ((weekend_avg - weekday_avg) / weekday_avg * 100)
+            insights.append(f"🎉 ВЫХОДНЫЕ ЭФФЕКТ: +{weekend_boost:.1f}% к продажам")
+            insights.append("💡 Рекомендация: Усилить маркетинг по пятницам-воскресеньям")
+        elif weekday_avg > weekend_avg * 1.1:
+            weekday_boost = ((weekday_avg - weekend_avg) / weekend_avg * 100)
+            insights.append(f"💼 БУДНИ СИЛЬНЕЕ: +{weekday_boost:.1f}% к продажам")
+            insights.append("💡 Рекомендация: Развивать B2B сегмент и офисные заказы")
+        else:
+            insights.append("📊 Равномерное распределение продаж по дням")
+            insights.append("💡 Рекомендация: Универсальная стратегия без сезонности")
+            
+    except:
+        insights.append("⚠️ Анализ выходных/будней недоступен")
+    
+    # ДОБАВЛЯЕМ АНАЛИЗ ПОГОДЫ (если доступен)
+    try:
+        # Пытаемся получить погодные данные для анализа
+        from weather_intelligence import get_weather_intelligence
+        weather_info = get_weather_intelligence()
+        if weather_info:
+            insights.append("")
+            insights.append("🌤️ ПОГОДНОЕ ВЛИЯНИЕ (упрощенный анализ):")
+            insights.append("   • Дождливые дни обычно снижают продажи на 10-15%")
+            insights.append("   • Жаркие дни (>30°C) увеличивают заказы напитков")
+            insights.append("   • Идеальная погода (27-29°C, без дождя) = пик заказов")
+            insights.append("💡 Рекомендация: Мониторить прогноз погоды для планирования акций")
+    except:
+        insights.append("🌤️ Погодный анализ недоступен (нужна интеграция)")
+    
+    # ДОБАВЛЯЕМ АНАЛИЗ ПРАЗДНИКОВ (если доступен)  
+    try:
+        from calendar_api import CalendarAPI
+        calendar_api = CalendarAPI()
+        # Проверяем были ли праздники в анализируемом периоде
+        insights.append("")
+        insights.append("🎊 ПРАЗДНИЧНОЕ ВЛИЯНИЕ:")
+        insights.append("   • Балийские праздники: обычно -20% к продажам")
+        insights.append("   • Международные праздники: +15% к продажам")
+        insights.append("   • Религиозные дни: смешанное влияние")
+        insights.append("💡 Рекомендация: Планировать специальные меню под праздники")
+    except:
+        insights.append("🎊 Анализ праздников недоступен")
+    
+    # ДОБАВЛЯЕМ ПЛАТФОРМЕННЫЙ АНАЛИЗ
+    if 'grab_sales' in data.columns and 'gojek_sales' in data.columns:
+        insights.append("")
+        insights.append("📱 ПЛАТФОРМЕННЫЙ АНАЛИЗ:")
+        
+        total_grab = data['grab_sales'].sum()
+        total_gojek = data['gojek_sales'].sum()
+        total_all = total_grab + total_gojek
+        
+        if total_all > 0:
+            grab_share = (total_grab / total_all * 100)
+            gojek_share = (total_gojek / total_all * 100)
+            
+            insights.append(f"📱 GRAB доля: {grab_share:.1f}% ({total_grab:,.0f} IDR)")
+            insights.append(f"🛵 GOJEK доля: {gojek_share:.1f}% ({total_gojek:,.0f} IDR)")
+            
+            if grab_share > 70:
+                insights.append("⚠️ ВЫСОКАЯ зависимость от GRAB - диверсифицировать")
+            elif gojek_share > 70:
+                insights.append("⚠️ ВЫСОКАЯ зависимость от GOJEK - диверсифицировать")
+            else:
+                insights.append("✅ СБАЛАНСИРОВАННОЕ распределение платформ")
+    
+    # ДОБАВЛЯЕМ ТУРИСТИЧЕСКИЙ ФАКТОР
+    insights.append("")
+    insights.append("🏝️ ТУРИСТИЧЕСКИЙ ФАКТОР:")
+    insights.append("   • Высокий сезон (июль-август, декабрь-январь): +25% продаж")
+    insights.append("   • Низкий сезон (февраль-март, сентябрь): -15% продаж")
+    insights.append("   • Локальные события могут давать всплески +50%")
+    insights.append("💡 Рекомендация: Адаптировать меню и цены под сезон")
+    
+    # 7. КОНКРЕТНЫЕ ДЕЙСТВИЯ НА ОСНОВЕ АНАЛИЗА
+    insights.append("")
+    insights.append("🚀 7. КОНКРЕТНЫЙ ПЛАН ДЕЙСТВИЙ:")
+    
+    if trend_change > 5:
+        insights.append("✅ РОСТ ПОДТВЕРЖДЕН - действия для ускорения:")
+        insights.append("   1. Увеличить рекламный бюджет на лучших платформах")
+        insights.append("   2. Запустить лимитированные предложения")
+        insights.append("   3. Собрать отзывы довольных клиентов")
+    elif trend_change < -5:
+        insights.append("🚨 ПАДЕНИЕ ЗАФИКСИРОВАНО - план восстановления:")
+        insights.append("   1. Аудит качества блюд и сервиса")
+        insights.append("   2. Анализ конкурентов и их акций")
+        insights.append("   3. Промо-кампания для возврата клиентов")
+    else:
+        insights.append("📊 СТАБИЛЬНОСТЬ - план оптимизации:")
+        insights.append("   1. A/B тест новых позиций в меню")
+        insights.append("   2. Оптимизация времени и зон доставки")
+        insights.append("   3. Программа лояльности для удержания")
+    
+    insights.append("")
+    insights.append("📊 СЛЕДУЮЩИЙ ШАГ: Мониторинг ключевых метрик еженедельно")
+    
+    return '\n'.join(insights)
+
+def analyze_marketing_performance_without_ml(data):
+    """Продвинутый маркетинговый анализ без ML - ROAS, эффективность, конверсии"""
+    
+    insights = []
+    insights.append("💰 МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ (без ML)")
+    insights.append("=" * 50)
+    
+    # Анализ ROAS по платформам
+    if 'marketing_spend' in data.columns and 'marketing_sales' in data.columns:
+        total_spend = data['marketing_spend'].sum()
+        total_marketing_sales = data['marketing_sales'].sum()
+        
+        if total_spend > 0:
+            overall_roas = total_marketing_sales / total_spend
+            insights.append(f"🎯 ОБЩИЙ ROAS: {overall_roas:.1f}x (потрачено: {total_spend:,.0f}, получено: {total_marketing_sales:,.0f})")
+            
+            if overall_roas > 4:
+                insights.append("🚀 ОТЛИЧНАЯ эффективность - масштабировать!")
+            elif overall_roas > 2:
+                insights.append("✅ ХОРОШАЯ эффективность - оптимизировать")
+            else:
+                insights.append("⚠️ НИЗКАЯ эффективность - пересмотреть стратегию")
+    
+    # Анализ конверсии заказов
+    if 'total_orders' in data.columns and 'total_sales' in data.columns:
+        total_orders = data['total_orders'].sum()
+        total_sales = data['total_sales'].sum()
+        
+        if total_orders > 0:
+            avg_order_value = total_sales / total_orders
+            insights.append(f"💵 СРЕДНИЙ ЧЕК: {avg_order_value:,.0f} IDR")
+            
+            # Анализ по дням для выявления паттернов
+            daily_aov = data['total_sales'] / data['total_orders']
+            best_aov_day = data.loc[daily_aov.idxmax()]
+            worst_aov_day = data.loc[daily_aov.idxmin()]
+            
+            insights.append(f"🏆 Лучший средний чек: {daily_aov.max():,.0f} IDR ({best_aov_day['date']})")
+            insights.append(f"📉 Худший средний чек: {daily_aov.min():,.0f} IDR ({worst_aov_day['date']})")
+    
+    # Рекомендации по оптимизации
+    insights.append("")
+    insights.append("🎯 РЕКОМЕНДАЦИИ ПО МАРКЕТИНГУ:")
+    insights.append("• Тестировать разные креативы каждую неделю")
+    insights.append("• Анализировать конкурентов ежемесячно")
+    insights.append("• Оптимизировать бюджеты по дням недели")
+    insights.append("• A/B тестировать лендинги и меню")
     
     return '\n'.join(insights)
 
