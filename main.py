@@ -1080,12 +1080,12 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (средняя по рабочим дням)")
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
     # Правильное распределение клиентов по платформам
-    grab_customers = data['new_customers'].sum() + data['repeated_customers'].sum() + data['reactivated_customers'].sum()
+    grab_customers = data[data['platform'] == 'grab']['total_customers'].sum()
+    gojek_customers = data[data['platform'] == 'gojek']['total_customers'].sum()
     
-    # Для GOJEK данные о клиентах ограничены
     print(f"👥 Обслужено клиентов:")
     print(f"   ├── 📱 GRAB: {grab_customers:,.0f} (детальная статистика)")
-    print(f"   └── 🛵 GOJEK: данные ограничены API")
+    print(f"   └── 🛵 GOJEK: {gojek_customers:,.0f} (ограниченная API статистика)")
     print(f"   💡 Общий охват: {total_customers:,.0f} уникальных клиентов")
     
     # Рассчитываем маркетинговый бюджет по платформам из исходных данных
