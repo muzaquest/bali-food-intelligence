@@ -14,6 +14,14 @@ import warnings
 warnings.filterwarnings('ignore')
 from weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
 
+# ML Детективный анализ
+try:
+    from proper_ml_detective_analysis import ProperMLDetectiveAnalysis
+    ML_DETECTIVE_AVAILABLE = True
+except ImportError:
+    ML_DETECTIVE_AVAILABLE = False
+    print("⚠️ ML Detective Analysis недоступен")
+
 # API интеграция
 import requests
 from dotenv import load_dotenv
@@ -1930,9 +1938,26 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("🔍 8.5 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН")
     print("-" * 40)
     
-    # Анализируем причины аномалий в продажах
-    detective_analysis = detect_sales_anomalies_and_causes(data, None, start_date, end_date)
-    print(detective_analysis)
+    # Используем РЕАЛЬНЫЙ ML-анализ
+    if ML_DETECTIVE_AVAILABLE:
+        try:
+            detective_analyzer = ProperMLDetectiveAnalysis()
+            detective_results = detective_analyzer.analyze_restaurant_performance(
+                restaurant_name, start_date, end_date
+            )
+            for result in detective_results:
+                print(result)
+        except Exception as e:
+            print(f"⚠️ Ошибка ML детективного анализа: {e}")
+            print("📊 Используем упрощенный анализ трендов...")
+            # Простой анализ трендов вместо фейковых данных
+            simple_trend_analysis = analyze_sales_trends(data)
+            print(simple_trend_analysis)
+    else:
+        print("⚠️ ML детективный анализ недоступен")
+        print("📊 Используем упрощенный анализ трендов...")
+        simple_trend_analysis = analyze_sales_trends(data)
+        print(simple_trend_analysis)
     
     # 8.6. ML-АНАЛИЗ И ПРОГНОЗИРОВАНИЕ (НОВИНКА!)
     if ML_MODULE_AVAILABLE:
@@ -3850,6 +3875,58 @@ def get_restaurant_location(restaurant_name):
             'area': 'Denpasar', 
             'zone': 'Central'
         }
+
+def analyze_sales_trends(data):
+    """Простой анализ трендов продаж на основе реальных данных"""
+    
+    insights = []
+    insights.append("📊 АНАЛИЗ ТРЕНДОВ ПРОДАЖ (на основе реальных данных)")
+    insights.append("=" * 50)
+    
+    if len(data) < 7:
+        insights.append("⚠️ Недостаточно данных для анализа трендов")
+        return '\n'.join(insights)
+    
+    # Анализ общего тренда
+    first_week = data.head(7)['total_sales'].mean()
+    last_week = data.tail(7)['total_sales'].mean()
+    trend_change = ((last_week - first_week) / first_week * 100) if first_week > 0 else 0
+    
+    insights.append("")
+    insights.append("🔄 ОБЩИЙ ТРЕНД:")
+    if trend_change > 10:
+        insights.append(f"📈 РОСТ: +{trend_change:.1f}% (первая неделя: {first_week:,.0f} → последняя: {last_week:,.0f})")
+    elif trend_change < -10:
+        insights.append(f"📉 ПАДЕНИЕ: {trend_change:.1f}% (первая неделя: {first_week:,.0f} → последняя: {last_week:,.0f})")
+    else:
+        insights.append(f"📊 СТАБИЛЬНОСТЬ: {trend_change:+.1f}% (колебания в пределах нормы)")
+    
+    # Анализ лучших и худших дней
+    working_days = data[data['total_sales'] > 0]
+    if len(working_days) > 0:
+        best_day = working_days.loc[working_days['total_sales'].idxmax()]
+        worst_day = working_days.loc[working_days['total_sales'].idxmin()]
+        
+        insights.append("")
+        insights.append("🎯 ЭКСТРЕМАЛЬНЫЕ ТОЧКИ:")
+        insights.append(f"🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR")
+        insights.append(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR")
+        
+        # Анализ стабильности
+        sales_std = working_days['total_sales'].std()
+        sales_mean = working_days['total_sales'].mean()
+        cv = (sales_std / sales_mean * 100) if sales_mean > 0 else 0
+        
+        insights.append("")
+        insights.append("📊 СТАБИЛЬНОСТЬ ПРОДАЖ:")
+        if cv < 20:
+            insights.append(f"✅ СТАБИЛЬНЫЕ продажи (коэф. вариации: {cv:.1f}%)")
+        elif cv < 40:
+            insights.append(f"⚠️ УМЕРЕННЫЕ колебания (коэф. вариации: {cv:.1f}%)")
+        else:
+            insights.append(f"🚨 ВЫСОКАЯ волатильность (коэф. вариации: {cv:.1f}%)")
+    
+    return '\n'.join(insights)
 
 if __name__ == "__main__":
     main()
