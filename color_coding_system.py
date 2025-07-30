@@ -72,9 +72,9 @@ def generate_colored_roas_breakdown(grab_sales, grab_spend, gojek_sales, gojek_s
     total_line = colorize_text(f"└── 🎯 ОБЩИЙ: {total_roas:.2f}x (продажи: {grab_sales + gojek_sales:,.0f} IDR / бюджет: {grab_spend + gojek_spend:,.0f} IDR)", 'combined')
     
     methodology = colorize_text("⚠️ МЕТОДИКА:", 'warning')
-    grab_method = colorize_text("• GRAB: учитывает только прямые продажи от рекламы", 'grab')
-    gojek_method = colorize_text("• GOJEK: включает все продажи в период активной рекламы", 'gojek')
-    benchmark = colorize_text("• Сравнение с рынком: только рестораны с полными рекламными данными", 'info')
+    grab_method = colorize_text("• GRAB: только прямые продажи от рекламных кампаний (поле ads_sales)", 'grab')
+    gojek_method = colorize_text("• GOJEK: только прямые продажи от рекламных кампаний (поле ads_sales)", 'gojek')
+    benchmark = colorize_text("• Обе платформы используют одинаковую логику расчета ROAS", 'info')
     
     return f"""
 🎯 ROAS АНАЛИЗ:
