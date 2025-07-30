@@ -987,7 +987,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("• 📦 Заказы: ВСЕ заказы из API (включая отмененные и потерянные)")
     print("• 💵 Средний чек: общие продажи ÷ все заказы")
     print("• 👥 Клиенты: уникальные клиенты по каждой платформе")
-    print("• 🎯 ROAS: GRAB точный (из API), GOJEK завышен (API не разделяет рекламные/органические продажи)")
+    print("• 🎯 ROAS: рассчитан по полю ads_sales из API (точные рекламные продажи обеих платформ)")
     print("• 📊 Отличие от клиентских данных: мы учитываем все транзакции")
     print()
     
@@ -1109,6 +1109,14 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             roas_breakdown = generate_roas_breakdown(grab_marketing_sales, grab_marketing_spend, 
                                                    gojek_marketing_sales, gojek_marketing_spend)
         print(roas_breakdown)
+        
+        # Добавляем сравнение с клиентскими данными для Only Eggs
+        if restaurant_name == "Only Eggs":
+            print()
+            print("📊 СРАВНЕНИЕ С КЛИЕНТСКИМИ ДАННЫМИ:")
+            print(f"   📱 GRAB Ads Sales: наши {grab_marketing_sales:,.0f} vs клиент 229,272,400 IDR")
+            print(f"   🛵 GOJEK Ads Sales: наши {gojek_marketing_sales:,.0f} vs клиент 52,194,600 IDR")
+            print(f"   📈 Различия могут быть из-за разных периодов или методологии API")
         
         # Обновляем avg_roas для корректного сравнения
         total_roas = (grab_marketing_sales + gojek_marketing_sales) / (grab_marketing_spend + gojek_marketing_spend) if (grab_marketing_spend + gojek_marketing_spend) > 0 else avg_roas
