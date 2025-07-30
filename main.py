@@ -1127,10 +1127,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     
     # Эффективность периода
     roi_percentage = ((marketing_sales - total_marketing) / total_marketing * 100) if total_marketing > 0 else 0
-    print(f"📈 ROI маркетинга: {roi_percentage:+.1f}% (расчет по доступным данным)")
+    print(f"📈 ROI маркетинга: {roi_percentage:+.1f}% (GRAB + GOJEK)")
     
     print()
-    print("⚠️ ВАЖНО: Детальная воронка доступна только для GRAB, финансы - GRAB + GOJEK")
     print(f"📅 Период: {len(data)} дней")
     print()
     
