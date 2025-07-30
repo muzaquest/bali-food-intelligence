@@ -1055,7 +1055,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"📦 Общие заказы: {total_orders:,.0f}")
     print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled})")
     print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost})")
-    print(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f} (клиентские данные: 2,311)")
+    print(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}")
     
     # Рассчитываем средний чек по платформам
     grab_sales = platform_data[platform_data['platform'] == 'grab']['sales'].sum() if not platform_data.empty else 0
@@ -1118,13 +1118,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                                                    gojek_marketing_sales, gojek_marketing_spend)
         print(roas_breakdown)
         
-        # Добавляем подтверждение точности данных для Only Eggs
-        if restaurant_name == "Only Eggs":
-            print()
-            print("✅ ПРОВЕРКА ТОЧНОСТИ ДАННЫХ:")
-            print(f"   📱 GRAB Ads Sales: {grab_marketing_sales:,.0f} IDR (совпадает с клиентскими данными)")
-            print(f"   🛵 GOJEK Ads Sales: {gojek_marketing_sales:,.0f} IDR (совпадает с клиентскими данными)")
-            print(f"   📊 Все финансовые показатели проверены и подтверждены клиентом")
+        # Блок проверки точности убран - не нужен в пользовательских отчетах
         
         # Обновляем avg_roas для корректного сравнения
         total_roas = (grab_marketing_sales + gojek_marketing_sales) / (grab_marketing_spend + gojek_marketing_spend) if (grab_marketing_spend + gojek_marketing_spend) > 0 else avg_roas
