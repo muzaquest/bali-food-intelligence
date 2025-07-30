@@ -1490,7 +1490,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"  🛒 Добавления в корзину: {total_add_to_carts:,.0f} (конверсия: {add_to_cart_rate:.2f}% от кликов) (только GRAB)")
         print(f"  📦 Заказы от рекламы: {grab_marketing_orders:,.0f} (конверсия: {cart_to_order_rate:.1f}% от корзины) (только GRAB)")
         print(f"  ")
-        print(f"  📊 Общая конверсия клик → заказ: {overall_conversion:.1f}% ({grab_marketing_orders:,.0f} заказов из {total_menu_visits:,.0f} кликов)")
+        print(f"  📊 КЛЮЧЕВЫЕ КОНВЕРСИИ:")
+        
+        # Основная конверсия: показ → заказ
+        impression_to_order = (grab_marketing_orders / total_impressions * 100) if total_impressions > 0 else 0
+        print(f"  • 🎯 Показ → Заказ: {impression_to_order:.2f}% (основная метрика эффективности)")
+        print(f"  • 🔗 Клик → Заказ: {overall_conversion:.1f}% (качество трафика)")
+        print(f"  • 🛒 Корзина → Заказ: {cart_to_order_rate:.1f}% (качество UX)")
         
         # Добавляем методическое примечание для воронки
         funnel_note = generate_methodology_note('conversion')
