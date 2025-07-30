@@ -1523,14 +1523,30 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                                                    gojek_marketing_sales, gojek_marketing_spend)
             print(roas_breakdown)
         
-        # Эффективность кампаний по месяцам (только GRAB - есть помесячные данные)
-        monthly_roas = data_sorted.groupby('month').apply(
+        # Эффективность кампаний по месяцам (GRAB + GOJEK)
+        monthly_roas = data.groupby('month').apply(
             lambda x: x['marketing_sales'].sum() / x['marketing_spend'].sum() if x['marketing_spend'].sum() > 0 else 0
         )
-        print(f"\n🎯 ROAS по месяцам (только GRAB):")
+        print(f"\n🎯 ROAS по месяцам (GRAB + GOJEK):")
         for month, roas in monthly_roas.items():
             month_name = month_names.get(month, f"Месяц {month}")
             print(f"  {month_name}: {roas:.2f}x")
+            
+        # Детализация по платформам
+        print(f"\n📊 Детализация ROAS по платформам:")
+        for month in sorted(monthly_roas.index):
+            month_name = month_names.get(month, f"Месяц {month}")
+            month_data = data[data['month'] == month]
+            
+            grab_month_sales = month_data[month_data['platform'] == 'grab']['marketing_sales'].sum()
+            grab_month_spend = month_data[month_data['platform'] == 'grab']['marketing_spend'].sum()
+            grab_month_roas = grab_month_sales / grab_month_spend if grab_month_spend > 0 else 0
+            
+            gojek_month_sales = month_data[month_data['platform'] == 'gojek']['marketing_sales'].sum()
+            gojek_month_spend = month_data[month_data['platform'] == 'gojek']['marketing_spend'].sum()
+            gojek_month_roas = gojek_month_sales / gojek_month_spend if gojek_month_spend > 0 else 0
+            
+            print(f"  {month_name}: 📱 GRAB {grab_month_roas:.2f}x | 🛵 GOJEK {gojek_month_roas:.2f}x")
         
         # Методические ограничения уже указаны в начале отчета
     
