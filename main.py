@@ -1157,8 +1157,11 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         less_efficient_emoji = "📱"
     
     # Инсайт 1: Сравнение эффективности
-    efficiency_diff = more_efficient_roi - less_efficient_roi
-    print(f"• {more_efficient_emoji} {more_efficient} БОЛЕЕ ЭФФЕКТИВЕН: {more_efficient_roi:+.1f}% vs {less_efficient_roi:+.1f}% (разница: {efficiency_diff:.1f}%)")
+    if less_efficient_roi > 0:
+        efficiency_ratio = more_efficient_roi / less_efficient_roi
+        print(f"• {more_efficient_emoji} {more_efficient} БОЛЕЕ ЭФФЕКТИВЕН: {more_efficient_roi:+.1f}% vs {less_efficient_roi:+.1f}% (в {efficiency_ratio:.1f} раза)")
+    else:
+        print(f"• {more_efficient_emoji} {more_efficient} БОЛЕЕ ЭФФЕКТИВЕН: {more_efficient_roi:+.1f}% vs {less_efficient_roi:+.1f}%")
     
     # Инсайт 2: Анализ бюджетов и ROAS
     grab_roas = grab_marketing_sales / grab_marketing_spend if grab_marketing_spend > 0 else 0
