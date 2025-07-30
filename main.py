@@ -17,10 +17,16 @@ from weather_intelligence import analyze_weather_impact_for_report, get_weather_
 # ML Детективный анализ
 try:
     from proper_ml_detective_analysis import ProperMLDetectiveAnalysis
+    # Проверяем что все зависимости доступны
+    import pandas as pd
+    import numpy as np
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.metrics import mean_absolute_error, r2_score
+    import shap
     ML_DETECTIVE_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     ML_DETECTIVE_AVAILABLE = False
-    print("⚠️ ML Detective Analysis недоступен")
+    print(f"⚠️ ML Detective Analysis недоступен: {e}")
 
 # API интеграция
 import requests
@@ -2124,7 +2130,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0\n")
             f.write(f"👥 Обслужено клиентов: {total_customers:,.0f}\n")
             f.write(f"🎯 ROAS: {avg_roas:.2f}x\n")
-            f.write(f"📈 ROI маркетинга: {roi_percentage:+.1f}%\n\n")
+            f.write(f"📈 ROI маркетинга: {format_roi(roi_percentage)}\n\n")
             
             # Динамика по месяцам
             f.write("📈 ДИНАМИКА ПО МЕСЯЦАМ\n")
