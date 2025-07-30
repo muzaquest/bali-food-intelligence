@@ -1052,22 +1052,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     gojek_avg_check = gojek_sales / gojek_orders if gojek_orders > 0 else 0
     
     print(f"💵 Средний чек: {avg_order_value:,.0f} IDR")
-    print(f"   ├── 📱 GRAB: {grab_avg_check:,.0f} IDR ({grab_sales:,.0f} ÷ {grab_orders:,.0f})")
-    print(f"   └── 🛵 GOJEK: {gojek_avg_check:,.0f} IDR ({gojek_sales:,.0f} ÷ {gojek_orders:,.0f})")
+    print(f"   ├── 📱 GRAB: {grab_avg_check:,.0f} IDR")
+    print(f"   └── 🛵 GOJEK: {gojek_avg_check:,.0f} IDR")
     print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (средняя по рабочим дням)")
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
     # Правильное распределение клиентов по платформам
     grab_customers = data['new_customers'].sum() + data['repeated_customers'].sum() + data['reactivated_customers'].sum()
-    gojek_customers = total_customers - grab_customers
     
-    # Проверяем консистентность клиентов
-    if grab_customers + gojek_customers != total_customers:
-        print(f"⚠️ ВНИМАНИЕ: Несоответствие в данных клиентов!")
-        print(f"   Общие клиенты: {total_customers:,.0f}")
-        print(f"   GRAB + GOJEK: {grab_customers + gojek_customers:,.0f}")
-        print()
-    
-    print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB: {grab_customers:,.0f} + GOJEK: {gojek_customers:,.0f})")
+    # Для GOJEK данные о клиентах ограничены
+    print(f"👥 Обслужено клиентов:")
+    print(f"   ├── 📱 GRAB: {grab_customers:,.0f} (детальная статистика)")
+    print(f"   └── 🛵 GOJEK: данные ограничены API")
+    print(f"   💡 Общий охват: {total_customers:,.0f} уникальных клиентов")
     
     # Рассчитываем маркетинговый бюджет по платформам из исходных данных
     grab_marketing_budget = platform_data[platform_data['platform'] == 'grab']['marketing_spend'].sum() if not platform_data.empty else 0
@@ -1133,9 +1129,16 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     grab_roi = ((grab_marketing_sales - grab_marketing_spend) / grab_marketing_spend * 100) if grab_marketing_spend > 0 else 0
     gojek_roi = ((gojek_marketing_sales - gojek_marketing_spend) / gojek_marketing_spend * 100) if gojek_marketing_spend > 0 else 0
     
-    print(f"📈 ROI маркетинга: {roi_percentage:+.1f}% (GRAB + GOJEK)")
-    print(f"   ├── 📱 GRAB: {grab_roi:+.1f}% (продажи: {grab_marketing_sales:,.0f} - бюджет: {grab_marketing_spend:,.0f})")
-    print(f"   └── 🛵 GOJEK: {gojek_roi:+.1f}% (продажи: {gojek_marketing_sales:,.0f} - бюджет: {gojek_marketing_spend:,.0f})")
+    # Форматируем ROI красиво
+    def format_roi(roi_value):
+        if roi_value >= 1000:
+            return f"{roi_value/100:.0f}x возврат"
+        else:
+            return f"+{roi_value:.0f}%"
+    
+    print(f"📈 ROI маркетинга: {format_roi(roi_percentage)} (GRAB + GOJEK)")
+    print(f"   ├── 📱 GRAB: {format_roi(grab_roi)}")
+    print(f"   └── 🛵 GOJEK: {format_roi(gojek_roi)}")
     
     # Автоматические инсайты по ROI
     print()
@@ -1160,9 +1163,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Инсайт 1: Сравнение эффективности
     if less_efficient_roi > 0:
         efficiency_ratio = more_efficient_roi / less_efficient_roi
-        print(f"• {more_efficient_emoji} {more_efficient} БОЛЕЕ ЭФФЕКТИВЕН: {more_efficient_roi:+.1f}% vs {less_efficient_roi:+.1f}% (в {efficiency_ratio:.1f} раза)")
+        print(f"• {more_efficient_emoji} {more_efficient} БОЛЕЕ ЭФФЕКТИВЕН: {format_roi(more_efficient_roi)} vs {format_roi(less_efficient_roi)} (в {efficiency_ratio:.1f} раза)")
     else:
-        print(f"• {more_efficient_emoji} {more_efficient} БОЛЕЕ ЭФФЕКТИВЕН: {more_efficient_roi:+.1f}% vs {less_efficient_roi:+.1f}%")
+        print(f"• {more_efficient_emoji} {more_efficient} БОЛЕЕ ЭФФЕКТИВЕН: {format_roi(more_efficient_roi)} vs {format_roi(less_efficient_roi)}")
     
     # Инсайт 2: Анализ бюджетов и ROAS
     grab_roas = grab_marketing_sales / grab_marketing_spend if grab_marketing_spend > 0 else 0
@@ -1179,7 +1182,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         smaller_budget = "GRAB"
         smaller_budget_amount = grab_marketing_spend / 1000000
     
-    print(f"• 💰 {bigger_budget}: больший бюджет ({bigger_budget_amount:.1f}M), {smaller_budget}: меньший бюджет ({smaller_budget_amount:.1f}M)")
+    print(f"• 💰 {bigger_budget}: больший бюджет ({bigger_budget_amount:.1f}M IDR), {smaller_budget}: меньший бюджет ({smaller_budget_amount:.1f}M IDR)")
     print(f"• 🎯 ROAS: GRAB {grab_roas:.1f}x, GOJEK {gojek_roas:.1f}x")
     
     # Инсайт 3: Стратегические рекомендации
@@ -1196,7 +1199,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     else:
         roi_assessment = "ТРЕБУЕТ ВНИМАНИЯ"
     
-    print(f"• 📊 Общий ROI {roi_assessment} ({roi_percentage:+.1f}%) - обе платформы прибыльны")
+    print(f"• 📊 Общий ROI {roi_assessment} ({format_roi(roi_percentage)}) - обе платформы прибыльны")
     
     # Рекомендация по более эффективной платформе
     if more_efficient_roi > less_efficient_roi * 1.5:  # Если разница больше 50%
