@@ -48,9 +48,26 @@ try:
     # Функции загружены успешно
     pass
 except ImportError as e:
+    print(f"❌ Ошибка импорта platform_breakdown_functions: {e}")
     # Определяем базовые функции как fallback
     def generate_roas_breakdown(grab_sales, grab_spend, gojek_sales, gojek_spend):
-        return f"ROAS: GRAB {grab_sales/grab_spend:.2f}x, GOJEK {gojek_sales/gojek_spend:.2f}x"
+        grab_roas = grab_sales / grab_spend if grab_spend > 0 else 0
+        gojek_roas = gojek_sales / gojek_spend if gojek_spend > 0 else 0
+        total_roas = (grab_sales + gojek_sales) / (grab_spend + gojek_spend) if (grab_spend + gojek_spend) > 0 else 0
+        
+        return f"""
+🎯 ROAS АНАЛИЗ (продажи от рекламы):
+├── 📱 GRAB: {grab_roas:.2f}x (реклама→продажи: {grab_sales:,.0f} IDR / бюджет: {grab_spend:,.0f} IDR)
+├── 🛵 GOJEK: {gojek_roas:.2f}x (реклама→продажи: {gojek_sales:,.0f} IDR / бюджет: {gojek_spend:,.0f} IDR)
+└── 🎯 ОБЩИЙ: {total_roas:.2f}x (реклама→продажи: {grab_sales + gojek_sales:,.0f} IDR / бюджет: {grab_spend + gojek_spend:,.0f} IDR)
+
+📊 ВАЖНО: ROAS показывает только продажи от рекламы ({grab_sales + gojek_sales:,.0f} IDR), не общую выручку!
+⚠️ МЕТОДИКА: 
+• GRAB: только прямые продажи от рекламных кампаний (поле ads_sales)
+• GOJEK: только прямые продажи от рекламных кампаний (поле ads_sales)
+• Обе платформы используют одинаковую логику расчета ROAS
+"""
+    
     def generate_data_limitations():
         return "⚠️ Ограничения данных: см. документацию"
 
