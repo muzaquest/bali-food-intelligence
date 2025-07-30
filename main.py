@@ -1057,9 +1057,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     gojek_customers = total_customers - grab_customers
     print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB: {grab_customers:,.0f} + GOJEK: {gojek_customers:,.0f})")
     
-    # Рассчитываем маркетинговый бюджет по платформам
-    grab_marketing_budget = grab_marketing_spend if 'grab_marketing_spend' in locals() else 0
-    gojek_marketing_budget = gojek_marketing_spend if 'gojek_marketing_spend' in locals() else 0
+    # Рассчитываем маркетинговый бюджет по платформам из исходных данных
+    grab_marketing_budget = platform_data[platform_data['platform'] == 'grab']['marketing_spend'].sum() if not platform_data.empty else 0
+    gojek_marketing_budget = platform_data[platform_data['platform'] == 'gojek']['marketing_spend'].sum() if not platform_data.empty else 0
     
     print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (GRAB + GOJEK)")
     print(f"   ├── 📱 GRAB: {grab_marketing_budget:,.0f} IDR ({grab_marketing_budget/total_marketing*100:.1f}%)")
