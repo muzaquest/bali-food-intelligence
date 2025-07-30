@@ -1035,6 +1035,15 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     grab_successful = grab_orders - grab_cancelled
     gojek_successful = gojek_orders - gojek_cancelled - gojek_lost
     
+    # Проверяем консистентность данных
+    platform_total_orders = grab_orders + gojek_orders
+    if total_orders != platform_total_orders:
+        print(f"⚠️ ВНИМАНИЕ: Несоответствие в данных заказов!")
+        print(f"   Агрегированные данные: {total_orders:,.0f}")
+        print(f"   Сумма по платформам: {platform_total_orders:,.0f}")
+        print(f"   Разница: {abs(total_orders - platform_total_orders):,.0f}")
+        print()
+    
     print(f"📦 Общие заказы: {total_orders:,.0f}")
     print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled})")
     print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost})")
@@ -1055,11 +1064,28 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Правильное распределение клиентов по платформам
     grab_customers = data['new_customers'].sum() + data['repeated_customers'].sum() + data['reactivated_customers'].sum()
     gojek_customers = total_customers - grab_customers
+    
+    # Проверяем консистентность клиентов
+    if grab_customers + gojek_customers != total_customers:
+        print(f"⚠️ ВНИМАНИЕ: Несоответствие в данных клиентов!")
+        print(f"   Общие клиенты: {total_customers:,.0f}")
+        print(f"   GRAB + GOJEK: {grab_customers + gojek_customers:,.0f}")
+        print()
+    
     print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB: {grab_customers:,.0f} + GOJEK: {gojek_customers:,.0f})")
     
     # Рассчитываем маркетинговый бюджет по платформам из исходных данных
     grab_marketing_budget = platform_data[platform_data['platform'] == 'grab']['marketing_spend'].sum() if not platform_data.empty else 0
     gojek_marketing_budget = platform_data[platform_data['platform'] == 'gojek']['marketing_spend'].sum() if not platform_data.empty else 0
+    
+    # Проверяем консистентность маркетингового бюджета
+    platform_total_marketing = grab_marketing_budget + gojek_marketing_budget
+    if abs(total_marketing - platform_total_marketing) > 1:  # Допускаем погрешность округления
+        print(f"⚠️ ВНИМАНИЕ: Несоответствие в маркетинговом бюджете!")
+        print(f"   Агрегированные данные: {total_marketing:,.0f} IDR")
+        print(f"   Сумма по платформам: {platform_total_marketing:,.0f} IDR")
+        print(f"   Разница: {abs(total_marketing - platform_total_marketing):,.0f} IDR")
+        print()
     
     print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (GRAB + GOJEK)")
     print(f"   ├── 📱 GRAB: {grab_marketing_budget:,.0f} IDR ({grab_marketing_budget/total_marketing*100:.1f}%)")
