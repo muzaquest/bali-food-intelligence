@@ -1163,6 +1163,27 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"   ├── 📱 GRAB: {format_roi(grab_roi)}")
     print(f"   └── 🛵 GOJEK: {format_roi(gojek_roi)}")
     
+    # Добавляем раздел PAYOUTS
+    print()
+    print("💰 РЕАЛЬНЫЕ ВЫПЛАТЫ РЕСТОРАНУ (PAYOUTS):")
+    grab_payouts = data[data['platform'] == 'grab']['payouts'].sum()
+    gojek_payouts = data[data['platform'] == 'gojek']['payouts'].sum()
+    total_payouts = grab_payouts + gojek_payouts
+    
+    grab_commission_pct = ((grab_platform_data['total_sales'].sum() - grab_payouts) / grab_platform_data['total_sales'].sum() * 100) if not grab_platform_data.empty and grab_platform_data['total_sales'].sum() > 0 else 0
+    gojek_commission_pct = ((gojek_platform_data['total_sales'].sum() - gojek_payouts) / gojek_platform_data['total_sales'].sum() * 100) if not gojek_platform_data.empty and gojek_platform_data['total_sales'].sum() > 0 else 0
+    avg_commission = ((total_sales - total_payouts) / total_sales * 100) if total_sales > 0 else 0
+    
+    print(f"💸 Общие выплаты: {total_payouts:,.0f} IDR ({100-avg_commission:.1f}% от продаж)")
+    print(f"   ├── 📱 GRAB: {grab_payouts:,.0f} IDR (комиссия: {grab_commission_pct:.1f}%)")
+    print(f"   └── 🛵 GOJEK: {gojek_payouts:,.0f} IDR (комиссия: {gojek_commission_pct:.1f}%)")
+    print(f"📊 Средняя комиссия: {avg_commission:.1f}%")
+    
+    better_platform = "GOJEK" if gojek_commission_pct < grab_commission_pct else "GRAB"
+    commission_diff = abs(grab_commission_pct - gojek_commission_pct)
+    if commission_diff > 0.1:
+        print(f"🏆 Лучшие условия: {better_platform} (комиссия на {commission_diff:.1f}% {'ниже' if better_platform == 'GOJEK' else 'выше'})")
+    
     # Автоматические инсайты по ROI
     print()
     print("💡 ИНСАЙТЫ ПО ЭФФЕКТИВНОСТИ ПЛАТФОРМ:")
@@ -1484,7 +1505,6 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         
         print(f"\n💸 Стоимость привлечения (только GRAB):")
         print(f"  💰 Стоимость клика: {cost_per_click:,.0f} IDR")
-        print(f"  💰 Стоимость конверсии: {cost_per_conversion:,.0f} IDR") 
         print(f"  💰 Стоимость заказа: {cost_per_order:,.0f} IDR")
         
         # Финансовые данные по платформам
