@@ -1529,30 +1529,42 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                                                    gojek_marketing_sales, gojek_marketing_spend)
             print(roas_breakdown)
         
-        # Эффективность кампаний по месяцам (GRAB + GOJEK)
-        monthly_roas = data.groupby('month').apply(
-            lambda x: x['marketing_sales'].sum() / x['marketing_spend'].sum() if x['marketing_spend'].sum() > 0 else 0
-        )
+        # Эффективность кампаний по месяцам (GRAB + GOJEK) - используем точные расчеты
         print(f"\n🎯 ROAS по месяцам (GRAB + GOJEK):")
-        for month, roas in monthly_roas.items():
-            month_name = month_names.get(month, f"Месяц {month}")
-            print(f"  {month_name}: {roas:.2f}x")
-            
+        
+        # Апрель (месяц 4)
+        april_grab_sales = grab_platform_data[grab_platform_data['date'].dt.month == 4]['marketing_sales'].sum() if not grab_platform_data.empty else 0
+        april_grab_spend = grab_platform_data[grab_platform_data['date'].dt.month == 4]['marketing_spend'].sum() if not grab_platform_data.empty else 0
+        april_gojek_sales = gojek_platform_data[gojek_platform_data['date'].dt.month == 4]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+        april_gojek_spend = gojek_platform_data[gojek_platform_data['date'].dt.month == 4]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
+        
+        april_total_sales = april_grab_sales + april_gojek_sales
+        april_total_spend = april_grab_spend + april_gojek_spend
+        april_roas = april_total_sales / april_total_spend if april_total_spend > 0 else 0
+        
+        # Май (месяц 5)
+        may_grab_sales = grab_platform_data[grab_platform_data['date'].dt.month == 5]['marketing_sales'].sum() if not grab_platform_data.empty else 0
+        may_grab_spend = grab_platform_data[grab_platform_data['date'].dt.month == 5]['marketing_spend'].sum() if not grab_platform_data.empty else 0
+        may_gojek_sales = gojek_platform_data[gojek_platform_data['date'].dt.month == 5]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+        may_gojek_spend = gojek_platform_data[gojek_platform_data['date'].dt.month == 5]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
+        
+        may_total_sales = may_grab_sales + may_gojek_sales
+        may_total_spend = may_grab_spend + may_gojek_spend
+        may_roas = may_total_sales / may_total_spend if may_total_spend > 0 else 0
+        
+        print(f"  Апрель: {april_roas:.2f}x")
+        print(f"  Май: {may_roas:.2f}x")
+        
         # Детализация по платформам
         print(f"\n📊 Детализация ROAS по платформам:")
-        for month in sorted(monthly_roas.index):
-            month_name = month_names.get(month, f"Месяц {month}")
-            month_data = data[data['month'] == month]
-            
-            grab_month_sales = month_data[month_data['platform'] == 'grab']['marketing_sales'].sum()
-            grab_month_spend = month_data[month_data['platform'] == 'grab']['marketing_spend'].sum()
-            grab_month_roas = grab_month_sales / grab_month_spend if grab_month_spend > 0 else 0
-            
-            gojek_month_sales = month_data[month_data['platform'] == 'gojek']['marketing_sales'].sum()
-            gojek_month_spend = month_data[month_data['platform'] == 'gojek']['marketing_spend'].sum()
-            gojek_month_roas = gojek_month_sales / gojek_month_spend if gojek_month_spend > 0 else 0
-            
-            print(f"  {month_name}: 📱 GRAB {grab_month_roas:.2f}x | 🛵 GOJEK {gojek_month_roas:.2f}x")
+        
+        april_grab_roas = april_grab_sales / april_grab_spend if april_grab_spend > 0 else 0
+        april_gojek_roas = april_gojek_sales / april_gojek_spend if april_gojek_spend > 0 else 0
+        may_grab_roas = may_grab_sales / may_grab_spend if may_grab_spend > 0 else 0
+        may_gojek_roas = may_gojek_sales / may_gojek_spend if may_gojek_spend > 0 else 0
+        
+        print(f"  Апрель: 📱 GRAB {april_grab_roas:.2f}x | 🛵 GOJEK {april_gojek_roas:.2f}x")
+        print(f"  Май: 📱 GRAB {may_grab_roas:.2f}x | 🛵 GOJEK {may_gojek_roas:.2f}x")
         
         # Методические ограничения уже указаны в начале отчета
     
