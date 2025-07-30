@@ -1680,19 +1680,19 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         bad_ratings = four_stars + three_stars + two_stars + one_stars
         gojek_orders = gojek_platform_data['orders'].sum() if not gojek_platform_data.empty and 'orders' in gojek_platform_data.columns else 0
         
-        if bad_ratings > 0 and total_orders > 0:
-            orders_per_bad_rating = total_orders / bad_ratings
-            print(f"\n📊 Частота плохих оценок (не 5★):")
-            print(f"  📈 Плохих оценок всего: {bad_ratings:,.0f} из {total_ratings:,.0f} ({(bad_ratings/total_ratings*100):.1f}%)")
-            print(f"  📦 Заказов на 1 плохую оценку: {orders_per_bad_rating:.1f}")
-            print(f"  💡 Это означает: каждый {orders_per_bad_rating:.0f}-й заказ получает оценку не 5★")
+        if bad_ratings > 0 and gojek_orders > 0:
+            orders_per_bad_rating = gojek_orders / bad_ratings
+            print(f"\n📊 Частота плохих оценок GOJEK (не 5★):")
+            print(f"  📈 Плохих оценок всего: {bad_ratings:,.0f} из {total_gojek_ratings:,.0f} ({(bad_ratings/total_gojek_ratings*100):.1f}%)")
+            print(f"  📦 Заказов GOJEK на 1 плохую оценку: {orders_per_bad_rating:.1f}")
+            print(f"  💡 Это означает: каждый {orders_per_bad_rating:.0f}-й заказ GOJEK получает оценку не 5★")
             
             # Интерпретация результата
-            if orders_per_bad_rating >= 20:
+            if orders_per_bad_rating >= 100:
                 print(f"  🟢 ОТЛИЧНО: Очень редкие плохие оценки")
-            elif orders_per_bad_rating >= 10:
+            elif orders_per_bad_rating >= 50:
                 print(f"  🟡 ХОРОШО: Умеренная частота плохих оценок")
-            elif orders_per_bad_rating >= 5:
+            elif orders_per_bad_rating >= 20:
                 print(f"  🟠 ВНИМАНИЕ: Частые плохие оценки")
             else:
                 print(f"  🔴 КРИТИЧНО: Очень частые плохие оценки")
@@ -1700,19 +1700,21 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             if negative_rate > 10:
                 print(f"  ⚠️ КРИТИЧНО: Высокий уровень негативных отзывов!")
         
-        # Потенциал улучшения рейтинга
-        current_weighted = (
-            data['five_star_ratings'].sum() * 5 +
-            data['four_star_ratings'].sum() * 4 +
-            data['three_star_ratings'].sum() * 3 +
-            data['two_star_ratings'].sum() * 2 +
-            data['one_star_ratings'].sum() * 1
-        ) / total_ratings
+        print(f"\n⚠️ ОГРАНИЧЕНИЯ ДАННЫХ:")
+        print(f"  • GOJEK: {total_gojek_ratings:,.0f} детальных оценок от клиентов")
+        print(f"  • GRAB: только средний рейтинг {grab_avg_rating:.2f}/5.0, детализация недоступна")
+        print(f"  • Анализ частоты основан только на данных GOJEK")
+    else:
+        print("📊 Детальные данные по оценкам недоступны")
         
-        target_weighted = 4.5
-        if current_weighted < target_weighted:
-            improvement_needed = total_ratings * (target_weighted - current_weighted)
-            print(f"📊 Для достижения 4.5★ нужно улучшить на {improvement_needed:.0f} балла")
+        # Показываем хотя бы средние рейтинги если есть
+        if not grab_platform_data.empty and 'rating' in grab_platform_data.columns:
+            grab_avg = grab_platform_data['rating'].mean()
+            print(f"📈 Средний рейтинг GRAB: {grab_avg:.2f}/5.0")
+        
+        if not gojek_platform_data.empty and 'rating' in gojek_platform_data.columns:
+            gojek_avg = gojek_platform_data['rating'].mean()
+            print(f"📈 Средний рейтинг GOJEK: {gojek_avg:.2f}/5.0")
     
     print()
     
