@@ -1056,7 +1056,14 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     grab_customers = data['new_customers'].sum() + data['repeated_customers'].sum() + data['reactivated_customers'].sum()
     gojek_customers = total_customers - grab_customers
     print(f"👥 Обслужено клиентов: {total_customers:,.0f} (GRAB: {grab_customers:,.0f} + GOJEK: {gojek_customers:,.0f})")
+    
+    # Рассчитываем маркетинговый бюджет по платформам
+    grab_marketing_budget = grab_marketing_spend if 'grab_marketing_spend' in locals() else 0
+    gojek_marketing_budget = gojek_marketing_spend if 'gojek_marketing_spend' in locals() else 0
+    
     print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (GRAB + GOJEK)")
+    print(f"   ├── 📱 GRAB: {grab_marketing_budget:,.0f} IDR ({grab_marketing_budget/total_marketing*100:.1f}%)")
+    print(f"   └── 🛵 GOJEK: {gojek_marketing_budget:,.0f} IDR ({gojek_marketing_budget/total_marketing*100:.1f}%)")
     # Получаем данные по платформам отдельно для корректного ROAS анализа
     try:
         # Получаем отдельные данные по платформам из исходных данных
