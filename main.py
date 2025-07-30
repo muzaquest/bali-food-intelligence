@@ -1127,7 +1127,14 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     
     # Эффективность периода
     roi_percentage = ((marketing_sales - total_marketing) / total_marketing * 100) if total_marketing > 0 else 0
+    
+    # ROI по платформам
+    grab_roi = ((grab_marketing_sales - grab_marketing_spend) / grab_marketing_spend * 100) if grab_marketing_spend > 0 else 0
+    gojek_roi = ((gojek_marketing_sales - gojek_marketing_spend) / gojek_marketing_spend * 100) if gojek_marketing_spend > 0 else 0
+    
     print(f"📈 ROI маркетинга: {roi_percentage:+.1f}% (GRAB + GOJEK)")
+    print(f"   ├── 📱 GRAB: {grab_roi:+.1f}% (продажи: {grab_marketing_sales:,.0f} - бюджет: {grab_marketing_spend:,.0f})")
+    print(f"   └── 🛵 GOJEK: {gojek_roi:+.1f}% (продажи: {gojek_marketing_sales:,.0f} - бюджет: {gojek_marketing_spend:,.0f})")
     
     print()
     print(f"📅 Период: {len(data)} дней")
