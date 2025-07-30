@@ -558,17 +558,19 @@ class OpenAIAnalyzer:
                 insights.append(f"   🚨 ПРОБЛЕМА: Низкое качество")
                 insights.append(f"   💡 Приоритет: Срочно улучшить сервис")
         
-        # Детальный анализ рейтингов
-        if 'one_star_ratings' in data.columns:
-            total_ratings = (data['one_star_ratings'].sum() + data['two_star_ratings'].sum() + 
-                            data['three_star_ratings'].sum() + data['four_star_ratings'].sum() + 
-                            data['five_star_ratings'].sum())
+        # Детальный анализ рейтингов (только GOJEK имеет детализацию)
+        gojek_data = data[data['platform'] == 'gojek'] if 'platform' in data.columns else data
+        
+        if 'one_star_ratings' in gojek_data.columns and not gojek_data.empty:
+            total_gojek_ratings = (gojek_data['one_star_ratings'].sum() + gojek_data['two_star_ratings'].sum() + 
+                                  gojek_data['three_star_ratings'].sum() + gojek_data['four_star_ratings'].sum() + 
+                                  gojek_data['five_star_ratings'].sum())
             
-            if total_ratings > 0:
-                one_star_rate = (data['one_star_ratings'].sum() / total_ratings) * 100
-                five_star_rate = (data['five_star_ratings'].sum() / total_ratings) * 100
+            if total_gojek_ratings > 0:
+                one_star_rate = (gojek_data['one_star_ratings'].sum() / total_gojek_ratings) * 100
+                five_star_rate = (gojek_data['five_star_ratings'].sum() / total_gojek_ratings) * 100
                 
-                insights.append(f"\n📊 ДЕТАЛЬНЫЙ АНАЛИЗ ОТЗЫВОВ:")
+                insights.append(f"\n📊 ДЕТАЛЬНЫЙ АНАЛИЗ ОТЗЫВОВ GOJEK ({total_gojek_ratings} оценок):")
                 insights.append(f"   • 5 звезд: {five_star_rate:.1f}%")
                 insights.append(f"   • 1 звезда: {one_star_rate:.1f}%")
                 
@@ -583,16 +585,16 @@ class OpenAIAnalyzer:
                     insights.append(f"   🏆 ПРЕВОСХОДНО: Большинство клиентов в восторге")
                     insights.append(f"   💡 Стратегия: Используйте отзывы в маркетинге")
                 
-                # Анализ частоты плохих оценок
-                bad_ratings = (data['four_star_ratings'].sum() + data['three_star_ratings'].sum() + 
-                              data['two_star_ratings'].sum() + data['one_star_ratings'].sum())
-                total_orders = data['orders'].sum()
+                # Правильный анализ частоты плохих оценок - только GOJEK данные
+                bad_ratings = (gojek_data['four_star_ratings'].sum() + gojek_data['three_star_ratings'].sum() + 
+                              gojek_data['two_star_ratings'].sum() + gojek_data['one_star_ratings'].sum())
+                gojek_orders = gojek_data['orders'].sum() if 'orders' in gojek_data.columns else 0
                 
-                if bad_ratings > 0 and total_orders > 0:
-                    orders_per_bad_rating = total_orders / bad_ratings
-                    insights.append(f"   📊 Частота плохих оценок: каждый {orders_per_bad_rating:.0f}-й заказ")
+                if bad_ratings > 0 and gojek_orders > 0:
+                    orders_per_bad_rating = gojek_orders / bad_ratings
+                    insights.append(f"   📊 Частота плохих оценок GOJEK: каждый {orders_per_bad_rating:.0f}-й заказ")
                     
-                    if orders_per_bad_rating >= 20:
+                    if orders_per_bad_rating >= 100:
                         insights.append(f"   🟢 ОТЛИЧНО: Очень редкие плохие оценки")
                     elif orders_per_bad_rating >= 10:
                         insights.append(f"   🟡 НОРМА: Умеренная частота плохих оценок")
@@ -2261,14 +2263,51 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             # Качество обслуживания
             f.write("⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ\n")
             f.write("-" * 50 + "\n")
-            if total_ratings > 0:
-                f.write(f"📊 Всего оценок: {total_ratings:,.0f}\n")
+            
+            # Используем те же переменные что и в консольном выводе
+            gojek_ratings_data = gojek_platform_data if not gojek_platform_data.empty else pd.DataFrame()
+            
+            if not gojek_ratings_data.empty and 'five_star_ratings' in gojek_ratings_data.columns:
+                one_stars = gojek_ratings_data['one_star_ratings'].sum()
+                two_stars = gojek_ratings_data['two_star_ratings'].sum()
+                three_stars = gojek_ratings_data['three_star_ratings'].sum()
+                four_stars = gojek_ratings_data['four_star_ratings'].sum()
+                five_stars = gojek_ratings_data['five_star_ratings'].sum()
+                total_gojek_ratings = one_stars + two_stars + three_stars + four_stars + five_stars
+                
+                grab_avg_rating = grab_platform_data['rating'].mean() if not grab_platform_data.empty and 'rating' in grab_platform_data.columns else 0
+                
+                f.write(f"📊 Детальные оценки клиентов GOJEK (всего: {total_gojek_ratings:,.0f}):\n")
+                
+                ratings_data = [
+                    (5, five_stars, "⭐⭐⭐⭐⭐"),
+                    (4, four_stars, "⭐⭐⭐⭐"),
+                    (3, three_stars, "⭐⭐⭐"),
+                    (2, two_stars, "⭐⭐"),
+                    (1, one_stars, "⭐")
+                ]
+                
                 for stars, count, emoji in ratings_data:
-                    percentage = (count / total_ratings) * 100
-                    f.write(f"{emoji} {stars} звезд: {count:,.0f} ({percentage:.1f}%)\n")
-                f.write(f"📈 Индекс удовлетворенности: {satisfaction_score:.2f}/5.0\n")
-                if 'negative_rate' in locals():
-                    f.write(f"🚨 Негативные отзывы: {negative_rate:.1f}%\n")
+                    if count > 0:  # Показываем только непустые категории
+                        percentage = (count / total_gojek_ratings) * 100 if total_gojek_ratings > 0 else 0
+                        f.write(f"  {emoji} {stars} звезд: {count:,.0f} ({percentage:.1f}%)\n")
+                
+                if total_gojek_ratings > 0:
+                    gojek_weighted_score = (five_stars * 5 + four_stars * 4 + three_stars * 3 + two_stars * 2 + one_stars * 1)
+                    gojek_satisfaction = gojek_weighted_score / total_gojek_ratings
+                    f.write(f"📈 Индекс удовлетворенности GOJEK: {gojek_satisfaction:.2f}/5.0\n")
+                
+                if grab_avg_rating > 0:
+                    f.write(f"📈 Средний рейтинг GRAB: {grab_avg_rating:.2f}/5.0 (детализация недоступна)\n")
+                
+                negative_ratings = one_stars + two_stars
+                if negative_ratings > 0:
+                    negative_rate = (negative_ratings / total_gojek_ratings) * 100
+                    f.write(f"🚨 Негативные отзывы GOJEK (1-2★): {negative_ratings:,.0f} ({negative_rate:.1f}%)\n")
+                
+                f.write(f"⚠️ ОГРАНИЧЕНИЯ: GOJEK {total_gojek_ratings} оценок, GRAB только средний рейтинг\n")
+            else:
+                f.write("📊 Детальные данные по оценкам недоступны\n")
             f.write("\n")
             
             # Внешние факторы
