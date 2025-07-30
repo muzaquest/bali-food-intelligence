@@ -1117,6 +1117,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Эффективность периода
     roi_percentage = ((marketing_sales - total_marketing) / total_marketing * 100) if total_marketing > 0 else 0
     
+    # Добавляем объяснение разницы между общими продажами и продажами от рекламы
+    print()
+    print("📊 РАЗБИВКА ПРОДАЖ:")
+    print(f"💰 Общая выручка: {total_sales:,.0f} IDR (все продажи)")
+    print(f"📈 Продажи от рекламы: {marketing_sales:,.0f} IDR (только от рекламных кампаний)")
+    organic_sales = total_sales - marketing_sales
+    organic_percentage = (organic_sales / total_sales * 100) if total_sales > 0 else 0
+    marketing_percentage = (marketing_sales / total_sales * 100) if total_sales > 0 else 0
+    print(f"🌱 Органические продажи: {organic_sales:,.0f} IDR ({organic_percentage:.1f}%)")
+    print(f"📊 Доля рекламы в общих продажах: {marketing_percentage:.1f}%")
+    print()
+    
     # ROI по платформам
     grab_roi = ((grab_marketing_sales - grab_marketing_spend) / grab_marketing_spend * 100) if grab_marketing_spend > 0 else 0
     gojek_roi = ((gojek_marketing_sales - gojek_marketing_spend) / gojek_marketing_spend * 100) if gojek_marketing_spend > 0 else 0
