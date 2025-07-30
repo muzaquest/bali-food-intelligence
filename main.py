@@ -1070,8 +1070,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}")
     
     # Рассчитываем средний чек по платформам
-    grab_sales = platform_data[platform_data['platform'] == 'grab']['sales'].sum() if not platform_data.empty else 0
-    gojek_sales = platform_data[platform_data['platform'] == 'gojek']['sales'].sum() if not platform_data.empty else 0
+    grab_sales = platform_data[platform_data['platform'] == 'grab']['total_sales'].sum() if not platform_data.empty else 0
+    gojek_sales = platform_data[platform_data['platform'] == 'gojek']['total_sales'].sum() if not platform_data.empty else 0
     
     grab_avg_check = grab_sales / grab_orders if grab_orders > 0 else 0
     gojek_avg_check = gojek_sales / gojek_orders if gojek_orders > 0 else 0
@@ -1082,8 +1082,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (средняя по рабочим дням)")
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
     # Правильное распределение клиентов по платформам
-    grab_customers = data[data['platform'] == 'grab']['total_customers'].sum()
-    gojek_customers = data[data['platform'] == 'gojek']['total_customers'].sum()
+    grab_customers = platform_data[platform_data['platform'] == 'grab']['total_customers'].sum()
+    gojek_customers = platform_data[platform_data['platform'] == 'gojek']['total_customers'].sum()
     
     print(f"👥 Обслужено клиентов:")
     print(f"   ├── 📱 GRAB: {grab_customers:,.0f} (детальная статистика)")
@@ -1168,8 +1168,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     # Добавляем раздел PAYOUTS
     print()
     print("💰 РЕАЛЬНЫЕ ВЫПЛАТЫ РЕСТОРАНУ (PAYOUTS):")
-    grab_payouts = data[data['platform'] == 'grab']['payouts'].sum()
-    gojek_payouts = data[data['platform'] == 'gojek']['payouts'].sum()
+    grab_payouts = platform_data[platform_data['platform'] == 'grab']['payouts'].sum()
+    gojek_payouts = platform_data[platform_data['platform'] == 'gojek']['payouts'].sum()
     total_payouts = grab_payouts + gojek_payouts
     
     grab_commission_pct = ((grab_platform_data['total_sales'].sum() - grab_payouts) / grab_platform_data['total_sales'].sum() * 100) if not grab_platform_data.empty and grab_platform_data['total_sales'].sum() > 0 else 0
