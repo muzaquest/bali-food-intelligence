@@ -1136,6 +1136,72 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print(f"   ├── 📱 GRAB: {grab_roi:+.1f}% (продажи: {grab_marketing_sales:,.0f} - бюджет: {grab_marketing_spend:,.0f})")
     print(f"   └── 🛵 GOJEK: {gojek_roi:+.1f}% (продажи: {gojek_marketing_sales:,.0f} - бюджет: {gojek_marketing_spend:,.0f})")
     
+    # Автоматические инсайты по ROI
+    print()
+    print("💡 ИНСАЙТЫ ПО ЭФФЕКТИВНОСТИ ПЛАТФОРМ:")
+    
+    # Определяем более эффективную платформу
+    if grab_roi > gojek_roi:
+        more_efficient = "GRAB"
+        more_efficient_roi = grab_roi
+        less_efficient = "GOJEK" 
+        less_efficient_roi = gojek_roi
+        more_efficient_emoji = "📱"
+        less_efficient_emoji = "🛵"
+    else:
+        more_efficient = "GOJEK"
+        more_efficient_roi = gojek_roi
+        less_efficient = "GRAB"
+        less_efficient_roi = grab_roi
+        more_efficient_emoji = "🛵"
+        less_efficient_emoji = "📱"
+    
+    # Инсайт 1: Сравнение эффективности
+    efficiency_diff = more_efficient_roi - less_efficient_roi
+    print(f"• {more_efficient_emoji} {more_efficient} БОЛЕЕ ЭФФЕКТИВЕН: {more_efficient_roi:+.1f}% vs {less_efficient_roi:+.1f}% (разница: {efficiency_diff:.1f}%)")
+    
+    # Инсайт 2: Анализ бюджетов и ROAS
+    grab_roas = grab_marketing_sales / grab_marketing_spend if grab_marketing_spend > 0 else 0
+    gojek_roas = gojek_marketing_sales / gojek_marketing_spend if gojek_marketing_spend > 0 else 0
+    
+    if grab_marketing_spend > gojek_marketing_spend:
+        bigger_budget = "GRAB"
+        bigger_budget_amount = grab_marketing_spend / 1000000
+        smaller_budget = "GOJEK"
+        smaller_budget_amount = gojek_marketing_spend / 1000000
+    else:
+        bigger_budget = "GOJEK" 
+        bigger_budget_amount = gojek_marketing_spend / 1000000
+        smaller_budget = "GRAB"
+        smaller_budget_amount = grab_marketing_spend / 1000000
+    
+    print(f"• 💰 {bigger_budget}: больший бюджет ({bigger_budget_amount:.1f}M), {smaller_budget}: меньший бюджет ({smaller_budget_amount:.1f}M)")
+    print(f"• 🎯 ROAS: GRAB {grab_roas:.1f}x, GOJEK {gojek_roas:.1f}x")
+    
+    # Инсайт 3: Стратегические рекомендации
+    print()
+    print("🎯 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ:")
+    
+    # Общая оценка ROI
+    if roi_percentage > 1000:
+        roi_assessment = "ОТЛИЧНЫЙ"
+    elif roi_percentage > 500:
+        roi_assessment = "ХОРОШИЙ"
+    elif roi_percentage > 200:
+        roi_assessment = "УМЕРЕННЫЙ"
+    else:
+        roi_assessment = "ТРЕБУЕТ ВНИМАНИЯ"
+    
+    print(f"• 📊 Общий ROI {roi_assessment} ({roi_percentage:+.1f}%) - обе платформы прибыльны")
+    
+    # Рекомендация по более эффективной платформе
+    if more_efficient_roi > less_efficient_roi * 1.5:  # Если разница больше 50%
+        print(f"• 🚀 ПРИОРИТЕТ: Увеличить бюджет {more_efficient} - самая высокая отдача")
+        print(f"• 🔧 Оптимизировать {less_efficient} - потенциал роста эффективности")
+    else:
+        print(f"• ⚖️ Обе платформы показывают сопоставимую эффективность")
+        print(f"• 📈 Рекомендуется пропорциональное увеличение бюджетов")
+    
     print()
     print(f"📅 Период: {len(data)} дней")
     print()
