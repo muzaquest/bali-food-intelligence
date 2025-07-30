@@ -1461,13 +1461,15 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     if total_impressions > 0:
         ctr = (total_menu_visits / total_impressions) * 100
         add_to_cart_rate = (total_add_to_carts / total_menu_visits) * 100 if total_menu_visits > 0 else 0
-        conversion_rate = (total_conversions / total_menu_visits) * 100 if total_menu_visits > 0 else 0
+        cart_to_order_rate = (grab_marketing_orders / total_add_to_carts) * 100 if total_add_to_carts > 0 else 0
+        overall_conversion = (grab_marketing_orders / total_menu_visits) * 100 if total_menu_visits > 0 else 0
         
         print(f"  👁️ Показы рекламы: {total_impressions:,.0f} (только GRAB)")
         print(f"  🔗 Посещения меню: {total_menu_visits:,.0f} (CTR: {ctr:.2f}%) (только GRAB)")
-        print(f"  🛒 Добавления в корзину: {total_add_to_carts:,.0f} (Rate: {add_to_cart_rate:.2f}%) (только GRAB)")
-        print(f"  ✅ Конверсии: {total_conversions:,.0f} (Rate: {conversion_rate:.2f}%) (только GRAB)")
-        print(f"  📦 Заказы от рекламы: {grab_marketing_orders:,.0f} (только GRAB)")
+        print(f"  🛒 Добавления в корзину: {total_add_to_carts:,.0f} (конверсия: {add_to_cart_rate:.2f}% от кликов) (только GRAB)")
+        print(f"  📦 Заказы от рекламы: {grab_marketing_orders:,.0f} (конверсия: {cart_to_order_rate:.1f}% от корзины) (только GRAB)")
+        print(f"  ")
+        print(f"  📊 Общая конверсия клик → заказ: {overall_conversion:.1f}% ({grab_marketing_orders:,.0f} заказов из {total_menu_visits:,.0f} кликов)")
         
         # Добавляем методическое примечание для воронки
         funnel_note = generate_methodology_note('conversion')
