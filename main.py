@@ -1786,8 +1786,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             weather_groups[condition] = []
         weather_groups[condition].append(day_sales)
     
-    # Применяем интеллектуальный анализ к каждому дню
-    print(f"  🧠 Применяем научно обоснованные коэффициенты влияния...")
+    # УПРОЩЕННЫЙ АНАЛИЗ ПОГОДЫ (без симуляций и псевдонауки)
+    print(f"  📊 Анализ погодных данных за {len(all_dates)} дней...")
     
     total_weather_impact = 0
     impact_details = []
@@ -1916,11 +1916,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     for i, recommendation in enumerate(general_analysis['recommendations'][:3], 1):
         print(f"    {i}. {recommendation}")
     
-    print(f"  🔬 НАУЧНОЕ ОБОСНОВАНИЕ:")
-    print(f"    📊 Основано на анализе 800+ наблюдений delivery-ресторанов")
-    print(f"    📈 Статистически значимые корреляции")
-    print(f"    🌍 Учтены особенности зоны: {restaurant_location.get('zone', 'Unknown')}")
-    print(f"    🎯 Специализация: влияние погоды на курьеров и клиентов")
+    if not api_available:
+        print("  ⚠️ Внешний API недоступен - используем базовый анализ")
+        print("  📊 Показываем основные тренды без детальных погодных данных")
+        print("  💡 Для полного анализа погоды подключите Open-Meteo API")
+        print()
+    else:
+        print("  ✅ Получаем реальные погодные данные...")
     
     # Анализ праздников
     print(f"\n📅 Влияние праздников:")
@@ -2249,10 +2251,30 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 f.write(f"🔗 CTR: {ctr:.2f}%\n")
                 f.write(f"✅ Конверсия: {conversion_rate:.2f}%\n")
                 f.write(f"💰 Стоимость заказа: {cost_per_order:,.0f} IDR\n")
-                f.write("ROAS по месяцам:\n")
-                for month, roas in monthly_roas.items():
-                    month_name = month_names.get(month, f"Месяц {month}")
-                    f.write(f"  {month_name}: {roas:.2f}x\n")
+                # ROAS по месяцам - пересчитываем для сохранения отчета
+                f.write("ROAS по месяцам (GRAB + GOJEK):\n")
+                
+                # Пересчитываем april_roas и may_roas для сохранения
+                april_grab_sales = grab_platform_data[grab_platform_data['date'].dt.month == 4]['marketing_sales'].sum() if not grab_platform_data.empty else 0
+                april_grab_spend = grab_platform_data[grab_platform_data['date'].dt.month == 4]['marketing_spend'].sum() if not grab_platform_data.empty else 0
+                april_gojek_sales = gojek_platform_data[gojek_platform_data['date'].dt.month == 4]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+                april_gojek_spend = gojek_platform_data[gojek_platform_data['date'].dt.month == 4]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
+                
+                april_total_sales = april_grab_sales + april_gojek_sales
+                april_total_spend = april_grab_spend + april_gojek_spend
+                april_roas_save = april_total_sales / april_total_spend if april_total_spend > 0 else 0
+                
+                may_grab_sales = grab_platform_data[grab_platform_data['date'].dt.month == 5]['marketing_sales'].sum() if not grab_platform_data.empty else 0
+                may_grab_spend = grab_platform_data[grab_platform_data['date'].dt.month == 5]['marketing_spend'].sum() if not grab_platform_data.empty else 0
+                may_gojek_sales = gojek_platform_data[gojek_platform_data['date'].dt.month == 5]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+                may_gojek_spend = gojek_platform_data[gojek_platform_data['date'].dt.month == 5]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
+                
+                may_total_sales = may_grab_sales + may_gojek_sales
+                may_total_spend = may_grab_spend + may_gojek_spend
+                may_roas_save = may_total_sales / may_total_spend if may_total_spend > 0 else 0
+                
+                f.write(f"  Апрель: {april_roas_save:.2f}x\n")
+                f.write(f"  Май: {may_roas_save:.2f}x\n")
             f.write("\n")
             
             # Операционные показатели
