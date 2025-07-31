@@ -1534,21 +1534,21 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         # Эффективность кампаний по месяцам (GRAB + GOJEK) - используем точные расчеты
         print(f"\n🎯 ROAS по месяцам (GRAB + GOJEK):")
         
-        # Апрель (месяц 4)
-        april_grab_sales = grab_platform_data[grab_platform_data['date'].dt.month == 4]['marketing_sales'].sum() if not grab_platform_data.empty else 0
-        april_grab_spend = grab_platform_data[grab_platform_data['date'].dt.month == 4]['marketing_spend'].sum() if not grab_platform_data.empty else 0
-        april_gojek_sales = gojek_platform_data[gojek_platform_data['date'].dt.month == 4]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
-        april_gojek_spend = gojek_platform_data[gojek_platform_data['date'].dt.month == 4]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
+        # Апрель (месяц 4) - преобразуем date в datetime
+        april_grab_sales = grab_platform_data[pd.to_datetime(grab_platform_data['date']).dt.month == 4]['marketing_sales'].sum() if not grab_platform_data.empty else 0
+        april_grab_spend = grab_platform_data[pd.to_datetime(grab_platform_data['date']).dt.month == 4]['marketing_spend'].sum() if not grab_platform_data.empty else 0
+        april_gojek_sales = gojek_platform_data[pd.to_datetime(gojek_platform_data['date']).dt.month == 4]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+        april_gojek_spend = gojek_platform_data[pd.to_datetime(gojek_platform_data['date']).dt.month == 4]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
         
         april_total_sales = april_grab_sales + april_gojek_sales
         april_total_spend = april_grab_spend + april_gojek_spend
         april_roas = april_total_sales / april_total_spend if april_total_spend > 0 else 0
         
-        # Май (месяц 5)
-        may_grab_sales = grab_platform_data[grab_platform_data['date'].dt.month == 5]['marketing_sales'].sum() if not grab_platform_data.empty else 0
-        may_grab_spend = grab_platform_data[grab_platform_data['date'].dt.month == 5]['marketing_spend'].sum() if not grab_platform_data.empty else 0
-        may_gojek_sales = gojek_platform_data[gojek_platform_data['date'].dt.month == 5]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
-        may_gojek_spend = gojek_platform_data[gojek_platform_data['date'].dt.month == 5]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
+        # Май (месяц 5) - преобразуем date в datetime
+        may_grab_sales = grab_platform_data[pd.to_datetime(grab_platform_data['date']).dt.month == 5]['marketing_sales'].sum() if not grab_platform_data.empty else 0
+        may_grab_spend = grab_platform_data[pd.to_datetime(grab_platform_data['date']).dt.month == 5]['marketing_spend'].sum() if not grab_platform_data.empty else 0
+        may_gojek_sales = gojek_platform_data[pd.to_datetime(gojek_platform_data['date']).dt.month == 5]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+        may_gojek_spend = gojek_platform_data[pd.to_datetime(gojek_platform_data['date']).dt.month == 5]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
         
         may_total_sales = may_grab_sales + may_gojek_sales
         may_total_spend = may_grab_spend + may_gojek_spend
@@ -2255,19 +2255,19 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 f.write("ROAS по месяцам (GRAB + GOJEK):\n")
                 
                 # Пересчитываем april_roas и may_roas для сохранения
-                april_grab_sales = grab_platform_data[grab_platform_data['date'].dt.month == 4]['marketing_sales'].sum() if not grab_platform_data.empty else 0
-                april_grab_spend = grab_platform_data[grab_platform_data['date'].dt.month == 4]['marketing_spend'].sum() if not grab_platform_data.empty else 0
-                april_gojek_sales = gojek_platform_data[gojek_platform_data['date'].dt.month == 4]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
-                april_gojek_spend = gojek_platform_data[gojek_platform_data['date'].dt.month == 4]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
+                april_grab_sales = grab_platform_data[pd.to_datetime(grab_platform_data['date']).dt.month == 4]['marketing_sales'].sum() if not grab_platform_data.empty else 0
+                april_grab_spend = grab_platform_data[pd.to_datetime(grab_platform_data['date']).dt.month == 4]['marketing_spend'].sum() if not grab_platform_data.empty else 0
+                april_gojek_sales = gojek_platform_data[pd.to_datetime(gojek_platform_data['date']).dt.month == 4]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+                april_gojek_spend = gojek_platform_data[pd.to_datetime(gojek_platform_data['date']).dt.month == 4]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
                 
                 april_total_sales = april_grab_sales + april_gojek_sales
                 april_total_spend = april_grab_spend + april_gojek_spend
                 april_roas_save = april_total_sales / april_total_spend if april_total_spend > 0 else 0
                 
-                may_grab_sales = grab_platform_data[grab_platform_data['date'].dt.month == 5]['marketing_sales'].sum() if not grab_platform_data.empty else 0
-                may_grab_spend = grab_platform_data[grab_platform_data['date'].dt.month == 5]['marketing_spend'].sum() if not grab_platform_data.empty else 0
-                may_gojek_sales = gojek_platform_data[gojek_platform_data['date'].dt.month == 5]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
-                may_gojek_spend = gojek_platform_data[gojek_platform_data['date'].dt.month == 5]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
+                may_grab_sales = grab_platform_data[pd.to_datetime(grab_platform_data['date']).dt.month == 5]['marketing_sales'].sum() if not grab_platform_data.empty else 0
+                may_grab_spend = grab_platform_data[pd.to_datetime(grab_platform_data['date']).dt.month == 5]['marketing_spend'].sum() if not grab_platform_data.empty else 0
+                may_gojek_sales = gojek_platform_data[pd.to_datetime(gojek_platform_data['date']).dt.month == 5]['marketing_sales'].sum() if not gojek_platform_data.empty else 0
+                may_gojek_spend = gojek_platform_data[pd.to_datetime(gojek_platform_data['date']).dt.month == 5]['marketing_spend'].sum() if not gojek_platform_data.empty else 0
                 
                 may_total_sales = may_grab_sales + may_gojek_sales
                 may_total_spend = may_grab_spend + may_gojek_spend
