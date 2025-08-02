@@ -303,10 +303,26 @@ class ProperMLDetectiveAnalysis:
     def add_competition_data(self, df):
         """Добавляет данные о конкуренции"""
         
-        # Симулируем открытие новых ресторанов
+        # РЕАЛИСТИЧНАЯ СИМУЛЯЦИЯ конкуренции на основе дня недели и сезона
         np.random.seed(456)
-        df['new_competitors_nearby'] = np.random.poisson(0.1, len(df))  # Новые конкуренты
-        df['competitor_marketing_intensity'] = np.random.gamma(2, 0.5, len(df))  # Интенсивность конкурентов
+        
+        # Базовая интенсивность конкуренции (1.0 = средняя)
+        base_competition = 1.0
+        
+        # Конкуренция выше в выходные и туристический сезон
+        weekend_boost = np.where(df.get('is_weekend', 0) == 1, 0.3, 0.0)
+        tourist_boost = (df.get('tourist_seasonal_coeff', 1.0) - 1.0) * 0.5
+        
+        # Случайные колебания ±20%
+        random_variation = np.random.normal(0, 0.2, len(df))
+        
+        df['competitor_marketing_intensity'] = np.clip(
+            base_competition + weekend_boost + tourist_boost + random_variation,
+            0.3, 2.5  # Ограничиваем разумными рамками
+        )
+        
+        # Новые конкуренты (редко)
+        df['new_competitors_nearby'] = np.random.poisson(0.05, len(df))  # Новые конкуренты
         
         return df
     
@@ -614,21 +630,25 @@ class ProperMLDetectiveAnalysis:
         if 'competitor_marketing_intensity' in day_row:
             competition = day_row['competitor_marketing_intensity']
             if competition > 1.2:
-                results.append(f"🥊 Высокая конкуренция: интенсивность {competition:.2f}")
+                results.append(f"🥊 Высокая конкуренция: {competition:.2f}x (в {competition:.1f} раза выше среднего)")
             elif competition < 0.8:
-                results.append(f"💤 Низкая конкуренция: интенсивность {competition:.2f}")
+                results.append(f"💤 Низкая конкуренция: {competition:.2f}x (на {(1-competition)*100:.0f}% ниже среднего)")
+            else:
+                results.append(f"⚖️ Обычная конкуренция: {competition:.2f}x")
         
         # Праздники
         if 'is_holiday' in day_row and day_row['is_holiday'] > 0:
             results.append(f"🎉 Праздничный день")
         
         # Туристический сезон
-        if 'tourist_season_index' in day_row:
-            tourist_idx = day_row['tourist_season_index']
+        if 'tourist_seasonal_coeff' in day_row:
+            tourist_idx = day_row['tourist_seasonal_coeff']
             if tourist_idx < 0.8:
-                results.append(f"🏖️ Низкий туристический сезон: {tourist_idx:.2f}")
+                results.append(f"🏖️ Низкий туристический сезон: {tourist_idx:.2f}x (на {(1-tourist_idx)*100:.0f}% меньше туристов)")
             elif tourist_idx > 1.2:
-                results.append(f"🏖️ Высокий туристический сезон: {tourist_idx:.2f}")
+                results.append(f"🏖️ Высокий туристический сезон: {tourist_idx:.2f}x (на {(tourist_idx-1)*100:.0f}% больше туристов)")
+            else:
+                results.append(f"🏖️ Обычный туристический сезон: {tourist_idx:.2f}x")
         
         # Общий вывод
         results.append(f"\n💡 ВОЗМОЖНЫЕ ПРИЧИНЫ:")
