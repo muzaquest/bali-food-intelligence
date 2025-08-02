@@ -519,9 +519,135 @@ class ProperMLDetectiveAnalysis:
                 if anomalies_found > 5:
                     results.append("(показаны топ-5 наиболее значительных)")
             
+            # 6. Анализ лучшего и худшего дня
+            results.append("")
+            results.append("🔍 АНАЛИЗ ЭКСТРЕМАЛЬНЫХ ДНЕЙ")
+            results.append("=" * 50)
+            
+            # Находим лучший и худший день
+            best_day = restaurant_data.loc[restaurant_data['sales'].idxmax()]
+            worst_day = restaurant_data.loc[restaurant_data['sales'].idxmin()]
+            
+            results.append(f"🏆 ЛУЧШИЙ ДЕНЬ: {best_day['stat_date']} ({best_day['sales']:,.0f} IDR)")
+            best_analysis = self.analyze_specific_day(df, best_day['stat_date'], self.model, self.feature_names)
+            for line in best_analysis:
+                results.append(line)
+            
+            results.append("")
+            results.append(f"📉 ХУДШИЙ ДЕНЬ: {worst_day['stat_date']} ({worst_day['sales']:,.0f} IDR)")
+            worst_analysis = self.analyze_specific_day(df, worst_day['stat_date'], self.model, self.feature_names)
+            for line in worst_analysis:
+                results.append(line)
+            
         except Exception as e:
             results.append(f"❌ Ошибка ML анализа: {e}")
             results.append("🔄 Проверьте данные и зависимости")
+        
+        return results
+    
+    def analyze_specific_day(self, df, target_date, model, feature_names):
+        """Анализирует конкретный день и объясняет причины низких/высоких продаж"""
+        
+        # Находим данные для конкретного дня
+        day_data = df[df['stat_date'] == target_date]
+        if day_data.empty:
+            return [f"❌ Данные для {target_date} не найдены"]
+        
+        day_row = day_data.iloc[0]
+        actual_sales = day_row['sales']
+        
+        # Подготавливаем признаки для предсказания
+        X_day = day_data[feature_names].fillna(0)
+        predicted_sales = model.predict(X_day)[0]
+        
+        difference_pct = ((actual_sales - predicted_sales) / predicted_sales) * 100
+        
+        results = []
+        results.append(f"🔍 ДЕТАЛЬНЫЙ АНАЛИЗ ДНЯ: {target_date}")
+        results.append("-" * 50)
+        results.append(f"💰 Фактические продажи: {actual_sales:,.0f} IDR")
+        results.append(f"🎯 Прогноз модели: {predicted_sales:,.0f} IDR")
+        results.append(f"📊 Отклонение: {difference_pct:+.1f}%")
+        
+        if abs(difference_pct) > 20:
+            results.append(f"🚨 АНОМАЛЬНЫЙ ДЕНЬ! Отклонение больше 20%")
+        
+        # Анализируем ключевые факторы
+        results.append(f"\n🔬 АНАЛИЗ КЛЮЧЕВЫХ ФАКТОРОВ:")
+        
+        # День недели
+        weekday = pd.to_datetime(target_date).strftime('%A')
+        weekday_ru = {'Monday': 'Понедельник', 'Tuesday': 'Вторник', 'Wednesday': 'Среда', 
+                      'Thursday': 'Четверг', 'Friday': 'Пятница', 'Saturday': 'Суббота', 'Sunday': 'Воскресенье'}
+        results.append(f"📅 День недели: {weekday_ru.get(weekday, weekday)}")
+        
+        # Погода
+        if 'weather_rain_hours' in day_row:
+            rain_hours = day_row['weather_rain_hours']
+            if rain_hours > 2:
+                results.append(f"🌧️ Дождь: {rain_hours:.1f} часов - сильно снизил доставки")
+            elif rain_hours > 0.5:
+                results.append(f"🌦️ Дождь: {rain_hours:.1f} часов - умеренно повлиял на доставки")
+            else:
+                results.append(f"☀️ Без дождя - погода не мешала доставкам")
+        
+        # Маркетинг
+        if 'marketing_spend' in day_row:
+            marketing = day_row['marketing_spend']
+            if marketing < 100000:
+                results.append(f"📉 Низкий маркетинговый бюджет: {marketing:,.0f} IDR")
+            else:
+                results.append(f"📈 Маркетинговый бюджет: {marketing:,.0f} IDR")
+        
+        # Промо заказы
+        if 'promo_orders' in day_row:
+            promo = day_row['promo_orders']
+            total_orders = day_row.get('orders', 0)
+            if total_orders > 0:
+                promo_rate = (promo / total_orders) * 100
+                if promo_rate < 10:
+                    results.append(f"🎁 Мало промо: {promo:.0f} из {total_orders:.0f} заказов ({promo_rate:.1f}%)")
+                else:
+                    results.append(f"🎁 Промо активность: {promo:.0f} из {total_orders:.0f} заказов ({promo_rate:.1f}%)")
+        
+        # Конкуренция
+        if 'competitor_marketing_intensity' in day_row:
+            competition = day_row['competitor_marketing_intensity']
+            if competition > 1.2:
+                results.append(f"🥊 Высокая конкуренция: интенсивность {competition:.2f}")
+            elif competition < 0.8:
+                results.append(f"💤 Низкая конкуренция: интенсивность {competition:.2f}")
+        
+        # Праздники
+        if 'is_holiday' in day_row and day_row['is_holiday'] > 0:
+            results.append(f"🎉 Праздничный день")
+        
+        # Туристический сезон
+        if 'tourist_season_index' in day_row:
+            tourist_idx = day_row['tourist_season_index']
+            if tourist_idx < 0.8:
+                results.append(f"🏖️ Низкий туристический сезон: {tourist_idx:.2f}")
+            elif tourist_idx > 1.2:
+                results.append(f"🏖️ Высокий туристический сезон: {tourist_idx:.2f}")
+        
+        # Общий вывод
+        results.append(f"\n💡 ВОЗМОЖНЫЕ ПРИЧИНЫ:")
+        if difference_pct < -20:
+            results.append("🔴 НИЗКИЕ ПРОДАЖИ могли быть вызваны:")
+            if 'weather_rain_hours' in day_row and day_row['weather_rain_hours'] > 2:
+                results.append("   • Сильный дождь снизил количество доставок")
+            if 'marketing_spend' in day_row and day_row['marketing_spend'] < 100000:
+                results.append("   • Недостаточный маркетинговый бюджет")
+            if 'competitor_marketing_intensity' in day_row and day_row['competitor_marketing_intensity'] > 1.2:
+                results.append("   • Активная реклама конкурентов")
+            if weekday in ['Monday', 'Tuesday']:
+                results.append("   • Начало недели - традиционно слабые дни")
+        elif difference_pct > 20:
+            results.append("🟢 ВЫСОКИЕ ПРОДАЖИ могли быть вызваны:")
+            if 'promo_orders' in day_row and day_row['promo_orders'] > 20:
+                results.append("   • Успешная промо-кампания")
+            if weekday in ['Friday', 'Saturday', 'Sunday']:
+                results.append("   • Выходные - традиционно сильные дни")
         
         return results
     
