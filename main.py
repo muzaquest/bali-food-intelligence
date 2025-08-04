@@ -1061,12 +1061,17 @@ def generate_only_eggs_specific_insights(data, grab_data, gojek_data):
     return insights
 
 
-def analyze_platform_downtime(restaurant_id, start_date, end_date):
+def analyze_platform_downtime(restaurant_id, start_date, end_date, external_data=None):
     """Анализирует выключения платформ (Close Time)
     
     Поддерживает множественные форматы данных:
     - GOJEK close_time: строки "H:M:S" или секунды (INTEGER)
     - GRAB offline_rate: проценты или минуты
+    - external_data: словарь с точными данными в секундах (приоритет над базой)
+    
+    Формат external_data: {
+        'date': {'gojek': seconds, 'grab': seconds}
+    }
     """
     
     def parse_time_value(time_value):
@@ -1138,37 +1143,83 @@ def analyze_platform_downtime(restaurant_id, start_date, end_date):
         results = []
         critical_issues = []
         
-        # Обрабатываем GRAB данные
+        # Обрабатываем GRAB данные (с приоритетом внешних данных)
         grab_downtime = []
-        if not grab_data.empty:
-            for _, row in grab_data.iterrows():
-                offline_seconds = convert_offline_rate_to_seconds(row['offline_rate'])
-                if offline_seconds >= 3600:  # >1 час критично
-                    grab_downtime.append({
-                        'date': row['stat_date'],
-                        'platform': 'GRAB',
-                        'downtime_seconds': offline_seconds,
-                        'downtime_formatted': format_duration(offline_seconds),
-                        'original_value': f"{row['offline_rate']}%",
-                        'sales': row['sales'] or 0,
-                        'orders': row['orders'] or 0
-                    })
         
-        # Обрабатываем GOJEK данные
+        # Если есть внешние данные, используем их
+        if external_data:
+            for date_str, platforms in external_data.items():
+                if 'grab' in platforms and platforms['grab'] > 0:
+                    grab_seconds = int(platforms['grab'])
+                    if grab_seconds >= 3600:  # >1 час критично
+                        # Ищем данные о продажах для этой даты
+                        sales_data = grab_data[grab_data['stat_date'] == date_str]
+                        sales = sales_data.iloc[0]['sales'] if not sales_data.empty else 0
+                        orders = sales_data.iloc[0]['orders'] if not sales_data.empty else 0
+                        
+                        grab_downtime.append({
+                            'date': date_str,
+                            'platform': 'GRAB',
+                            'downtime_seconds': grab_seconds,
+                            'downtime_formatted': format_duration(grab_seconds),
+                            'original_value': f"{grab_seconds}s (external)",
+                            'sales': sales or 0,
+                            'orders': orders or 0
+                        })
+        else:
+            # Используем данные из базы (старая логика)
+            if not grab_data.empty:
+                for _, row in grab_data.iterrows():
+                    offline_seconds = convert_offline_rate_to_seconds(row['offline_rate'])
+                    if offline_seconds >= 3600:  # >1 час критично
+                        grab_downtime.append({
+                            'date': row['stat_date'],
+                            'platform': 'GRAB',
+                            'downtime_seconds': offline_seconds,
+                            'downtime_formatted': format_duration(offline_seconds),
+                            'original_value': f"{row['offline_rate']}%",
+                            'sales': row['sales'] or 0,
+                            'orders': row['orders'] or 0
+                        })
+        
+        # Обрабатываем GOJEK данные (с приоритетом внешних данных)
         gojek_downtime = []
-        if not gojek_data.empty:
-            for _, row in gojek_data.iterrows():
-                downtime_seconds = parse_time_value(row['close_time'])
-                if downtime_seconds >= 3600:  # >1 час критично
-                    gojek_downtime.append({
-                        'date': row['stat_date'],
-                        'platform': 'GOJEK',
-                        'downtime_seconds': downtime_seconds,
-                        'downtime_formatted': format_duration(downtime_seconds),
-                        'original_value': str(row['close_time']),
-                        'sales': row['sales'] or 0,
-                        'orders': row['orders'] or 0
-                    })
+        
+        # Если есть внешние данные, используем их
+        if external_data:
+            for date_str, platforms in external_data.items():
+                if 'gojek' in platforms and platforms['gojek'] > 0:
+                    gojek_seconds = int(platforms['gojek'])
+                    if gojek_seconds >= 3600:  # >1 час критично
+                        # Ищем данные о продажах для этой даты
+                        sales_data = gojek_data[gojek_data['stat_date'] == date_str]
+                        sales = sales_data.iloc[0]['sales'] if not sales_data.empty else 0
+                        orders = sales_data.iloc[0]['orders'] if not sales_data.empty else 0
+                        
+                        gojek_downtime.append({
+                            'date': date_str,
+                            'platform': 'GOJEK',
+                            'downtime_seconds': gojek_seconds,
+                            'downtime_formatted': format_duration(gojek_seconds),
+                            'original_value': f"{gojek_seconds}s (external)",
+                            'sales': sales or 0,
+                            'orders': orders or 0
+                        })
+        else:
+            # Используем данные из базы (старая логика)
+            if not gojek_data.empty:
+                for _, row in gojek_data.iterrows():
+                    downtime_seconds = parse_time_value(row['close_time'])
+                    if downtime_seconds >= 3600:  # >1 час критично
+                        gojek_downtime.append({
+                            'date': row['stat_date'],
+                            'platform': 'GOJEK',
+                            'downtime_seconds': downtime_seconds,
+                            'downtime_formatted': format_duration(downtime_seconds),
+                            'original_value': str(row['close_time']),
+                            'sales': row['sales'] or 0,
+                            'orders': row['orders'] or 0
+                        })
         
         # Объединяем критические выключения
         all_critical = grab_downtime + gojek_downtime
