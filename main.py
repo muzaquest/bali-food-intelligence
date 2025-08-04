@@ -1072,7 +1072,7 @@ def analyze_platform_downtime(restaurant_id, start_date, end_date):
         except:
             return 0
 
-    def format_duration(seconds):
+    def format_duration_from_seconds(seconds):
         """Форматирует секунды в H:MM"""
         if seconds == 0:
             return '0:00'
@@ -1080,79 +1080,98 @@ def analyze_platform_downtime(restaurant_id, start_date, end_date):
         minutes = (seconds % 3600) // 60
         return f'{hours}:{minutes:02d}'
     
+    def format_duration_from_percent(offline_rate):
+        """Конвертирует offline_rate в часы:минуты"""
+        if offline_rate >= 100:
+            # Если >= 100, вероятно это минуты
+            hours = int(offline_rate // 60)
+            minutes = int(offline_rate % 60)
+            return f'{hours}:{minutes:02d}'
+        else:
+            # Если < 100, это процент от 24 часов
+            total_minutes = int(offline_rate * 24 * 60 / 100)
+            hours = total_minutes // 60
+            minutes = total_minutes % 60
+            return f'{hours}:{minutes:02d}'
+    
     try:
         conn = sqlite3.connect("database.sqlite")
         
-        # Анализ GOJEK выключений
+        # Анализ GRAB выключений (offline_rate)
+        grab_query = f"""
+        SELECT stat_date, offline_rate, sales, orders, ads_spend, impressions
+        FROM grab_stats 
+        WHERE restaurant_id = {restaurant_id} AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+        AND offline_rate IS NOT NULL AND offline_rate > 0
+        ORDER BY offline_rate DESC
+        """
+        
+        grab_data = pd.read_sql_query(grab_query, conn)
+        
+        # Анализ GOJEK выключений (close_time)  
         gojek_query = f"""
         SELECT stat_date, close_time, sales, orders
         FROM gojek_stats 
         WHERE restaurant_id = {restaurant_id} AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+        AND close_time IS NOT NULL AND close_time != '0:0:0' AND close_time != ''
         ORDER BY stat_date
         """
         
         gojek_data = pd.read_sql_query(gojek_query, conn)
         conn.close()
         
-        # Обрабатываем данные GOJEK
-        downtime_days = []
-        total_downtime_seconds = 0
+        results = []
+        total_issues = 0
         
-        for _, row in gojek_data.iterrows():
-            downtime_sec = parse_time_string(row['close_time'])
-            if downtime_sec > 0:
-                downtime_days.append({
-                    'date': row['stat_date'],
-                    'downtime_sec': downtime_sec,
-                    'downtime_formatted': format_duration(downtime_sec),
-                    'sales': row['sales'] or 0,
-                    'orders': row['orders'] or 0
-                })
-                total_downtime_seconds += downtime_sec
+        # Обрабатываем GRAB данные
+        if not grab_data.empty:
+            grab_critical = grab_data[grab_data['offline_rate'] >= 60]  # >60% или >60 минут = критично
+            total_issues += len(grab_data)
+            
+            results.append(f"📱 GRAB выключения: {len(grab_data)} дней")
+            
+            if not grab_critical.empty:
+                results.append(f"🚨 КРИТИЧЕСКИЕ GRAB выключения (>60%): {len(grab_critical)}")
+                for _, row in grab_critical.head(3).iterrows():
+                    downtime_formatted = format_duration_from_percent(row['offline_rate'])
+                    sales = row['sales'] or 0
+                    results.append(f"   • {row['stat_date']}: {downtime_formatted} ({row['offline_rate']}%) | Продажи: {sales:,.0f} IDR")
         
-        if not downtime_days:
+        # Обрабатываем GOJEK данные
+        if not gojek_data.empty:
+            gojek_critical = []
+            for _, row in gojek_data.iterrows():
+                downtime_sec = parse_time_string(row['close_time'])
+                if downtime_sec >= 3600:  # >1 час
+                    gojek_critical.append({
+                        'date': row['stat_date'],
+                        'downtime_formatted': format_duration_from_seconds(downtime_sec),
+                        'sales': row['sales'] or 0
+                    })
+            
+            total_issues += len(gojek_data)
+            results.append(f"🛵 GOJEK выключения: {len(gojek_data)} дней")
+            
+            if gojek_critical:
+                results.append(f"🚨 КРИТИЧЕСКИЕ GOJEK выключения (>1 час): {len(gojek_critical)}")
+                for day in gojek_critical[:3]:
+                    results.append(f"   • {day['date']}: {day['downtime_formatted']} | Продажи: {day['sales']:,.0f} IDR")
+        
+        if total_issues == 0:
             return ["✅ Нет значительных выключений платформ"]
         
-        # Формируем результат
-        results = []
-        results.append(f"🛵 GOJEK выключения: {len(downtime_days)} дней из {len(gojek_data)} ({len(downtime_days)/len(gojek_data)*100:.1f}%)")
-        results.append(f"⏱️ Общее время выключения: {format_duration(total_downtime_seconds)}")
-        
-        # Топ критических выключений (> 1 часа)
-        critical_downtime = [d for d in downtime_days if d['downtime_sec'] >= 3600]
-        if critical_downtime:
-            results.append(f"🚨 КРИТИЧЕСКИЕ выключения (>1 час): {len(critical_downtime)}")
-            critical_downtime.sort(key=lambda x: x['downtime_sec'], reverse=True)
-            
-            for day in critical_downtime[:3]:  # Топ-3
-                results.append(f"   • {day['date']}: {day['downtime_formatted']} | Продажи: {day['sales']:,.0f} IDR")
-        
-        # Анализ влияния на продажи
-        if len(downtime_days) > 1:
-            # Средние продажи в дни без выключений
-            no_downtime_sales = []
-            for _, row in gojek_data.iterrows():
-                if parse_time_string(row['close_time']) == 0 and row['sales'] and row['sales'] > 0:
-                    no_downtime_sales.append(row['sales'])
-            
-            # Средние продажи в дни с выключениями  
-            downtime_sales = [d['sales'] for d in downtime_days if d['sales'] > 0]
-            
-            if no_downtime_sales and downtime_sales:
-                avg_normal = sum(no_downtime_sales) / len(no_downtime_sales)
-                avg_downtime = sum(downtime_sales) / len(downtime_sales)
-                
-                if avg_normal > 0:
-                    impact = ((avg_normal - avg_downtime) / avg_normal) * 100
-                    if abs(impact) > 5:  # Значимое влияние
-                        results.append(f"📊 Влияние на продажи GOJEK: {impact:+.1f}%")
+        # Общая статистика
+        total_days = pd.date_range(start_date, end_date).shape[0]
+        results.insert(0, f"⏱️ ОБЩИЙ АНАЛИЗ ВЫКЛЮЧЕНИЙ: {total_issues} проблемных дней из {total_days} ({total_issues/total_days*100:.1f}%)")
         
         # Рекомендации
-        if critical_downtime:
-            results.append("💡 РЕКОМЕНДАЦИИ:")
-            results.append("   • Настроить автоматические уведомления о выключении платформ")
-            results.append("   • Создать чек-лист для сотрудников по включению утром")
-            results.append("   • Мониторинг доступности платформ в реальном времени")
+        if (not grab_data.empty and len(grab_data[grab_data['offline_rate'] >= 60]) > 0) or \
+           (not gojek_data.empty and len([d for d in gojek_data.iterrows() if parse_time_string(d[1]['close_time']) >= 3600]) > 0):
+            results.append("💡 КРИТИЧЕСКИЕ РЕКОМЕНДАЦИИ:")
+            results.append("   • Настроить SMS/Push уведомления о выключении платформ")
+            results.append("   • Создать обязательный чек-лист включения утром")
+            results.append("   • Установить мониторинг доступности каждые 15 минут")
+            results.append("   • Обучить персонал важности своевременного включения")
         
         return results
         
