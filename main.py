@@ -1057,49 +1057,59 @@ def generate_only_eggs_specific_insights(data, grab_data, gojek_data):
 
 
 def analyze_platform_downtime(restaurant_id, start_date, end_date):
-    """Анализирует выключения платформ (Close Time)"""
+    """Анализирует выключения платформ (Close Time)
     
-    def parse_time_string(time_str):
-        """Парсит строку вида H:M:S в секунды"""
-        if not time_str or time_str == '0:0:0':
+    Поддерживает множественные форматы данных:
+    - GOJEK close_time: строки "H:M:S" или секунды (INTEGER)
+    - GRAB offline_rate: проценты или минуты
+    """
+    
+    def parse_time_value(time_value):
+        """Универсальный парсер времени - строки, секунды, проценты"""
+        if not time_value or time_value == '0:0:0' or time_value == 0:
             return 0
+            
+        # Если строка в формате H:M:S
+        if isinstance(time_value, str) and ':' in time_value:
+            try:
+                parts = time_value.split(':')
+                hours = int(parts[0])
+                minutes = int(parts[1]) 
+                seconds = int(parts[2]) if len(parts) > 2 else 0
+                return hours * 3600 + minutes * 60 + seconds
+            except:
+                return 0
+        
+        # Если число (секунды)
         try:
-            parts = time_str.split(':')
-            hours = int(parts[0])
-            minutes = int(parts[1]) 
-            seconds = int(parts[2]) if len(parts) > 2 else 0
-            return hours * 3600 + minutes * 60 + seconds
+            return int(float(time_value))
         except:
             return 0
 
-    def format_duration_from_seconds(seconds):
-        """Форматирует секунды в H:MM"""
+    def format_duration(seconds):
+        """Форматирует секунды в H:MM:SS"""
         if seconds == 0:
-            return '0:00'
+            return '0:00:00'
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
-        return f'{hours}:{minutes:02d}'
+        secs = seconds % 60
+        return f'{hours}:{minutes:02d}:{secs:02d}'
     
-    def format_duration_from_percent(offline_rate):
-        """Конвертирует offline_rate в часы:минуты"""
+    def convert_offline_rate_to_seconds(offline_rate):
+        """Конвертирует offline_rate в секунды"""
         if offline_rate >= 100:
             # Если >= 100, вероятно это минуты
-            hours = int(offline_rate // 60)
-            minutes = int(offline_rate % 60)
-            return f'{hours}:{minutes:02d}'
+            return int(offline_rate * 60)
         else:
-            # Если < 100, это процент от 24 часов
-            total_minutes = int(offline_rate * 24 * 60 / 100)
-            hours = total_minutes // 60
-            minutes = total_minutes % 60
-            return f'{hours}:{minutes:02d}'
+            # Если < 100, это процент от 24 часов (86400 секунд)
+            return int(offline_rate * 86400 / 100)
     
     try:
         conn = sqlite3.connect("database.sqlite")
         
         # Анализ GRAB выключений (offline_rate)
         grab_query = f"""
-        SELECT stat_date, offline_rate, sales, orders, ads_spend, impressions
+        SELECT stat_date, offline_rate, sales, orders
         FROM grab_stats 
         WHERE restaurant_id = {restaurant_id} AND stat_date BETWEEN '{start_date}' AND '{end_date}'
         AND offline_rate IS NOT NULL AND offline_rate > 0
@@ -1108,12 +1118,12 @@ def analyze_platform_downtime(restaurant_id, start_date, end_date):
         
         grab_data = pd.read_sql_query(grab_query, conn)
         
-        # Анализ GOJEK выключений (close_time)  
+        # Анализ GOJEK выключений - пробуем оба формата
         gojek_query = f"""
         SELECT stat_date, close_time, sales, orders
         FROM gojek_stats 
         WHERE restaurant_id = {restaurant_id} AND stat_date BETWEEN '{start_date}' AND '{end_date}'
-        AND close_time IS NOT NULL AND close_time != '0:0:0' AND close_time != ''
+        AND close_time IS NOT NULL 
         ORDER BY stat_date
         """
         
@@ -1121,62 +1131,98 @@ def analyze_platform_downtime(restaurant_id, start_date, end_date):
         conn.close()
         
         results = []
-        total_issues = 0
+        critical_issues = []
         
         # Обрабатываем GRAB данные
+        grab_downtime = []
         if not grab_data.empty:
-            grab_critical = grab_data[grab_data['offline_rate'] >= 60]  # >60% или >60 минут = критично
-            total_issues += len(grab_data)
-            
-            results.append(f"📱 GRAB выключения: {len(grab_data)} дней")
-            
-            if not grab_critical.empty:
-                results.append(f"🚨 КРИТИЧЕСКИЕ GRAB выключения (>60%): {len(grab_critical)}")
-                for _, row in grab_critical.head(3).iterrows():
-                    downtime_formatted = format_duration_from_percent(row['offline_rate'])
-                    sales = row['sales'] or 0
-                    results.append(f"   • {row['stat_date']}: {downtime_formatted} ({row['offline_rate']}%) | Продажи: {sales:,.0f} IDR")
+            for _, row in grab_data.iterrows():
+                offline_seconds = convert_offline_rate_to_seconds(row['offline_rate'])
+                if offline_seconds >= 3600:  # >1 час критично
+                    grab_downtime.append({
+                        'date': row['stat_date'],
+                        'platform': 'GRAB',
+                        'downtime_seconds': offline_seconds,
+                        'downtime_formatted': format_duration(offline_seconds),
+                        'original_value': f"{row['offline_rate']}%",
+                        'sales': row['sales'] or 0,
+                        'orders': row['orders'] or 0
+                    })
         
         # Обрабатываем GOJEK данные
+        gojek_downtime = []
         if not gojek_data.empty:
-            gojek_critical = []
             for _, row in gojek_data.iterrows():
-                downtime_sec = parse_time_string(row['close_time'])
-                if downtime_sec >= 3600:  # >1 час
-                    gojek_critical.append({
+                downtime_seconds = parse_time_value(row['close_time'])
+                if downtime_seconds >= 3600:  # >1 час критично
+                    gojek_downtime.append({
                         'date': row['stat_date'],
-                        'downtime_formatted': format_duration_from_seconds(downtime_sec),
-                        'sales': row['sales'] or 0
+                        'platform': 'GOJEK',
+                        'downtime_seconds': downtime_seconds,
+                        'downtime_formatted': format_duration(downtime_seconds),
+                        'original_value': str(row['close_time']),
+                        'sales': row['sales'] or 0,
+                        'orders': row['orders'] or 0
                     })
-            
-            total_issues += len(gojek_data)
-            results.append(f"🛵 GOJEK выключения: {len(gojek_data)} дней")
-            
-            if gojek_critical:
-                results.append(f"🚨 КРИТИЧЕСКИЕ GOJEK выключения (>1 час): {len(gojek_critical)}")
-                for day in gojek_critical[:3]:
-                    results.append(f"   • {day['date']}: {day['downtime_formatted']} | Продажи: {day['sales']:,.0f} IDR")
         
-        if total_issues == 0:
-            return ["✅ Нет значительных выключений платформ"]
+        # Объединяем критические выключения
+        all_critical = grab_downtime + gojek_downtime
+        all_critical.sort(key=lambda x: x['downtime_seconds'], reverse=True)
         
-        # Общая статистика
+        if not all_critical:
+            return ["✅ Нет критических выключений платформ (>1 час)", 
+                   "ℹ️ Примечание: Анализируются только выключения длительностью более 1 часа"]
+        
+        # Формируем результат
         total_days = pd.date_range(start_date, end_date).shape[0]
-        results.insert(0, f"⏱️ ОБЩИЙ АНАЛИЗ ВЫКЛЮЧЕНИЙ: {total_issues} проблемных дней из {total_days} ({total_issues/total_days*100:.1f}%)")
+        total_downtime_hours = sum(d['downtime_seconds'] for d in all_critical) // 3600
+        
+        results.append(f"🚨 КРИТИЧЕСКИЕ ВЫКЛЮЧЕНИЯ ПЛАТФОРМ: {len(all_critical)} случаев")
+        results.append(f"⏱️ Общее время простоя: {total_downtime_hours} часов за период")
+        results.append(f"📊 Затронуто дней: {len(set(d['date'] for d in all_critical))} из {total_days}")
+        
+        # Топ критических выключений
+        results.append("\\n🔥 ТОП КРИТИЧЕСКИХ ВЫКЛЮЧЕНИЙ:")
+        for i, issue in enumerate(all_critical[:5], 1):
+            impact = "0 продаж" if issue['sales'] == 0 else f"{issue['sales']:,.0f} IDR"
+            results.append(f"{i}. {issue['date']} ({issue['platform']}): {issue['downtime_formatted']} → {impact}")
+        
+        # Анализ по платформам
+        grab_critical = [d for d in all_critical if d['platform'] == 'GRAB']
+        gojek_critical = [d for d in all_critical if d['platform'] == 'GOJEK']
+        
+        if grab_critical:
+            grab_hours = sum(d['downtime_seconds'] for d in grab_critical) // 3600
+            results.append(f"\\n📱 GRAB: {len(grab_critical)} критических выключений ({grab_hours}ч)")
+            
+        if gojek_critical:
+            gojek_hours = sum(d['downtime_seconds'] for d in gojek_critical) // 3600
+            results.append(f"🛵 GOJEK: {len(gojek_critical)} критических выключений ({gojek_hours}ч)")
+        
+        # Подсчет потерь
+        zero_sales_days = len([d for d in all_critical if d['sales'] == 0])
+        if zero_sales_days > 0:
+            results.append(f"\\n💸 ДНЕЙ С НУЛЕВЫМИ ПРОДАЖАМИ: {zero_sales_days}")
+            results.append("   (Прямая связь между выключением платформы и отсутствием продаж)")
         
         # Рекомендации
-        if (not grab_data.empty and len(grab_data[grab_data['offline_rate'] >= 60]) > 0) or \
-           (not gojek_data.empty and len([d for d in gojek_data.iterrows() if parse_time_string(d[1]['close_time']) >= 3600]) > 0):
-            results.append("💡 КРИТИЧЕСКИЕ РЕКОМЕНДАЦИИ:")
-            results.append("   • Настроить SMS/Push уведомления о выключении платформ")
-            results.append("   • Создать обязательный чек-лист включения утром")
-            results.append("   • Установить мониторинг доступности каждые 15 минут")
-            results.append("   • Обучить персонал важности своевременного включения")
+        results.append("\\n💡 КРИТИЧЕСКИЕ РЕКОМЕНДАЦИИ:")
+        results.append("   🔔 Настроить мгновенные уведомления при выключении платформ")
+        results.append("   ✅ Обязательный чек-лист включения платформ каждое утро")  
+        results.append("   📊 Мониторинг доступности каждые 10-15 минут")
+        results.append("   👨‍💼 Назначить ответственного за контроль платформ")
+        results.append("   📱 Дублирующие каналы связи с платформами")
+        
+        # Примечание о данных
+        if len(grab_data) == 0 and len([d for d in gojek_data.iterrows() if parse_time_value(d[1]['close_time']) > 0]) == 0:
+            results.append("\\nℹ️ ПРИМЕЧАНИЕ: Данные о выключениях могут быть неполными")
+            results.append("   Рекомендуется синхронизировать с актуальными данными Looker Studio")
         
         return results
         
     except Exception as e:
-        return [f"⚠️ Ошибка анализа выключений: {e}"]
+        return [f"⚠️ Ошибка анализа выключений: {e}",
+               "ℹ️ Возможно, требуется обновление структуры данных"]
 
 
 def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
