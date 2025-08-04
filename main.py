@@ -1093,19 +1093,14 @@ def analyze_platform_downtime(restaurant_id, start_date, end_date):
     
     def convert_offline_rate_to_seconds(offline_rate):
         """Конвертирует offline_rate в секунды
-        Логика на основе анализа данных:
-        - Если >= 100: это минуты (например, 357 = 357 минут = 5:57:00)
-        - Если < 100: это проценты от 24 часов (например, 8.75% от 24ч = 2:06:00)
+        ИСПРАВЛЕНО: offline_rate всегда хранится в МИНУТАХ (не в процентах!)
+        Формула: offline_rate * 60 = секунды
         """
         if not offline_rate or offline_rate == 0:
             return 0
             
-        if offline_rate >= 100:
-            # Минуты (например, 357 минут)
-            return int(offline_rate * 60)
-        else:
-            # Проценты от 24 часов (например, 8.75% от 86400 секунд)
-            return int(offline_rate * 86400 / 100)
+        # offline_rate всегда в минутах, конвертируем в секунды
+        return int(offline_rate * 60)
     
     conn = sqlite3.connect('database.sqlite')
     results = []
