@@ -680,9 +680,14 @@ def get_restaurant_data_full(restaurant_name, start_date, end_date, db_path="dat
     """Получает ВСЕ доступные данные ресторана из grab_stats и gojek_stats"""
     conn = sqlite3.connect(db_path)
     
-    # Получаем ID ресторана
-    restaurant_query = "SELECT id FROM restaurants WHERE name = ?"
-    restaurant_result = pd.read_sql_query(restaurant_query, conn, params=(restaurant_name,))
+    # Получаем ID ресторана с обработкой специальных случаев
+    if restaurant_name == "Only_Eggs":
+        # Специальная обработка для Only_Eggs -> "Only Eggs"
+        restaurant_query = "SELECT id FROM restaurants WHERE name = ?"
+        restaurant_result = pd.read_sql_query(restaurant_query, conn, params=("Only Eggs",))
+    else:
+        restaurant_query = "SELECT id FROM restaurants WHERE name = ?"
+        restaurant_result = pd.read_sql_query(restaurant_query, conn, params=(restaurant_name,))
     
     if len(restaurant_result) == 0:
         conn.close()
