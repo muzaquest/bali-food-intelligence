@@ -324,8 +324,14 @@ class UltimateSmartAnalytics:
             analysis['score'] -= 10
             
         # 7. АНАЛИЗ ВРЕМЕНИ ДОСТАВКИ (GOJEK)
-        if day_data['close_time_minutes'] > 60:  # Больше часа закрыто
-            analysis['factors'].append(f"⏰ Долго закрыто: {day_data['close_time_minutes']} мин")
+        close_time = day_data['close_time_minutes'] or 0
+        if isinstance(close_time, str):
+            try:
+                close_time = int(close_time)
+            except:
+                close_time = 0
+        if close_time > 60:  # Больше часа закрыто
+            analysis['factors'].append(f"⏰ Долго закрыто: {close_time} мин")
             analysis['score'] -= 20
             analysis['issues'].append("Длительное закрытие")
             
@@ -375,8 +381,13 @@ class UltimateSmartAnalytics:
                 analysis['score'] -= 15
                 analysis['issues'].append("Слабые позиции против конкурентов")
                 
-        # 13. ПОГОДНЫЙ АНАЛИЗ (базовый, без API пока)
-        analysis['weather_analyzed'] = False  # Флаг для будущего улучшения
+        # 13. ПОГОДНЫЙ АНАЛИЗ (с реальным API)
+        weather_factors, weather_impact = self._analyze_weather_impact(date)
+        if weather_factors:
+            analysis['factors'].extend(weather_factors)
+            analysis['score'] += weather_impact
+            if weather_impact < -15:
+                analysis['issues'].append("Плохая погода")
         
         return analysis
         
@@ -529,17 +540,100 @@ class UltimateSmartAnalytics:
         
         # Генерируем краткий ответ клиенту
         if patterns['trends']:
-            main_trend = patterns['trends'][0]
-            if patterns['common_issues']:
-                main_issue = max(patterns['common_issues'].items(), key=lambda x: x[1])[0]
-                client_answer = f"{main_trend.replace('📈', '').replace('📉', '').strip()} в основном из-за {main_issue.lower()}"
+            main_trend = patterns['trends'][0].replace('📈', '').replace('📉', '').strip()
+            
+            # Умная логика для ответа
+            if "Рост продаж" in main_trend:
+                # Для роста - ищем позитивные факторы из лучших дней
+                positive_factors = []
+                for day in patterns['best_days']:
+                    for factor in day['factors']:
+                        if any(word in factor for word in ['Отличные продажи', 'Отличный ROAS', 'Высокий средний чек', 'Отличный рейтинг']):
+                            positive_factors.append(factor)
+                
+                if positive_factors:
+                    client_answer = f"{main_trend} благодаря улучшению операционной эффективности и маркетинга"
+                else:
+                    client_answer = f"{main_trend} благодаря общему улучшению бизнес-процессов"
+                    
+            elif "Снижение продаж" in main_trend:
+                # Для снижения - ищем главную проблему
+                if patterns['common_issues']:
+                    main_issue = max(patterns['common_issues'].items(), key=lambda x: x[1])[0]
+                    if main_issue == "Проблемы с GOJEK":
+                        client_answer = f"{main_trend} из-за технических проблем с GOJEK платформой"
+                    elif main_issue == "Проблемы с GRAB":
+                        client_answer = f"{main_trend} из-за технических проблем с GRAB платформой"
+                    elif main_issue == "Влияние праздника":
+                        client_answer = f"{main_trend} из-за балийских праздников (снижение активности местных)"
+                    else:
+                        client_answer = f"{main_trend} из-за {main_issue.lower()}"
+                else:
+                    client_answer = f"{main_trend} - требуется детальный анализ причин"
             else:
-                client_answer = f"{main_trend.replace('📈', '').replace('📉', '').strip()}"
+                client_answer = main_trend
         else:
             client_answer = "Продажи стабильны, основные факторы под контролем"
             
         print(f'"{client_answer}"')
         print("=" * 45)
+
+    def _analyze_weather_impact(self, date):
+        """Анализирует влияние погоды на конкретный день"""
+        try:
+            # Интеграция с Open-Meteo API
+            url = "https://archive-api.open-meteo.com/v1/archive"
+            params = {
+                'latitude': -8.4095,  # Бали
+                'longitude': 115.1889,
+                'start_date': date,
+                'end_date': date,
+                'hourly': 'temperature_2m,precipitation,wind_speed_10m',
+                'timezone': 'Asia/Jakarta'
+            }
+            
+            response = requests.get(url, params=params, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                hourly = data.get('hourly', {})
+                
+                if hourly:
+                    temperatures = hourly.get('temperature_2m', [])
+                    precipitation = hourly.get('precipitation', [])
+                    wind_speeds = hourly.get('wind_speed_10m', [])
+                    
+                    if temperatures and precipitation and wind_speeds:
+                        avg_temp = sum(temperatures) / len(temperatures)
+                        total_rain = sum(precipitation)
+                        avg_wind = sum(wind_speeds) / len(wind_speeds)
+                        
+                        weather_factors = []
+                        
+                        # Анализ дождя (главный фактор для курьеров)
+                        if total_rain > 15:
+                            weather_factors.append("🌧️ Сильный дождь снизил количество курьеров")
+                            return weather_factors, -25  # Сильное негативное влияние
+                        elif total_rain > 5:
+                            weather_factors.append("🌦️ Дождь повлиял на доставки")
+                            return weather_factors, -10  # Умеренное негативное влияние
+                        elif total_rain < 0.1:
+                            weather_factors.append("☀️ Отличная погода для доставок")
+                            return weather_factors, +5   # Позитивное влияние
+                            
+                        # Анализ температуры
+                        if avg_temp > 32:
+                            weather_factors.append("🔥 Жаркая погода - больше заказов домой")
+                            return weather_factors, +10
+                        elif avg_temp < 22:
+                            weather_factors.append("🌡️ Прохладная погода - люди выходят из дома")
+                            return weather_factors, -5
+                            
+                        return ["🌤️ Нормальная погода"], 0
+                        
+        except Exception as e:
+            pass
+            
+        return [], 0
 
 def main():
     """Запуск максимально умной аналитики"""
@@ -547,8 +641,19 @@ def main():
     analytics = UltimateSmartAnalytics()
     
     # Тест на Only Eggs
+    print("🧪 ТЕСТ 1: Only Eggs")
     analytics.analyze_restaurant_comprehensive(
         "Only Eggs",
+        "2025-04-01", 
+        "2025-05-31"
+    )
+    
+    print("\n" + "="*80)
+    
+    # Тест на другом ресторане
+    print("🧪 ТЕСТ 2: Ika Canggu")
+    analytics.analyze_restaurant_comprehensive(
+        "Ika Canggu",
         "2025-04-01", 
         "2025-05-31"
     )
