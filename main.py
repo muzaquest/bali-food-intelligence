@@ -106,6 +106,22 @@ except ImportError:
     ML_MODULE_AVAILABLE = False
     print("⚠️ ML модуль недоступен. Запустите: pip install scikit-learn prophet")
 
+# Добавляем импорт нового профессионального анализа
+try:
+    from professional_detective_analysis import compare_periods as professional_compare_periods
+    PROFESSIONAL_ANALYSIS_AVAILABLE = True
+except ImportError:
+    PROFESSIONAL_ANALYSIS_AVAILABLE = False
+    print("⚠️ Профессиональный анализ недоступен")
+
+# Импорт чистой версии профессионального анализа (без pandas)
+try:
+    from clean_professional_analysis import analyze_sales_changes_professional
+    CLEAN_PROFESSIONAL_ANALYSIS_AVAILABLE = True
+except ImportError:
+    CLEAN_PROFESSIONAL_ANALYSIS_AVAILABLE = False
+    print("⚠️ Упрощенный профессиональный анализ недоступен")
+
 class WeatherAPI:
     """Класс для работы с Open-Meteo API (БЕСПЛАТНЫЙ!)"""
     
@@ -324,7 +340,6 @@ class CalendarAPI:
         
         return [{'date': date, 'name': name, 'type': 'balinese' if date in balinese_holidays else 'national'} 
                 for date, name in all_holidays.items()]
-
 class OpenAIAnalyzer:
     """Класс для работы с OpenAI API"""
     
@@ -675,7 +690,6 @@ class OpenAIAnalyzer:
             insights.append(f"   • ROAS: {(roas * 1.1):.1f}x (+10%)")
         
         return '\n'.join(insights)
-
 def get_restaurant_data_full(restaurant_name, start_date, end_date, db_path="database.sqlite"):
     """Получает ВСЕ доступные данные ресторана из grab_stats и gojek_stats"""
     conn = sqlite3.connect(db_path)
@@ -1059,8 +1073,6 @@ def generate_only_eggs_specific_insights(data, grab_data, gojek_data):
    4. Добавить upsell предложения в меню"""
     
     return insights
-
-
 def analyze_platform_downtime(restaurant_id, start_date, end_date):
     """Анализирует выключения платформ (Close Time) используя только данные из базы
     
@@ -1556,11 +1568,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             total_day = data.iloc[0]  # Берем любой день для показа
             print(f"📅 Единственный день с данными: {total_day['date']} - {total_day['total_sales']:,.0f} IDR")
     print()
-    
     # 3. УГЛУБЛЕННЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ
     print("👥 3. ДЕТАЛЬНЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ")
     print("-" * 40)
-    
     # Получаем restaurant_id для запросов
     import sqlite3
     conn_temp = sqlite3.connect("database.sqlite")
@@ -2017,10 +2027,6 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         if condition not in weather_groups:
             weather_groups[condition] = []
         weather_groups[condition].append(day_sales)
-    
-    # УПРОЩЕННЫЙ АНАЛИЗ ПОГОДЫ (без симуляций и псевдонауки)
-    print(f"  📊 Анализ погодных данных за {len(all_dates)} дней...")
-    
     total_weather_impact = 0
     impact_details = []
     critical_days = []
@@ -2064,7 +2070,6 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 'primary_factor': weather_analysis['primary_factor'],
                 'weather': day_weather
             })
-    
     # Средний эффект погоды за период
     avg_weather_impact = total_weather_impact / len(weather_sales_data) if weather_sales_data else 0
     weather_impact = avg_weather_impact  # Для совместимости с остальным кодом
@@ -2422,9 +2427,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             print(f"  {i}. {rec}")
     else:
         print("✅ Все ключевые показатели в пределах нормы!")
-    
     print()
-    
     # Сохраняем ДЕТАЛЬНЫЙ отчет
     try:
         os.makedirs('reports', exist_ok=True)
@@ -2909,13 +2912,10 @@ def analyze_market(start_date=None, end_date=None):
             print(f"   • Средний чек: {budget_segment['avg_order_value'].mean():,.0f} IDR")
             print(f"   • Общие продажи: {budget_segment['total_sales'].sum():,.0f} IDR")
             print(f"   • Доля ТОП-15: {(budget_segment['total_sales'].sum() / top15_total_sales * 100):.1f}%")
-        
         print()
-        
         # 4. АНАЛИЗ ЭФФЕКТИВНОСТИ
         print("⚡ 4. АНАЛИЗ ЭФФЕКТИВНОСТИ")
         print("-" * 40)
-        
         # Топ по различным метрикам
         top_roas = leaders[leaders['marketing_spend'] > 0].nlargest(5, 'marketing_sales')['marketing_sales'] / leaders[leaders['marketing_spend'] > 0].nlargest(5, 'marketing_sales')['marketing_spend']
         top_rating = leaders.nlargest(5, 'avg_rating')
@@ -3391,7 +3391,6 @@ def main():
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
 def detect_sales_anomalies_and_causes(restaurant_data, weather_data, start_date, end_date):
     """Реальный анализ причин падений/роста продаж на основе данных"""
     
@@ -3760,7 +3759,6 @@ def generate_cause_based_recommendations(daily_analysis):
     recommendations.append("📈 ПРЕДИКТИВНОСТЬ: Планируйте маркетинг с учетом погодных прогнозов и календаря")
     
     return recommendations
-
 def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
     """Детективный анализ рыночных аномалий и их причин"""
     
@@ -4065,182 +4063,6 @@ def detect_market_anomalies_and_causes(market_leaders, start_date, end_date):
         insights.append(f"❌ Ошибка анализа рыночных аномалий: {e}")
     
     return '\n'.join(insights)
-
-def analyze_tourist_data():
-    """Анализ туристических данных из наших XLS файлов"""
-    try:
-        import pandas as pd
-        import os
-        
-        # ⚠️ КРИТИЧЕСКАЯ ПРОВЕРКА: Наличие туристических файлов
-        required_files = [
-            'data/Kunjungan_Wisatawan_Bali_2024.xls',
-            'data/Kunjungan_Wisatawan_Bali_2025.xls'
-        ]
-        
-        for file in required_files:
-            if not os.path.exists(file):
-                print(f"🚨 КРИТИЧНО: Отсутствует файл {file}")
-                print(f"   📋 Восстановите файл из git: git checkout HEAD -- {file}")
-                print(f"   🔧 Или проверьте .gitignore (строка *.xls должна быть закомментирована)")
-                return None
-        
-        # Читаем файлы
-        df_2024 = pd.read_csv('data/Kunjungan_Wisatawan_Bali_2024.xls', skiprows=2)
-        df_2025 = pd.read_csv('data/Kunjungan_Wisatawan_Bali_2025.xls', skiprows=2)
-        
-        # Анализ 2024
-        countries_2024 = []
-        for i, row in df_2024.iterrows():
-            if i < 200 and pd.notna(row.iloc[0]) and isinstance(row.iloc[0], str):
-                country = row.iloc[0].strip()
-                if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS', '', 'NO', 'I']:
-                    total_col = df_2024.columns[-1]  # Последняя колонка - Total
-                    total_value = row[total_col]
-                    if pd.notna(total_value) and isinstance(total_value, (int, float)) and total_value > 0:
-                        countries_2024.append({
-                            'country': country,
-                            'total': total_value
-                        })
-        
-        # Анализ 2025
-        countries_2025 = []
-        for i, row in df_2025.iterrows():
-            if i < 200 and pd.notna(row.iloc[0]) and isinstance(row.iloc[0], str):
-                country = row.iloc[0].strip()
-                if country and country not in ['TOTAL', 'EXCLUDING ASEAN', '- / + (%)', 'TOURISTS', '', 'NO', 'I']:
-                    total_col = df_2025.columns[-1]  # Последняя колонка - Total
-                    total_value = row[total_col]
-                    if pd.notna(total_value) and isinstance(total_value, (int, float)) and total_value > 0:
-                        countries_2025.append({
-                            'country': country,
-                            'total': total_value
-                        })
-        
-        # Сортируем по количеству туристов
-        countries_2024 = sorted(countries_2024, key=lambda x: x['total'], reverse=True)
-        countries_2025 = sorted(countries_2025, key=lambda x: x['total'], reverse=True)
-        
-        # Подсчитываем итоги
-        total_2024 = sum([d['total'] for d in countries_2024])
-        total_2025 = sum([d['total'] for d in countries_2025])
-        
-        # Формируем результат
-        result = {
-            'total_2024': total_2024,
-            'total_2025_partial': total_2025,
-            'top_countries_2024': countries_2024[:3],
-            'top_countries_2025': countries_2025[:3],
-            'all_countries_2024': countries_2024,
-            'all_countries_2025': countries_2025
-        }
-        
-        return result
-        
-    except Exception as e:
-        print(f"Ошибка анализа туристических данных: {e}")
-        return None
-
-def get_tourist_insights():
-    """Получить инсайты по туристическим данным для отчетов"""
-    tourist_data = analyze_tourist_data()
-    if not tourist_data:
-        return "   🏝️ КОНТЕКСТ: Туристические данные недоступны"
-    
-    # Топ-3 страны 2024
-    top_2024 = tourist_data['top_countries_2024']
-    top_2025 = tourist_data['top_countries_2025']
-    
-    insights = []
-    insights.append(f"   🏝️ ТУРИСТИЧЕСКИЕ ДАННЫЕ БАЛИ (из наших файлов):")
-    insights.append(f"   • 2024 ИТОГО: {tourist_data['total_2024']:,.0f} туристов")
-    insights.append(f"   • 2025 до мая: {tourist_data['total_2025_partial']:,.0f} туристов")
-    
-    if len(top_2024) >= 3:
-        total_2024 = tourist_data['total_2024']
-        insights.append(f"   📊 ТОП-3 РЫНКА 2024:")
-        for i, country in enumerate(top_2024[:3]):
-            percentage = (country['total'] / total_2024) * 100
-            insights.append(f"      {i+1}. {country['country']}: {country['total']:,.0f} ({percentage:.1f}%)")
-    
-    if len(top_2025) >= 3:
-        total_2025 = tourist_data['total_2025_partial']
-        insights.append(f"   📊 ТОП-3 РЫНКА 2025 (до мая):")
-        for i, country in enumerate(top_2025[:3]):
-            percentage = (country['total'] / total_2025) * 100
-            insights.append(f"      {i+1}. {country['country']}: {country['total']:,.0f} ({percentage:.1f}%)")
-    
-    return "\n".join(insights)
-
-def get_russia_position():
-    """Получить позицию России в туристических потоках"""
-    tourist_data = analyze_tourist_data()
-    if not tourist_data:
-        return None
-    
-    # Ищем Россию в данных 2024 и 2025
-    russia_info = {}
-    
-    # 2024
-    for i, country in enumerate(tourist_data['all_countries_2024']):
-        if 'Russian' in country['country']:
-            percentage = (country['total'] / tourist_data['total_2024']) * 100
-            russia_info['2024'] = {
-                'rank': i + 1,
-                'total': country['total'],
-                'percentage': percentage,
-                'total_countries': len(tourist_data['all_countries_2024'])
-            }
-            break
-    
-    # 2025
-    for i, country in enumerate(tourist_data['all_countries_2025']):
-        if 'Russian' in country['country']:
-            percentage = (country['total'] / tourist_data['total_2025_partial']) * 100
-            russia_info['2025'] = {
-                'rank': i + 1,
-                'total': country['total'],
-                'percentage': percentage,
-                'total_countries': len(tourist_data['all_countries_2025'])
-            }
-            break
-    
-    return russia_info
-
-def get_restaurant_location(restaurant_name):
-    """Получает координаты ресторана из файла локаций"""
-    try:
-        with open('data/bali_restaurant_locations.json', 'r', encoding='utf-8') as f:
-            locations_data = json.load(f)
-        
-        for restaurant in locations_data['restaurants']:
-            if restaurant['name'].lower() == restaurant_name.lower():
-                return {
-                    'latitude': restaurant['latitude'],
-                    'longitude': restaurant['longitude'],
-                    'location': restaurant['location'],
-                    'area': restaurant['area'],
-                    'zone': restaurant['zone']
-                }
-        
-        # Если не найден, возвращаем координаты центра Бали
-        return {
-            'latitude': -8.4095,
-            'longitude': 115.1889,
-            'location': 'Denpasar',
-            'area': 'Denpasar',
-            'zone': 'Central'
-        }
-    except Exception as e:
-        print(f"⚠️ Ошибка при загрузке локаций: {e}")
-        return {
-            'latitude': -8.4095,
-            'longitude': 115.1889,
-            'location': 'Denpasar',
-            'area': 'Denpasar', 
-            'zone': 'Central'
-        }
-
 def analyze_sales_trends(data):
     """ПРОДВИНУТЫЙ маркетинговый анализ без ML - используем ВСЕ данные!"""
     
@@ -4483,7 +4305,7 @@ def analyze_sales_trends(data):
     else:
         insights.append("📊 СТАБИЛЬНОСТЬ - план оптимизации:")
         insights.append("   1. A/B тест новых позиций в меню")
-        insights.append("   2. Оптимизация времени и зон доставки")
+        insights.append("   2. Оптимизировать время и зон доставки")
         insights.append("   3. Программа лояльности для удержания")
     
     insights.append("")
