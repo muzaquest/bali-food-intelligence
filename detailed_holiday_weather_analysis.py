@@ -25,26 +25,61 @@ class DetailedHolidayWeatherAnalysis:
         self.db_path = db_path
         self.weather_cache = {}
         
-        # Расширенный список балийских и индонезийских праздников
+                         # ПОЛНЫЙ список праздников с учетом религиозного состава курьеров
         self.holidays_impact = {
-            # ПОЛОЖИТЕЛЬНОЕ ВЛИЯНИЕ (люди заказывают больше еды)
-            '2024-01-01': {'name': 'New Year', 'type': 'positive', 'impact': 'Люди празднуют дома, заказывают еду'},
-            '2024-02-10': {'name': 'Chinese New Year', 'type': 'positive', 'impact': 'Китайская община празднует, заказы растут'},
-            '2025-01-01': {'name': 'New Year', 'type': 'positive', 'impact': 'Люди празднуют дома, заказывают еду'},
-            '2025-01-29': {'name': 'Chinese New Year', 'type': 'positive', 'impact': 'Китайская община празднует, заказы растут'},
-            
-            # ОТРИЦАТЕЛЬНОЕ ВЛИЯНИЕ (курьеры не работают)
-            '2024-03-11': {'name': 'Nyepi (Balinese New Year)', 'type': 'negative', 'impact': 'День тишины - никто не работает'},
-            '2024-03-29': {'name': 'Good Friday', 'type': 'negative', 'impact': 'Религиозный праздник - меньше курьеров'},
-            '2024-05-01': {'name': 'Labor Day', 'type': 'negative', 'impact': 'Национальный праздник - курьеры отдыхают'},
-            '2024-05-09': {'name': 'Ascension Day', 'type': 'negative', 'impact': 'Христианский праздник'},
-            '2024-06-01': {'name': 'Pancasila Day', 'type': 'negative', 'impact': 'Национальный праздник Индонезии'},
-            '2024-06-17': {'name': 'Eid al-Adha', 'type': 'negative', 'impact': 'Мусульманский праздник - курьеры молятся'},
-            '2024-07-07': {'name': 'Islamic New Year', 'type': 'negative', 'impact': 'Мусульманский новый год'},
-            '2024-08-17': {'name': 'Independence Day', 'type': 'negative', 'impact': 'День независимости - курьеры празднуют'},
-            '2024-09-16': {'name': 'Prophet Muhammad Birthday', 'type': 'negative', 'impact': 'Мусульманский праздник'},
-            '2024-10-31': {'name': 'Diwali', 'type': 'negative', 'impact': 'Индуистский праздник - курьеры празднуют'},
-            '2024-12-25': {'name': 'Christmas', 'type': 'negative', 'impact': 'Рождество - курьеры с семьями'},
+             # ПОЛОЖИТЕЛЬНОЕ ВЛИЯНИЕ (люди заказывают больше еды дома)
+             '2024-01-01': {'name': 'New Year', 'type': 'positive', 'impact': 'Люди празднуют дома, заказывают еду'},
+             '2024-02-10': {'name': 'Chinese New Year', 'type': 'positive', 'impact': 'Китайская община празднует, заказы растут'},
+             '2025-01-01': {'name': 'New Year', 'type': 'positive', 'impact': 'Люди празднуют дома, заказывают еду'},
+             '2025-01-29': {'name': 'Chinese New Year', 'type': 'positive', 'impact': 'Китайская община празднует, заказы растут'},
+             
+             # МУСУЛЬМАНСКИЕ ПРАЗДНИКИ (курьеры-мусульмане не работают)
+             '2024-04-10': {'name': 'Eid al-Fitr Day 1', 'type': 'negative', 'impact': 'Курьеры-мусульмане празднуют окончание Рамадана'},
+             '2024-04-11': {'name': 'Eid al-Fitr Day 2', 'type': 'negative', 'impact': 'Второй день Ураза-байрам'},
+             '2024-06-17': {'name': 'Eid al-Adha', 'type': 'negative', 'impact': 'Курган-байрам - мусульмане в мечетях и с семьями'},
+             '2024-07-07': {'name': 'Islamic New Year (Muharram)', 'type': 'negative', 'impact': 'Мусульманский новый год - курьеры молятся'},
+             '2024-09-16': {'name': 'Mawlid (Prophet Birthday)', 'type': 'negative', 'impact': 'День рождения Пророка - мусульманские курьеры не работают'},
+                           '2024-02-28': {'name': 'Isra Miraj', 'type': 'negative', 'impact': 'Ночь вознесения Пророка - мусульманский праздник'},
+              
+              # РАМАДАН (особый период)
+              '2024-03-10': {'name': 'Start of Ramadan', 'type': 'negative', 'impact': 'Начало поста - курьеры постятся, меньше работают днем'},
+             '2024-04-09': {'name': 'End of Ramadan', 'type': 'negative', 'impact': 'Конец поста - подготовка к Ураза-байрам'},
+             
+             # МУСУЛЬМАНСКИЕ ПРАЗДНИКИ 2025
+             '2025-03-30': {'name': 'Eid al-Fitr Day 1', 'type': 'negative', 'impact': 'Курьеры-мусульмане празднуют'},
+             '2025-03-31': {'name': 'Eid al-Fitr Day 2', 'type': 'negative', 'impact': 'Второй день Ураза-байрам'},
+             '2025-06-07': {'name': 'Eid al-Adha', 'type': 'negative', 'impact': 'Курган-байрам'},
+             '2025-06-26': {'name': 'Islamic New Year', 'type': 'negative', 'impact': 'Мусульманский новый год'},
+             '2025-09-05': {'name': 'Mawlid', 'type': 'negative', 'impact': 'День рождения Пророка'},
+             
+             # БАЛИЙСКИЕ ПРАЗДНИКИ (курьеры-индуисты не работают)
+             '2024-03-11': {'name': 'Nyepi (Balinese New Year)', 'type': 'negative', 'impact': 'День тишины - НИКТО не работает на Бали'},
+             '2024-04-16': {'name': 'Galungan', 'type': 'negative', 'impact': 'Балийский семейный праздник - индуистские курьеры с семьями'},
+             '2024-04-26': {'name': 'Kuningan', 'type': 'negative', 'impact': 'Балийские религиозные церемонии'},
+             '2024-10-02': {'name': 'Galungan', 'type': 'negative', 'impact': 'Балийский семейный праздник'},
+             '2024-10-12': {'name': 'Kuningan', 'type': 'negative', 'impact': 'Балийские религиозные церемонии'},
+             '2024-10-31': {'name': 'Diwali', 'type': 'negative', 'impact': 'Индуистский праздник света - курьеры-индуисты празднуют'},
+             '2025-03-29': {'name': 'Nyepi (Balinese New Year)', 'type': 'negative', 'impact': 'День тишины - полный запрет движения'},
+             '2025-04-16': {'name': 'Galungan', 'type': 'negative', 'impact': 'Балийский семейный праздник'},
+             '2025-04-26': {'name': 'Kuningan', 'type': 'negative', 'impact': 'Балийские религиозные церемонии'},
+             
+             # ХРИСТИАНСКИЕ ПРАЗДНИКИ (курьеры-христиане не работают)
+             '2024-03-29': {'name': 'Good Friday', 'type': 'negative', 'impact': 'Страстная пятница - курьеры-христиане в церкви'},
+             '2024-03-31': {'name': 'Easter Sunday', 'type': 'negative', 'impact': 'Пасха - христианские курьеры с семьями'},
+             '2024-05-09': {'name': 'Ascension Day', 'type': 'negative', 'impact': 'Вознесение - христианский праздник'},
+             '2024-12-25': {'name': 'Christmas', 'type': 'negative', 'impact': 'Рождество - курьеры-христиане с семьями'},
+             '2025-04-18': {'name': 'Good Friday', 'type': 'negative', 'impact': 'Страстная пятница'},
+             '2025-04-20': {'name': 'Easter Sunday', 'type': 'negative', 'impact': 'Пасха'},
+             '2025-05-29': {'name': 'Ascension Day', 'type': 'negative', 'impact': 'Вознесение'},
+             '2025-12-25': {'name': 'Christmas', 'type': 'negative', 'impact': 'Рождество'},
+             
+             # НАЦИОНАЛЬНЫЕ ПРАЗДНИКИ ИНДОНЕЗИИ (все курьеры отдыхают)
+             '2024-05-01': {'name': 'Labor Day', 'type': 'negative', 'impact': 'День труда - официальный выходной для всех'},
+             '2024-06-01': {'name': 'Pancasila Day', 'type': 'negative', 'impact': 'День Панчасила - национальный праздник Индонезии'},
+             '2024-08-17': {'name': 'Independence Day', 'type': 'negative', 'impact': 'День независимости - все курьеры празднуют'},
+             '2025-05-01': {'name': 'Labor Day', 'type': 'negative', 'impact': 'День труда'},
+             '2025-06-01': {'name': 'Pancasila Day', 'type': 'negative', 'impact': 'День Панчасила'},
+             '2025-08-17': {'name': 'Independence Day', 'type': 'negative', 'impact': 'День независимости'},
             
             # 2025 год
             '2025-03-29': {'name': 'Nyepi (Balinese New Year)', 'type': 'negative', 'impact': 'День тишины - никто не работает'},
