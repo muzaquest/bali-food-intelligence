@@ -1,0 +1,44 @@
+{
+  "ml_thresholds": {
+    "low_sales": 1073618.25,
+    "high_sales": 7917737.5,
+    "excellent_sales": 13215060.000000002,
+    "low_aov": 196604.0,
+    "high_aov": 347489.25,
+    "low_rating": 4.6999999523162845,
+    "high_rating": 4.850000047683716,
+    "low_roas": 9.983443964266081,
+    "high_roas": 24.727176359688176,
+    "month_1_factor": 0.2274705930172725,
+    "month_7_factor": 0.27008670968347004,
+    "month_8_factor": 0.27744181425300696,
+    "closure_impact": 0.07646392333305939,
+    "stock_impact": 0.15136578930459882,
+    "cancellation_impact": 0.12252636249511706
+  },
+  "factor_correlations": {
+    "total_orders": 0.9131888442801568,
+    "marketing_sales": 0.8991278997450336,
+    "marketing_spend": 0.7834712956208596,
+    "returning_customers": 0.7480324836081381,
+    "new_customers": 0.6243398681082847,
+    "roas": 0.25593598034040715,
+    "avg_order_value": 0.13772962961459964
+  },
+  "feature_importance": {
+    "total_orders": 0.8925106608322833,
+    "avg_order_value": 0.1041834695477833,
+    "avg_rating": 9.477392619966557e-05,
+    "marketing_spend": 0.00036752007205203933,
+    "roas": 0.0012453304325229487,
+    "total_closed": 1.0451045815917268e-06,
+    "total_out_of_stock": 4.007619185293459e-06,
+    "total_cancelled": 7.119598435721085e-06,
+    "day_of_week": 9.371389932409198e-05,
+    "month": 0.00010958673536871444,
+    "day_of_year": 0.0002091271742810018,
+    "new_customers": 0.00020626071645502228,
+    "returning_customers": 0.0009673843415272154
+  },
+  "model_trained": true
+}
