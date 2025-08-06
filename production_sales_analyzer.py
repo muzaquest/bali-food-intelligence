@@ -71,11 +71,19 @@ class ProductionSalesAnalyzer:
             results.append("")
             
             # Анализируем каждый проблемный день
-            for i, (date, drop_percent) in enumerate(bad_days[:5], 1):  # Топ-5 худших дней
+            for i, bad_day_info in enumerate(bad_days[:5], 1):  # Топ-5 худших дней
+                date = bad_day_info[0]
+                problem_percent = bad_day_info[1]
+                problem_type = bad_day_info[2] if len(bad_day_info) > 2 else 'relative_drop'
+                
                 day_analysis = self._analyze_specific_day(restaurant_name, date)
                 
                 results.append(f"📉 ПРОБЛЕМНЫЙ ДЕНЬ #{i}: {date}")
-                results.append(f"   💔 Падение продаж: {drop_percent:.1f}%")
+                
+                if problem_type == 'absolute_low':
+                    results.append(f"   📉 Критически низкие продажи: {problem_percent:.1f}% ниже медианы")
+                else:
+                    results.append(f"   💔 Падение продаж: {problem_percent:.1f}%")
                 results.append("")
                 
                 # Добавляем детальный анализ
@@ -126,9 +134,20 @@ class ProductionSalesAnalyzer:
                 
             drop_percent = ((row['sales_7day_avg'] - row['total_sales']) / row['sales_7day_avg']) * 100
             if drop_percent >= 20:  # Падение больше 20%
-                bad_days.append((row['stat_date'], drop_percent))
+                bad_days.append((row['stat_date'], drop_percent, 'relative_drop'))
         
-        # Сортируем по величине падения
+        # Добавляем дни с критически низкими абсолютными продажами
+        median_sales = df['total_sales'].median()
+        low_threshold = median_sales * 0.7  # 70% от медианы
+        
+        for _, row in df.iterrows():
+            if row['total_sales'] < low_threshold:
+                # Проверяем что этот день еще не добавлен
+                if not any(day[0] == row['stat_date'] for day in bad_days):
+                    below_median_percent = ((median_sales - row['total_sales']) / median_sales) * 100
+                    bad_days.append((row['stat_date'], below_median_percent, 'absolute_low'))
+        
+        # Сортируем по величине проблемы
         bad_days.sort(key=lambda x: x[1], reverse=True)
         return bad_days
     
@@ -418,7 +437,7 @@ class ProductionSalesAnalyzer:
         results.append("")
         
         # Анализируем паттерны
-        weekend_issues = sum(1 for date, _ in bad_days if pd.to_datetime(date).strftime('%A') in ['Sunday', 'Monday'])
+        weekend_issues = sum(1 for bad_day_info in bad_days if pd.to_datetime(bad_day_info[0]).strftime('%A') in ['Sunday', 'Monday'])
         
         if weekend_issues > len(bad_days) * 0.5:
             results.append("📅 Проблема с выходными днями:")
