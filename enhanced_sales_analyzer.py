@@ -129,7 +129,7 @@ class EnhancedSalesAnalyzer:
             COALESCE(gj.delivery_time, '00:00:00') as delivery_time,
             COALESCE(gj.accepting_time, '00:00:00') as accepting_time,
             COALESCE(gj.driver_waiting, 0) as gojek_driver_waiting_min,
-            COALESCE(g.driver_waiting_time, 0) as grab_driver_waiting_min,
+            COALESCE(g.driver_waiting_time, 0) / 60.0 as grab_driver_waiting_min,  -- Конвертируем секунды в минуты
             
             -- КАЛЕНДАРНЫЕ ДАННЫЕ
             CAST(strftime('%w', g.stat_date) AS INTEGER) as day_of_week,
