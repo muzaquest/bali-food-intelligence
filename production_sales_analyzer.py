@@ -43,7 +43,17 @@ class ProductionSalesAnalyzer:
         """Загружаем данные о локациях ресторанов"""
         try:
             with open('data/bali_restaurant_locations.json', 'r', encoding='utf-8') as f:
-                return json.load(f)
+                data = json.load(f)
+                # Преобразуем в словарь name -> location
+                locations = {}
+                if 'restaurants' in data:
+                    for restaurant in data['restaurants']:
+                        locations[restaurant['name']] = {
+                            'latitude': restaurant['latitude'],
+                            'longitude': restaurant['longitude'],
+                            'location': restaurant['location']
+                        }
+                return locations
         except Exception as e:
             print(f"⚠️ Не удалось загрузить локации: {e}")
             return {}
@@ -104,20 +114,39 @@ class ProductionSalesAnalyzer:
     
     def _find_bad_days(self, restaurant_name, start_date, end_date):
         """Находит дни с критическим падением продаж"""
-        query = f"""
-        SELECT 
-            g.stat_date,
-            COALESCE(g.sales, 0) + COALESCE(gj.sales, 0) as total_sales
-        FROM grab_stats g
-        LEFT JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id 
-                                 AND g.stat_date = gj.stat_date
-        LEFT JOIN restaurants r ON g.restaurant_id = r.id
-        WHERE r.name = '{restaurant_name}'
-        AND g.stat_date BETWEEN '{start_date}' AND '{end_date}'
-        ORDER BY g.stat_date
-        """
-        
         with sqlite3.connect('database.sqlite') as conn:
+            # Сначала найдем ID ресторана
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            restaurant_df = pd.read_sql_query(restaurant_query, conn)
+            
+            if restaurant_df.empty:
+                return []
+                
+            restaurant_id = restaurant_df.iloc[0]['id']
+            
+            # Получаем все даты с продажами из обеих таблиц
+            query = f"""
+            WITH all_dates AS (
+                SELECT stat_date FROM grab_stats 
+                WHERE restaurant_id = {restaurant_id} 
+                AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+                UNION 
+                SELECT stat_date FROM gojek_stats 
+                WHERE restaurant_id = {restaurant_id}
+                AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+            ),
+            combined_sales AS (
+                SELECT 
+                    ad.stat_date,
+                    COALESCE(g.sales, 0) + COALESCE(gj.sales, 0) as total_sales
+                FROM all_dates ad
+                LEFT JOIN grab_stats g ON ad.stat_date = g.stat_date AND g.restaurant_id = {restaurant_id}
+                LEFT JOIN gojek_stats gj ON ad.stat_date = gj.stat_date AND gj.restaurant_id = {restaurant_id}
+            )
+            SELECT * FROM combined_sales 
+            ORDER BY stat_date
+            """
+            
             df = pd.read_sql_query(query, conn)
         
         if len(df) < 7:  # Недостаточно данных
@@ -201,10 +230,12 @@ class ProductionSalesAnalyzer:
                 impact_score += 30
         
         # 2. Временные показатели с отклонениями
-        self._analyze_time_factors(day_data, monthly_averages, factors, impact_score, critical_issues)
+        time_impact = self._analyze_time_factors(day_data, monthly_averages, factors, critical_issues)
+        impact_score += time_impact
         
         # 3. Реклама и ROAS
-        self._analyze_advertising(day_data, factors, impact_score, critical_issues)
+        ads_impact = self._analyze_advertising(day_data, factors, critical_issues)
+        impact_score += ads_impact
         
         # 4. Погода
         if weather_data:
@@ -214,6 +245,9 @@ class ProductionSalesAnalyzer:
             elif weather_data['precipitation'] > 5:
                 factors.append(f"🌦️ Умеренный дождь ({weather_data['precipitation']:.1f}мм)")
                 impact_score += 15
+            elif weather_data['precipitation'] > 0:
+                factors.append(f"🌤️ Легкий дождь ({weather_data['precipitation']:.1f}мм)")
+                impact_score += 5
         
         # 5. Праздники
         if holiday_info:
@@ -255,64 +289,116 @@ class ProductionSalesAnalyzer:
     
     def _get_day_data(self, restaurant_name, target_date):
         """Получает данные за конкретный день"""
-        query = f"""
-        SELECT 
-            g.stat_date,
-            COALESCE(g.sales, 0) + COALESCE(gj.sales, 0) as total_sales,
-            COALESCE(g.orders, 0) + COALESCE(gj.orders, 0) as total_orders,
-            COALESCE(g.sales, 0) as grab_sales,
-            COALESCE(gj.sales, 0) as gojek_sales,
-            COALESCE(g.orders, 0) as grab_orders,
-            COALESCE(gj.orders, 0) as gojek_orders,
-            COALESCE(gj.close_time, '00:00:00') as gojek_close_time,
-            COALESCE(g.offline_rate, 0) as grab_offline_rate,
-            COALESCE(gj.preparation_time, '00:00:00') as gojek_preparation_time,
-            COALESCE(gj.delivery_time, '00:00:00') as gojek_delivery_time,
-            COALESCE(gj.driver_waiting, 0) as gojek_driver_waiting_min,
-            COALESCE(g.driver_waiting_time, 0) / 60.0 as grab_driver_waiting_min,
-            COALESCE(g.ads_spend, 0) as grab_ads_spend,
-            COALESCE(g.ads_sales, 0) as grab_ads_sales,
-            COALESCE(gj.ads_spend, 0) as gojek_ads_spend,
-            COALESCE(gj.ads_sales, 0) as gojek_ads_sales
-        FROM grab_stats g
-        LEFT JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id 
-                                 AND g.stat_date = gj.stat_date
-        LEFT JOIN restaurants r ON g.restaurant_id = r.id
-        WHERE r.name = '{restaurant_name}' AND g.stat_date = '{target_date}'
-        """
-        
+        # Сначала найдем ID ресторана
         with sqlite3.connect('database.sqlite') as conn:
-            df = pd.read_sql_query(query, conn)
-        
-        if len(df) > 0:
-            return df.iloc[0].to_dict()
-        return None
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            restaurant_df = pd.read_sql_query(restaurant_query, conn)
+            
+            if restaurant_df.empty:
+                return None
+                
+            restaurant_id = restaurant_df.iloc[0]['id']
+            
+            # Получаем данные Grab
+            grab_query = f"""
+            SELECT 
+                stat_date,
+                COALESCE(sales, 0) as grab_sales,
+                COALESCE(orders, 0) as grab_orders,
+                COALESCE(offline_rate, 0) as grab_offline_rate,
+                COALESCE(driver_waiting_time, 0) / 60.0 as grab_driver_waiting_min,
+                COALESCE(ads_spend, 0) as grab_ads_spend,
+                COALESCE(ads_sales, 0) as grab_ads_sales
+            FROM grab_stats
+            WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
+            """
+            grab_df = pd.read_sql_query(grab_query, conn)
+            
+            # Получаем данные Gojek
+            gojek_query = f"""
+            SELECT 
+                stat_date,
+                COALESCE(sales, 0) as gojek_sales,
+                COALESCE(orders, 0) as gojek_orders,
+                COALESCE(close_time, '00:00:00') as gojek_close_time,
+                COALESCE(preparation_time, '00:00:00') as gojek_preparation_time,
+                COALESCE(delivery_time, '00:00:00') as gojek_delivery_time,
+                COALESCE(driver_waiting, 0) as gojek_driver_waiting_min,
+                COALESCE(ads_spend, 0) as gojek_ads_spend,
+                COALESCE(ads_sales, 0) as gojek_ads_sales
+            FROM gojek_stats
+            WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
+            """
+            gojek_df = pd.read_sql_query(gojek_query, conn)
+            
+            # Если нет данных ни в одной из таблиц
+            if grab_df.empty and gojek_df.empty:
+                return None
+                
+            # Объединяем данные
+            result = {
+                'stat_date': target_date,
+                'grab_sales': grab_df.iloc[0]['grab_sales'] if not grab_df.empty else 0,
+                'gojek_sales': gojek_df.iloc[0]['gojek_sales'] if not gojek_df.empty else 0,
+                'grab_orders': grab_df.iloc[0]['grab_orders'] if not grab_df.empty else 0,
+                'gojek_orders': gojek_df.iloc[0]['gojek_orders'] if not gojek_df.empty else 0,
+                'grab_offline_rate': grab_df.iloc[0]['grab_offline_rate'] if not grab_df.empty else 0,
+                'gojek_close_time': gojek_df.iloc[0]['gojek_close_time'] if not gojek_df.empty else '00:00:00',
+                'gojek_preparation_time': gojek_df.iloc[0]['gojek_preparation_time'] if not gojek_df.empty else '00:00:00',
+                'gojek_delivery_time': gojek_df.iloc[0]['gojek_delivery_time'] if not gojek_df.empty else '00:00:00',
+                'gojek_driver_waiting_min': gojek_df.iloc[0]['gojek_driver_waiting_min'] if not gojek_df.empty else 0,
+                'grab_driver_waiting_min': grab_df.iloc[0]['grab_driver_waiting_min'] if not grab_df.empty else 0,
+                'grab_ads_spend': grab_df.iloc[0]['grab_ads_spend'] if not grab_df.empty else 0,
+                'grab_ads_sales': grab_df.iloc[0]['grab_ads_sales'] if not grab_df.empty else 0,
+                'gojek_ads_spend': gojek_df.iloc[0]['gojek_ads_spend'] if not gojek_df.empty else 0,
+                'gojek_ads_sales': gojek_df.iloc[0]['gojek_ads_sales'] if not gojek_df.empty else 0
+            }
+            
+            result['total_sales'] = result['grab_sales'] + result['gojek_sales']
+            result['total_orders'] = result['grab_orders'] + result['gojek_orders']
+            
+            return result
     
     def _get_monthly_averages(self, restaurant_name, target_date):
         """Получает среднемесячные временные показатели"""
         target_month = target_date[:7]  # YYYY-MM
         
-        query = f"""
-        SELECT 
-            AVG(CASE WHEN gj.preparation_time IS NOT NULL AND gj.preparation_time != '00:00:00' 
-                THEN (CAST(substr(gj.preparation_time, 1, 2) AS INTEGER) * 60 + 
-                      CAST(substr(gj.preparation_time, 4, 2) AS INTEGER) + 
-                      CAST(substr(gj.preparation_time, 7, 2) AS INTEGER) / 60.0) 
-                ELSE NULL END) as avg_prep_time,
-            AVG(CASE WHEN gj.delivery_time IS NOT NULL AND gj.delivery_time != '00:00:00' 
-                THEN (CAST(substr(gj.delivery_time, 1, 2) AS INTEGER) * 60 + 
-                      CAST(substr(gj.delivery_time, 4, 2) AS INTEGER) + 
-                      CAST(substr(gj.delivery_time, 7, 2) AS INTEGER) / 60.0) 
-                ELSE NULL END) as avg_delivery_time,
-            AVG(CASE WHEN gj.driver_waiting > 0 THEN gj.driver_waiting ELSE NULL END) as avg_gojek_waiting,
-            AVG(CASE WHEN g.driver_waiting_time > 0 THEN g.driver_waiting_time / 60.0 ELSE NULL END) as avg_grab_waiting
-        FROM grab_stats g
-        LEFT JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
-        LEFT JOIN restaurants r ON g.restaurant_id = r.id
-        WHERE r.name = '{restaurant_name}' AND g.stat_date LIKE '{target_month}%'
-        """
-        
         with sqlite3.connect('database.sqlite') as conn:
+            # Сначала найдем ID ресторана
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            restaurant_df = pd.read_sql_query(restaurant_query, conn)
+            
+            if restaurant_df.empty:
+                return {'avg_prep_time': 0, 'avg_delivery_time': 0, 'avg_gojek_waiting': 0, 'avg_grab_waiting': 0}
+                
+            restaurant_id = restaurant_df.iloc[0]['id']
+            
+            query = f"""
+            WITH all_dates AS (
+                SELECT stat_date FROM grab_stats 
+                WHERE restaurant_id = {restaurant_id} AND stat_date LIKE '{target_month}%'
+                UNION 
+                SELECT stat_date FROM gojek_stats 
+                WHERE restaurant_id = {restaurant_id} AND stat_date LIKE '{target_month}%'
+            )
+            SELECT 
+                AVG(CASE WHEN gj.preparation_time IS NOT NULL AND gj.preparation_time != '00:00:00' 
+                    THEN (CAST(substr(gj.preparation_time, 1, 2) AS INTEGER) * 60 + 
+                          CAST(substr(gj.preparation_time, 4, 2) AS INTEGER) + 
+                          CAST(substr(gj.preparation_time, 7, 2) AS INTEGER) / 60.0) 
+                    ELSE NULL END) as avg_prep_time,
+                AVG(CASE WHEN gj.delivery_time IS NOT NULL AND gj.delivery_time != '00:00:00' 
+                    THEN (CAST(substr(gj.delivery_time, 1, 2) AS INTEGER) * 60 + 
+                          CAST(substr(gj.delivery_time, 4, 2) AS INTEGER) + 
+                          CAST(substr(gj.delivery_time, 7, 2) AS INTEGER) / 60.0) 
+                    ELSE NULL END) as avg_delivery_time,
+                AVG(CASE WHEN gj.driver_waiting > 0 THEN gj.driver_waiting ELSE NULL END) as avg_gojek_waiting,
+                AVG(CASE WHEN g.driver_waiting_time > 0 THEN g.driver_waiting_time / 60.0 ELSE NULL END) as avg_grab_waiting
+            FROM all_dates ad
+            LEFT JOIN grab_stats g ON ad.stat_date = g.stat_date AND g.restaurant_id = {restaurant_id}
+            LEFT JOIN gojek_stats gj ON ad.stat_date = gj.stat_date AND gj.restaurant_id = {restaurant_id}
+            """
+            
             df = pd.read_sql_query(query, conn)
             
         if len(df) > 0:
@@ -354,8 +440,10 @@ class ProductionSalesAnalyzer:
         
         return None
     
-    def _analyze_time_factors(self, day_data, monthly_averages, factors, impact_score, critical_issues):
+    def _analyze_time_factors(self, day_data, monthly_averages, factors, critical_issues):
         """Анализирует временные факторы с отклонениями"""
+        impact_score = 0
+        
         # Preparation Time
         prep_time_str = day_data.get('gojek_preparation_time', '00:00:00')
         if prep_time_str and prep_time_str != '00:00:00':
@@ -367,8 +455,10 @@ class ProductionSalesAnalyzer:
                 if prep_deviation >= 50:
                     factors.append(f"🚨 КРИТИЧНО: Gojek Preparation {prep_minutes:.1f}мин (+{prep_deviation:.0f}%)")
                     critical_issues.append("Критическое время готовки Gojek")
+                    impact_score += 30
                 elif prep_deviation >= 30:
                     factors.append(f"⚠️ Gojek Preparation {prep_minutes:.1f}мин (+{prep_deviation:.0f}% выше)")
+                    impact_score += 15
         
         # Delivery Time
         delivery_time_str = day_data.get('gojek_delivery_time', '00:00:00')
@@ -381,8 +471,10 @@ class ProductionSalesAnalyzer:
                 if delivery_deviation >= 50:
                     factors.append(f"🚨 КРИТИЧНО: Gojek Delivery {delivery_minutes:.1f}мин (+{delivery_deviation:.0f}%)")
                     critical_issues.append("Критическое время доставки Gojek")
+                    impact_score += 30
                 elif delivery_deviation >= 30:
                     factors.append(f"⚠️ Gojek Delivery {delivery_minutes:.1f}мин (+{delivery_deviation:.0f}% выше)")
+                    impact_score += 15
         
         # Driver Waiting Time
         gojek_waiting = day_data.get('gojek_driver_waiting_min', 0)
@@ -393,10 +485,14 @@ class ProductionSalesAnalyzer:
                 if waiting_deviation >= 50:
                     factors.append(f"🚨 КРИТИЧНО: Gojek Driver Waiting {gojek_waiting}мин (+{waiting_deviation:.0f}%)")
                     critical_issues.append("Критическое время ожидания Gojek")
+                    impact_score += 30
                 elif waiting_deviation >= 30:
                     factors.append(f"⚠️ Gojek Driver Waiting {gojek_waiting}мин (+{waiting_deviation:.0f}% выше)")
+                    impact_score += 15
+                    
+        return impact_score
     
-    def _analyze_advertising(self, day_data, factors, impact_score, critical_issues):
+    def _analyze_advertising(self, day_data, factors, critical_issues):
         """Анализирует рекламные показатели"""
         grab_ads_spend = day_data.get('grab_ads_spend', 0)
         grab_ads_sales = day_data.get('grab_ads_sales', 0)
@@ -404,6 +500,7 @@ class ProductionSalesAnalyzer:
         gojek_ads_sales = day_data.get('gojek_ads_sales', 0)
         
         ads_working = False
+        impact_score = 0
         
         if grab_ads_spend > 0:
             grab_roas = grab_ads_sales / grab_ads_spend
@@ -415,6 +512,7 @@ class ProductionSalesAnalyzer:
             elif grab_roas < 1:
                 factors.append(f"🚨 Grab ROAS критичный: {grab_roas:.1f}")
                 critical_issues.append("Критически низкий ROAS Grab")
+                impact_score += 40
                 
         if gojek_ads_spend > 0:
             gojek_roas = gojek_ads_sales / gojek_ads_spend
@@ -426,9 +524,13 @@ class ProductionSalesAnalyzer:
             elif gojek_roas < 1:
                 factors.append(f"🚨 Gojek ROAS критичный: {gojek_roas:.1f}")
                 critical_issues.append("Критически низкий ROAS Gojek")
+                impact_score += 40
         
         if not ads_working:
             factors.append("❌ Реклама не работала")
+            impact_score += 20
+            
+        return impact_score
     
     def _generate_general_recommendations(self, bad_days):
         """Генерирует общие рекомендации"""
