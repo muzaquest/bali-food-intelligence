@@ -124,10 +124,12 @@ class EnhancedSalesAnalyzer:
             COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0) as total_ads_spend,
             COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0) as total_ads_sales,
             
-            -- ВРЕМЯ ОБСЛУЖИВАНИЯ
+            -- ВРЕМЯ ОБСЛУЖИВАНИЯ И ОЖИДАНИЯ (КРИТИЧНО!)
             COALESCE(gj.preparation_time, '00:00:00') as preparation_time,
             COALESCE(gj.delivery_time, '00:00:00') as delivery_time,
             COALESCE(gj.accepting_time, '00:00:00') as accepting_time,
+            COALESCE(gj.driver_waiting, 0) as gojek_driver_waiting_min,
+            COALESCE(g.driver_waiting_time, 0) as grab_driver_waiting_min,
             
             -- КАЛЕНДАРНЫЕ ДАННЫЕ
             CAST(strftime('%w', g.stat_date) AS INTEGER) as day_of_week,
@@ -158,6 +160,12 @@ class EnhancedSalesAnalyzer:
                 print(f"   🚨 Gojek выключен: {row['gojek_close_time']}")
             if row['grab_offline_rate'] > 0:
                 print(f"   🚨 Grab offline: {row['grab_offline_rate']:.1f}%")
+                
+            # Показываем время ожидания водителей
+            if row['gojek_driver_waiting_min'] > 0:
+                print(f"   ⏱️ Gojek Driver Waiting: {row['gojek_driver_waiting_min']} мин")
+            if row['grab_driver_waiting_min'] > 0:
+                print(f"   ⏱️ Grab Driver Waiting: {row['grab_driver_waiting_min']} мин")
                 
             return row
         else:
@@ -271,7 +279,41 @@ class EnhancedSalesAnalyzer:
                 analysis['factors'].append(f"⚠️ Grab offline {grab_offline_rate:.1f}%")
                 analysis['impact_score'] += 10
                 
-        # ФАКТОР 2: Операционные проблемы
+        # ФАКТОР 2: ВРЕМЯ ОЖИДАНИЯ ВОДИТЕЛЕЙ (НОВЫЙ КРИТИЧЕСКИЙ ФАКТОР!)
+        gojek_waiting = day_data.get('gojek_driver_waiting_min', 0)
+        grab_waiting = day_data.get('grab_driver_waiting_min', 0)
+        
+        if gojek_waiting > 0:
+            if gojek_waiting >= 20:  # Больше 20 минут - критично
+                analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek Driver Waiting {gojek_waiting} мин")
+                analysis['impact_score'] += 35
+                analysis['critical_issues'].append("Критическое время ожидания Gojek")
+            elif gojek_waiting >= 15:  # Больше 15 минут - серьезно
+                analysis['factors'].append(f"⚠️ Gojek Driver Waiting {gojek_waiting} мин (высокое)")
+                analysis['impact_score'] += 25
+            elif gojek_waiting >= 10:  # Больше 10 минут - проблема
+                analysis['factors'].append(f"🕐 Gojek Driver Waiting {gojek_waiting} мин")
+                analysis['impact_score'] += 15
+            else:
+                analysis['factors'].append(f"⏱️ Gojek Driver Waiting {gojek_waiting} мин")
+                analysis['impact_score'] += 5
+                
+        if grab_waiting > 0:
+            if grab_waiting >= 20:  # Больше 20 минут - критично
+                analysis['factors'].append(f"🚨 КРИТИЧНО: Grab Driver Waiting {grab_waiting} мин")
+                analysis['impact_score'] += 35
+                analysis['critical_issues'].append("Критическое время ожидания Grab")
+            elif grab_waiting >= 15:  # Больше 15 минут - серьезно
+                analysis['factors'].append(f"⚠️ Grab Driver Waiting {grab_waiting} мин (высокое)")
+                analysis['impact_score'] += 25
+            elif grab_waiting >= 10:  # Больше 10 минут - проблема
+                analysis['factors'].append(f"🕐 Grab Driver Waiting {grab_waiting} мин")
+                analysis['impact_score'] += 15
+            else:
+                analysis['factors'].append(f"⏱️ Grab Driver Waiting {grab_waiting} мин")
+                analysis['impact_score'] += 5
+                
+        # ФАКТОР 3: Операционные проблемы
         if day_data['grab_closed'] > 0:
             analysis['factors'].append("🚨 Ресторан был закрыт на Grab")
             analysis['impact_score'] += 30
@@ -561,6 +603,10 @@ class EnhancedSalesAnalyzer:
                 recommendations.append("🚨 СРОЧНО: Выяснить почему программа Gojek была выключена на несколько часов")
             if "Критическое выключение Grab" in analysis['critical_issues']:
                 recommendations.append("🚨 СРОЧНО: Выяснить почему программа Grab была выключена на несколько часов")
+            if "Критическое время ожидания Gojek" in analysis['critical_issues']:
+                recommendations.append("🚨 СРОЧНО: Проблемы с водителями Gojek - долгое ожидание отпугивает клиентов")
+            if "Критическое время ожидания Grab" in analysis['critical_issues']:
+                recommendations.append("🚨 СРОЧНО: Проблемы с водителями Grab - долгое ожидание отпугивает клиентов")
                 
         # Операционные рекомендации
         operational_factors = [f for f in analysis['factors'] if any(x in f for x in ['закрыт', 'товара', 'перегружен'])]
@@ -620,24 +666,25 @@ class EnhancedSalesAnalyzer:
                 return f"{hours}ч"
 
 def main():
-    """Тестируем улучшенный анализатор на 15 мая с учетом Close Time"""
+    """Тестируем анализатор на 18 мая с фокусом на Driver Waiting Time"""
     
     analyzer = EnhancedSalesAnalyzer()
     
-    # Анализируем 15 мая с учетом времени закрытия
-    result = analyzer.analyze_sales_drop("Only Eggs", "2025-05-15")
+    # Анализируем 18 мая с фокусом на время ожидания водителей
+    result = analyzer.analyze_sales_drop("Only Eggs", "2025-05-18")
     
     print("\n" + "="*100)
-    print("📋 УЛУЧШЕННЫЙ ОТЧЕТ С УЧЕТОМ CLOSE TIME:")
+    print("📋 АНАЛИЗ С ФОКУСОМ НА DRIVER WAITING TIME:")
     print("="*100)
     print(result)
     print("="*100)
     
-    print("\n🎯 АНАЛИЗАТОР ГОТОВ К ПРОДАКШН ИСПОЛЬЗОВАНИЮ!")
-    print("   ✅ Учитывает Close Time")
-    print("   ✅ Все критические факторы")
-    print("   ✅ Профессиональные отчеты")
-    print("   ✅ Готов к интеграции")
+    print("\n🎯 АНАЛИЗАТОР УЧИТЫВАЕТ ВСЕ КРИТИЧЕСКИЕ ФАКТОРЫ!")
+    print("   ✅ Close Time (выключение программы)")
+    print("   ✅ Driver Waiting Time (время ожидания водителей)")
+    print("   ✅ Все операционные факторы")
+    print("   ✅ Погода и праздники")
+    print("   ✅ Готов к продакшн использованию")
 
 if __name__ == "__main__":
     main()
