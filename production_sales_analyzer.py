@@ -254,7 +254,25 @@ class ProductionSalesAnalyzer:
             factors.append(f"🎉 {holiday_info.get('name', 'Праздник')}")
             impact_score += 25
         
-        # 6. День недели
+        # 6. Рейтинги
+        gojek_rating = day_data.get('gojek_rating', 0)
+        grab_rating = day_data.get('grab_rating', 0)
+        
+        if gojek_rating > 0 and gojek_rating < 4.5:
+            factors.append(f"⭐ Низкий рейтинг Gojek: {gojek_rating}")
+            impact_score += 20
+        elif gojek_rating > 0 and gojek_rating < 4.7:
+            factors.append(f"⭐ Средний рейтинг Gojek: {gojek_rating}")
+            impact_score += 10
+            
+        if grab_rating > 0 and grab_rating < 4.5:
+            factors.append(f"⭐ Низкий рейтинг Grab: {grab_rating}")
+            impact_score += 20
+        elif grab_rating > 0 and grab_rating < 4.7:
+            factors.append(f"⭐ Средний рейтинг Grab: {grab_rating}")
+            impact_score += 10
+        
+        # 7. День недели
         weekday = pd.to_datetime(target_date).strftime('%A')
         if weekday in ['Sunday', 'Monday']:
             factors.append(f"📅 Слабый день недели ({weekday})")
@@ -308,7 +326,8 @@ class ProductionSalesAnalyzer:
                 COALESCE(offline_rate, 0) as grab_offline_rate,
                 COALESCE(driver_waiting_time, 0) / 60.0 as grab_driver_waiting_min,
                 COALESCE(ads_spend, 0) as grab_ads_spend,
-                COALESCE(ads_sales, 0) as grab_ads_sales
+                COALESCE(ads_sales, 0) as grab_ads_sales,
+                COALESCE(rating, 0) as grab_rating
             FROM grab_stats
             WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
             """
@@ -325,7 +344,8 @@ class ProductionSalesAnalyzer:
                 COALESCE(delivery_time, '00:00:00') as gojek_delivery_time,
                 COALESCE(driver_waiting, 0) as gojek_driver_waiting_min,
                 COALESCE(ads_spend, 0) as gojek_ads_spend,
-                COALESCE(ads_sales, 0) as gojek_ads_sales
+                COALESCE(ads_sales, 0) as gojek_ads_sales,
+                COALESCE(rating, 0) as gojek_rating
             FROM gojek_stats
             WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
             """
@@ -351,7 +371,9 @@ class ProductionSalesAnalyzer:
                 'grab_ads_spend': grab_df.iloc[0]['grab_ads_spend'] if not grab_df.empty else 0,
                 'grab_ads_sales': grab_df.iloc[0]['grab_ads_sales'] if not grab_df.empty else 0,
                 'gojek_ads_spend': gojek_df.iloc[0]['gojek_ads_spend'] if not gojek_df.empty else 0,
-                'gojek_ads_sales': gojek_df.iloc[0]['gojek_ads_sales'] if not gojek_df.empty else 0
+                'gojek_ads_sales': gojek_df.iloc[0]['gojek_ads_sales'] if not gojek_df.empty else 0,
+                'grab_rating': grab_df.iloc[0]['grab_rating'] if not grab_df.empty else 0,
+                'gojek_rating': gojek_df.iloc[0]['gojek_rating'] if not gojek_df.empty else 0
             }
             
             result['total_sales'] = result['grab_sales'] + result['gojek_sales']
