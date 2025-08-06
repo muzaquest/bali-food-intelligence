@@ -439,12 +439,12 @@ class SpecificDateAnalyzer:
         return "\n".join(report)
 
 def main():
-    """Анализируем Only Eggs 15 мая 2025"""
+    """Анализируем Only Eggs 18 мая 2025"""
     
     analyzer = SpecificDateAnalyzer()
     
     # Анализируем конкретную дату
-    result = analyzer.analyze_specific_date("Only Eggs", "2025-05-15")
+    result = analyzer.analyze_specific_date("Only Eggs", "2025-05-18")
     
     print("\n" + "="*100)
     print("📋 РЕЗУЛЬТАТ АНАЛИЗА:")
