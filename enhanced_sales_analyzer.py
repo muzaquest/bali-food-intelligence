@@ -120,7 +120,11 @@ class EnhancedSalesAnalyzer:
             COALESCE(gj.cancelled_orders, 0) as gojek_cancelled,
             COALESCE(g.rating, gj.rating, 4.0) as rating,
             
-            -- МАРКЕТИНГ
+            -- МАРКЕТИНГ (ДЕТАЛЬНО)
+            COALESCE(g.ads_spend, 0) as grab_ads_spend,
+            COALESCE(g.ads_sales, 0) as grab_ads_sales,
+            COALESCE(gj.ads_spend, 0) as gojek_ads_spend,
+            COALESCE(gj.ads_sales, 0) as gojek_ads_sales,
             COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0) as total_ads_spend,
             COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0) as total_ads_sales,
             
@@ -174,6 +178,14 @@ class EnhancedSalesAnalyzer:
             if row['gojek_delivery_time'] and row['gojek_delivery_time'] != '00:00:00':
                 delivery_minutes = self._parse_time_to_minutes(row['gojek_delivery_time'])
                 print(f"   🚚 Gojek Delivery Time: {delivery_minutes:.1f} мин")
+                
+            # Показываем рекламные показатели
+            if row['grab_ads_spend'] > 0:
+                grab_roas = row['grab_ads_sales'] / row['grab_ads_spend']
+                print(f"   📢 Grab ROAS: {grab_roas:.2f} (потрачено: {row['grab_ads_spend']:,.0f} IDR)")
+            if row['gojek_ads_spend'] > 0:
+                gojek_roas = row['gojek_ads_sales'] / row['gojek_ads_spend']
+                print(f"   📢 Gojek ROAS: {gojek_roas:.2f} (потрачено: {row['gojek_ads_spend']:,.0f} IDR)")
                 
             return row
         else:
@@ -430,8 +442,50 @@ class EnhancedSalesAnalyzer:
                 elif delivery_deviation >= 15:
                     analysis['factors'].append(f"🕐 Gojek Delivery {delivery_minutes:.1f}мин (+{delivery_deviation:.0f}% выше)")
                     analysis['impact_score'] += 15
+        
+        # ФАКТОР 4: АНАЛИЗ РЕКЛАМЫ И ROAS
+        grab_ads_spend = day_data.get('grab_ads_spend', 0)
+        grab_ads_sales = day_data.get('grab_ads_sales', 0)
+        gojek_ads_spend = day_data.get('gojek_ads_spend', 0)
+        gojek_ads_sales = day_data.get('gojek_ads_sales', 0)
+        
+        # Проверяем работу рекламы
+        ads_working = False
+        if grab_ads_spend > 0:
+            grab_roas = grab_ads_sales / grab_ads_spend
+            ads_working = True
+            if grab_roas >= 10:  # Отличный ROAS
+                analysis['factors'].append(f"✅ Grab ROAS отличный: {grab_roas:.1f}")
+            elif grab_roas >= 3:  # Хороший ROAS
+                analysis['factors'].append(f"🟢 Grab ROAS хороший: {grab_roas:.1f}")
+            elif grab_roas >= 1:  # Низкий ROAS
+                analysis['factors'].append(f"🟡 Grab ROAS низкий: {grab_roas:.1f}")
+                analysis['impact_score'] += 10
+            else:  # Критически низкий ROAS
+                analysis['factors'].append(f"🚨 Grab ROAS критичный: {grab_roas:.1f}")
+                analysis['impact_score'] += 20
+                analysis['critical_issues'].append("Критически низкий ROAS Grab")
                 
-        # ФАКТОР 4: Операционные проблемы
+        if gojek_ads_spend > 0:
+            gojek_roas = gojek_ads_sales / gojek_ads_spend
+            ads_working = True
+            if gojek_roas >= 10:  # Отличный ROAS
+                analysis['factors'].append(f"✅ Gojek ROAS отличный: {gojek_roas:.1f}")
+            elif gojek_roas >= 3:  # Хороший ROAS
+                analysis['factors'].append(f"🟢 Gojek ROAS хороший: {gojek_roas:.1f}")
+            elif gojek_roas >= 1:  # Низкий ROAS
+                analysis['factors'].append(f"🟡 Gojek ROAS низкий: {gojek_roas:.1f}")
+                analysis['impact_score'] += 10
+            else:  # Критически низкий ROAS
+                analysis['factors'].append(f"🚨 Gojek ROAS критичный: {gojek_roas:.1f}")
+                analysis['impact_score'] += 20
+                analysis['critical_issues'].append("Критически низкий ROAS Gojek")
+        
+        if not ads_working:
+            analysis['factors'].append("❌ Реклама не работала")
+            analysis['impact_score'] += 15
+                 
+        # ФАКТОР 5: Операционные проблемы
         if day_data['grab_closed'] > 0:
             analysis['factors'].append("🚨 Ресторан был закрыт на Grab")
             analysis['impact_score'] += 30
