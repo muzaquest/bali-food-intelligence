@@ -71,7 +71,7 @@ class ProductionSalesAnalyzer:
             results.append("")
             
             # Анализируем каждый проблемный день
-            for i, (date, drop_percent) in enumerate(bad_days[:3], 1):  # Топ-3 худших дня
+            for i, (date, drop_percent) in enumerate(bad_days[:5], 1):  # Топ-5 худших дней
                 day_analysis = self._analyze_specific_day(restaurant_name, date)
                 
                 results.append(f"📉 ПРОБЛЕМНЫЙ ДЕНЬ #{i}: {date}")
@@ -118,14 +118,14 @@ class ProductionSalesAnalyzer:
         # Рассчитываем скользящее среднее
         df['sales_7day_avg'] = df['total_sales'].rolling(window=7, center=True).mean()
         
-        # Находим дни с падением больше 30%
+        # Находим дни с падением больше 20%
         bad_days = []
         for _, row in df.iterrows():
             if pd.isna(row['sales_7day_avg']) or row['sales_7day_avg'] == 0:
                 continue
                 
             drop_percent = ((row['sales_7day_avg'] - row['total_sales']) / row['sales_7day_avg']) * 100
-            if drop_percent >= 30:  # Падение больше 30%
+            if drop_percent >= 20:  # Падение больше 20%
                 bad_days.append((row['stat_date'], drop_percent))
         
         # Сортируем по величине падения
@@ -488,6 +488,6 @@ class ProperMLDetectiveAnalysis:
 # Для тестирования
 if __name__ == "__main__":
     analyzer = ProductionSalesAnalyzer()
-    results = analyzer.analyze_restaurant_performance("Ika Canggu", "2025-04-01", "2025-04-30")
+    results = analyzer.analyze_restaurant_performance("Only Eggs", "2025-04-01", "2025-05-31")
     for result in results:
         print(result)
