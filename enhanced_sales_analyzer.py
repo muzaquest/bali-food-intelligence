@@ -165,7 +165,12 @@ class EnhancedSalesAnalyzer:
             if row['gojek_driver_waiting_min'] > 0:
                 print(f"   ⏱️ Gojek Driver Waiting: {row['gojek_driver_waiting_min']} мин")
             if row['grab_driver_waiting_min'] > 0:
-                print(f"   ⏱️ Grab Driver Waiting: {row['grab_driver_waiting_min']} мин")
+                print(f"   ⏱️ Grab Driver Waiting: {row['grab_driver_waiting_min']:.1f} мин")
+                
+            # Показываем время доставки
+            if row['delivery_time'] and row['delivery_time'] != '00:00:00':
+                delivery_minutes = self._parse_time_to_minutes(row['delivery_time'])
+                print(f"   🚚 Gojek Delivery Time: {delivery_minutes:.1f} мин")
                 
             return row
         else:
@@ -310,10 +315,29 @@ class EnhancedSalesAnalyzer:
                 analysis['factors'].append(f"🕐 Grab Driver Waiting {grab_waiting} мин")
                 analysis['impact_score'] += 15
             else:
-                analysis['factors'].append(f"⏱️ Grab Driver Waiting {grab_waiting} мин")
+                analysis['factors'].append(f"⏱️ Grab Driver Waiting {grab_waiting:.1f} мин")
                 analysis['impact_score'] += 5
                 
-        # ФАКТОР 3: Операционные проблемы
+        # ФАКТОР 3: ВРЕМЯ ДОСТАВКИ (КРИТИЧЕСКИЙ ФАКТОР!)
+        delivery_time_str = day_data.get('delivery_time', '00:00:00')
+        if delivery_time_str and delivery_time_str != '00:00:00':
+            delivery_minutes = self._parse_time_to_minutes(delivery_time_str)
+            
+            if delivery_minutes >= 30:  # Больше 30 минут - критично
+                analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek Delivery Time {delivery_minutes:.1f} мин")
+                analysis['impact_score'] += 40
+                analysis['critical_issues'].append("Критическое время доставки Gojek")
+            elif delivery_minutes >= 20:  # Больше 20 минут - серьезно
+                analysis['factors'].append(f"⚠️ Gojek Delivery Time {delivery_minutes:.1f} мин (высокое)")
+                analysis['impact_score'] += 25
+            elif delivery_minutes >= 15:  # Больше 15 минут - проблема
+                analysis['factors'].append(f"🕐 Gojek Delivery Time {delivery_minutes:.1f} мин")
+                analysis['impact_score'] += 15
+            elif delivery_minutes >= 10:  # Больше 10 минут - заметно
+                analysis['factors'].append(f"⏱️ Gojek Delivery Time {delivery_minutes:.1f} мин")
+                analysis['impact_score'] += 8
+                
+        # ФАКТОР 4: Операционные проблемы
         if day_data['grab_closed'] > 0:
             analysis['factors'].append("🚨 Ресторан был закрыт на Grab")
             analysis['impact_score'] += 30
@@ -607,6 +631,8 @@ class EnhancedSalesAnalyzer:
                 recommendations.append("🚨 СРОЧНО: Проблемы с водителями Gojek - долгое ожидание отпугивает клиентов")
             if "Критическое время ожидания Grab" in analysis['critical_issues']:
                 recommendations.append("🚨 СРОЧНО: Проблемы с водителями Grab - долгое ожидание отпугивает клиентов")
+            if "Критическое время доставки Gojek" in analysis['critical_issues']:
+                recommendations.append("🚨 СРОЧНО: Критическое время доставки Gojek - клиенты отменяют заказы")
                 
         # Операционные рекомендации
         operational_factors = [f for f in analysis['factors'] if any(x in f for x in ['закрыт', 'товара', 'перегружен'])]
@@ -664,6 +690,27 @@ class EnhancedSalesAnalyzer:
                 return f"{hours}ч {minutes}м"
             else:
                 return f"{hours}ч"
+                
+    def _parse_time_to_minutes(self, time_str):
+        """Парсит строку времени H:M:S в минуты"""
+        if not time_str or time_str == '00:00:00':
+            return 0
+            
+        try:
+            parts = time_str.split(':')
+            if len(parts) >= 3:
+                hours = int(parts[0])
+                minutes = int(parts[1])
+                seconds = int(parts[2])
+                return hours * 60 + minutes + seconds / 60.0
+            elif len(parts) == 2:
+                hours = int(parts[0])
+                minutes = int(parts[1])
+                return hours * 60 + minutes
+        except:
+            return 0
+            
+        return 0
 
 def main():
     """Тестируем анализатор на 18 мая с фокусом на Driver Waiting Time"""
