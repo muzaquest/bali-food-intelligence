@@ -110,9 +110,10 @@ class EnhancedSalesAnalyzer:
             COALESCE(g.store_is_busy, 0) as grab_busy,
             COALESCE(gj.store_is_busy, 0) as gojek_busy,
             
-            -- ВРЕМЯ ЗАКРЫТИЯ (КРИТИЧНО!)
-            COALESCE(gj.close_time, 0) as gojek_close_minutes,
-            -- Для Grab нет прямой колонки close_time, но можем вычислить из других данных
+            -- ВРЕМЯ ВЫКЛЮЧЕНИЯ ПРОГРАММЫ (КРИТИЧНО!)
+            COALESCE(gj.close_time, '00:00:00') as gojek_close_time,
+            -- Для Grab есть offline_rate (процент времени выключения)
+            COALESCE(g.offline_rate, 0) as grab_offline_rate,
             
             -- ОТМЕНЫ И КАЧЕСТВО
             COALESCE(g.cancelled_orders, 0) as grab_cancelled,
@@ -152,11 +153,11 @@ class EnhancedSalesAnalyzer:
             print(f"   🟢 Grab: {row['grab_sales']:,.0f} IDR ({row['grab_orders']} заказов)")
             print(f"   🟠 Gojek: {row['gojek_sales']:,.0f} IDR ({row['gojek_orders']} заказов)")
             
-            # Показываем время закрытия если есть
-            if row['gojek_close_minutes'] > 0:
-                hours = int(row['gojek_close_minutes'] // 60)
-                minutes = int(row['gojek_close_minutes'] % 60)
-                print(f"   🕐 Gojek закрыт: {hours:02d}:{minutes:02d}")
+            # Показываем время выключения если есть
+            if row['gojek_close_time'] != '00:00:00':
+                print(f"   🚨 Gojek выключен: {row['gojek_close_time']}")
+            if row['grab_offline_rate'] > 0:
+                print(f"   🚨 Grab offline: {row['grab_offline_rate']:.1f}%")
                 
             return row
         else:
@@ -177,7 +178,8 @@ class EnhancedSalesAnalyzer:
             COALESCE(g.sales, 0) + COALESCE(gj.sales, 0) as total_sales,
             COALESCE(g.orders, 0) + COALESCE(gj.orders, 0) as total_orders,
             COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0) as total_ads_spend,
-            COALESCE(gj.close_time, 0) as gojek_close_minutes,
+            COALESCE(gj.close_time, '00:00:00') as gojek_close_time,
+            COALESCE(g.offline_rate, 0) as grab_offline_rate,
             CAST(strftime('%w', g.stat_date) AS INTEGER) as day_of_week
         FROM grab_stats g
         LEFT JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id 
@@ -196,18 +198,19 @@ class EnhancedSalesAnalyzer:
         if len(df) > 0:
             avg_sales = df['total_sales'].mean()
             avg_orders = df['total_orders'].mean()
-            avg_close_time = df['gojek_close_minutes'].mean()
+            # Считаем дни с выключениями
+            outage_days = len(df[(df['gojek_close_time'] != '00:00:00') | (df['grab_offline_rate'] > 0)])
             
             print(f"📈 КОНТЕКСТ (30 дней до и 7 дней после):")
             print(f"   📊 Средние продажи: {avg_sales:,.0f} IDR")
             print(f"   📦 Средние заказы: {avg_orders:.0f}")
-            print(f"   🕐 Среднее время закрытия: {avg_close_time:.0f} минут")
+            print(f"   🚨 Дней с выключениями: {outage_days}")
             print(f"   📅 Дней в анализе: {len(df)}")
             
             return {
                 'avg_sales': avg_sales,
                 'avg_orders': avg_orders,
-                'avg_close_time': avg_close_time,
+                'outage_days': outage_days,
                 'data': df
             }
         else:
@@ -232,23 +235,41 @@ class EnhancedSalesAnalyzer:
             
             print(f"📉 ОТКЛОНЕНИЕ ОТ СРЕДНЕГО: {analysis['drop_percent']:+.1f}%")
         
-        # ФАКТОР 1: ВРЕМЯ ЗАКРЫТИЯ (НОВЫЙ КРИТИЧЕСКИЙ ФАКТОР!)
-        gojek_close_minutes = day_data['gojek_close_minutes']
-        if gojek_close_minutes > 0:
-            hours = int(gojek_close_minutes // 60)
-            minutes = int(gojek_close_minutes % 60)
-            close_time_str = f"{hours:02d}:{minutes:02d}"
+        # ФАКТОР 1: ВЫКЛЮЧЕНИЕ ПРОГРАММЫ (КРИТИЧЕСКИЙ ФАКТОР!)
+        gojek_outage = self._parse_time_string(day_data['gojek_close_time'])
+        grab_offline_rate = day_data['grab_offline_rate']
+        
+        if gojek_outage > 0:
+            outage_str = self._format_duration(gojek_outage)
             
-            if gojek_close_minutes > 300:  # Больше 5 часов
-                analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek закрыт на {close_time_str} часов")
-                analysis['impact_score'] += 40
-                analysis['critical_issues'].append("Длительное закрытие Gojek")
-            elif gojek_close_minutes > 120:  # Больше 2 часов
-                analysis['factors'].append(f"⚠️ Gojek закрыт на {close_time_str} часов")
-                analysis['impact_score'] += 25
-            elif gojek_close_minutes > 60:  # Больше 1 часа
-                analysis['factors'].append(f"🕐 Gojek закрыт на {close_time_str}")
-                analysis['impact_score'] += 15
+            if gojek_outage >= 18000:  # Больше 5 часов (в секундах)
+                analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek выключен {outage_str}")
+                analysis['impact_score'] += 50
+                analysis['critical_issues'].append("Критическое выключение Gojek")
+            elif gojek_outage >= 7200:  # Больше 2 часов
+                analysis['factors'].append(f"⚠️ Gojek выключен {outage_str}")
+                analysis['impact_score'] += 30
+            elif gojek_outage >= 3600:  # Больше 1 часа
+                analysis['factors'].append(f"🕐 Gojek выключен {outage_str}")
+                analysis['impact_score'] += 20
+            else:
+                analysis['factors'].append(f"⚠️ Gojek выключен {outage_str}")
+                analysis['impact_score'] += 10
+                
+        if grab_offline_rate > 0:
+            if grab_offline_rate >= 300:  # Больше 300% = больше 5 часов
+                analysis['factors'].append(f"🚨 КРИТИЧНО: Grab offline {grab_offline_rate:.1f}%")
+                analysis['impact_score'] += 50
+                analysis['critical_issues'].append("Критическое выключение Grab")
+            elif grab_offline_rate >= 120:  # Больше 120% = больше 2 часов
+                analysis['factors'].append(f"⚠️ Grab offline {grab_offline_rate:.1f}%")
+                analysis['impact_score'] += 30
+            elif grab_offline_rate >= 60:  # Больше 60% = больше 1 часа
+                analysis['factors'].append(f"🕐 Grab offline {grab_offline_rate:.1f}%")
+                analysis['impact_score'] += 20
+            else:
+                analysis['factors'].append(f"⚠️ Grab offline {grab_offline_rate:.1f}%")
+                analysis['impact_score'] += 10
                 
         # ФАКТОР 2: Операционные проблемы
         if day_data['grab_closed'] > 0:
@@ -536,8 +557,10 @@ class EnhancedSalesAnalyzer:
                 recommendations.append("🚨 СРОЧНО: Проверить интеграцию с Gojek, связаться с техподдержкой")
             if "Grab не функционирует" in analysis['critical_issues']:
                 recommendations.append("🚨 СРОЧНО: Проверить интеграцию с Grab, связаться с техподдержкой")
-            if "Длительное закрытие Gojek" in analysis['critical_issues']:
-                recommendations.append("🚨 СРОЧНО: Выяснить причину длительного закрытия на Gojek")
+            if "Критическое выключение Gojek" in analysis['critical_issues']:
+                recommendations.append("🚨 СРОЧНО: Выяснить почему программа Gojek была выключена на несколько часов")
+            if "Критическое выключение Grab" in analysis['critical_issues']:
+                recommendations.append("🚨 СРОЧНО: Выяснить почему программа Grab была выключена на несколько часов")
                 
         # Операционные рекомендации
         operational_factors = [f for f in analysis['factors'] if any(x in f for x in ['закрыт', 'товара', 'перегружен'])]
@@ -559,6 +582,42 @@ class EnhancedSalesAnalyzer:
             recommendations.append("📊 Провести детальный аудит всех операционных процессов")
             
         return recommendations
+        
+    def _parse_time_string(self, time_str):
+        """Парсит строку времени H:M:S в секунды"""
+        if not time_str or time_str == '00:00:00' or time_str == '0:0:0':
+            return 0
+            
+        try:
+            parts = time_str.split(':')
+            if len(parts) >= 3:
+                hours = int(parts[0])
+                minutes = int(parts[1])
+                seconds = int(parts[2])
+                return hours * 3600 + minutes * 60 + seconds
+            elif len(parts) == 2:
+                hours = int(parts[0])
+                minutes = int(parts[1])
+                return hours * 3600 + minutes * 60
+        except:
+            return 0
+            
+        return 0
+        
+    def _format_duration(self, seconds):
+        """Форматирует секунды в читаемый вид"""
+        if seconds < 60:
+            return f"{seconds}с"
+        elif seconds < 3600:
+            minutes = seconds // 60
+            return f"{minutes}м"
+        else:
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            if minutes > 0:
+                return f"{hours}ч {minutes}м"
+            else:
+                return f"{hours}ч"
 
 def main():
     """Тестируем улучшенный анализатор на 15 мая с учетом Close Time"""
