@@ -125,8 +125,8 @@ class EnhancedSalesAnalyzer:
             COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0) as total_ads_sales,
             
             -- ВРЕМЯ ОБСЛУЖИВАНИЯ И ОЖИДАНИЯ (КРИТИЧНО!)
-            COALESCE(gj.preparation_time, '00:00:00') as preparation_time,
-            COALESCE(gj.delivery_time, '00:00:00') as delivery_time,
+            COALESCE(gj.preparation_time, '00:00:00') as gojek_preparation_time,
+            COALESCE(gj.delivery_time, '00:00:00') as gojek_delivery_time,
             COALESCE(gj.accepting_time, '00:00:00') as accepting_time,
             COALESCE(gj.driver_waiting, 0) as gojek_driver_waiting_min,
             COALESCE(g.driver_waiting_time, 0) / 60.0 as grab_driver_waiting_min,  -- Конвертируем секунды в минуты
@@ -167,9 +167,12 @@ class EnhancedSalesAnalyzer:
             if row['grab_driver_waiting_min'] > 0:
                 print(f"   ⏱️ Grab Driver Waiting: {row['grab_driver_waiting_min']:.1f} мин")
                 
-            # Показываем время доставки
-            if row['delivery_time'] and row['delivery_time'] != '00:00:00':
-                delivery_minutes = self._parse_time_to_minutes(row['delivery_time'])
+            # Показываем все временные показатели Gojek
+            if row['gojek_preparation_time'] and row['gojek_preparation_time'] != '00:00:00':
+                prep_minutes = self._parse_time_to_minutes(row['gojek_preparation_time'])
+                print(f"   👨‍🍳 Gojek Preparation Time: {prep_minutes:.1f} мин")
+            if row['gojek_delivery_time'] and row['gojek_delivery_time'] != '00:00:00':
+                delivery_minutes = self._parse_time_to_minutes(row['gojek_delivery_time'])
                 print(f"   🚚 Gojek Delivery Time: {delivery_minutes:.1f} мин")
                 
             return row
@@ -229,8 +232,55 @@ class EnhancedSalesAnalyzer:
         else:
             return None
             
+    def _get_monthly_time_averages(self, restaurant_name, target_date):
+        """Получаем средние временные показатели за месяц"""
+        # Определяем месяц для анализа
+        target_month = target_date[:7]  # YYYY-MM
+        
+        query = f"""
+        SELECT 
+            AVG(CASE WHEN gj.preparation_time IS NOT NULL AND gj.preparation_time != '00:00:00' 
+                THEN (CAST(substr(gj.preparation_time, 1, 2) AS INTEGER) * 60 + 
+                      CAST(substr(gj.preparation_time, 4, 2) AS INTEGER) + 
+                      CAST(substr(gj.preparation_time, 7, 2) AS INTEGER) / 60.0) 
+                ELSE NULL END) as avg_prep_time,
+            AVG(CASE WHEN gj.delivery_time IS NOT NULL AND gj.delivery_time != '00:00:00' 
+                THEN (CAST(substr(gj.delivery_time, 1, 2) AS INTEGER) * 60 + 
+                      CAST(substr(gj.delivery_time, 4, 2) AS INTEGER) + 
+                      CAST(substr(gj.delivery_time, 7, 2) AS INTEGER) / 60.0) 
+                ELSE NULL END) as avg_delivery_time,
+            AVG(CASE WHEN gj.driver_waiting > 0 THEN gj.driver_waiting ELSE NULL END) as avg_gojek_waiting,
+            AVG(CASE WHEN g.driver_waiting_time > 0 THEN g.driver_waiting_time / 60.0 ELSE NULL END) as avg_grab_waiting
+        FROM grab_stats g
+        LEFT JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
+        LEFT JOIN restaurants r ON g.restaurant_id = r.id
+        WHERE r.name = '{restaurant_name}'
+        AND g.stat_date LIKE '{target_month}%'
+        """
+        
+        with sqlite3.connect('database.sqlite') as conn:
+            df = pd.read_sql_query(query, conn)
+            
+        if len(df) > 0:
+            return {
+                'avg_prep_time': df['avg_prep_time'].iloc[0] or 0,
+                'avg_delivery_time': df['avg_delivery_time'].iloc[0] or 0,
+                'avg_gojek_waiting': df['avg_gojek_waiting'].iloc[0] or 0,
+                'avg_grab_waiting': df['avg_grab_waiting'].iloc[0] or 0
+            }
+        else:
+            return {
+                'avg_prep_time': 0,
+                'avg_delivery_time': 0,
+                'avg_gojek_waiting': 0,
+                'avg_grab_waiting': 0
+            }
+            
     def _conduct_enhanced_analysis(self, day_data, context_data, target_date, restaurant_name):
         """Проводит улучшенный анализ с учетом всех факторов"""
+        
+        # Получаем среднемесячные временные показатели
+        monthly_averages = self._get_monthly_time_averages(restaurant_name, target_date)
         
         analysis = {
             'date': target_date,
@@ -239,7 +289,8 @@ class EnhancedSalesAnalyzer:
             'orders': day_data['total_orders'],
             'factors': [],
             'impact_score': 0,
-            'critical_issues': []
+            'critical_issues': [],
+            'monthly_averages': monthly_averages
         }
         
         if context_data:
@@ -284,58 +335,101 @@ class EnhancedSalesAnalyzer:
                 analysis['factors'].append(f"⚠️ Grab offline {grab_offline_rate:.1f}%")
                 analysis['impact_score'] += 10
                 
-        # ФАКТОР 2: ВРЕМЯ ОЖИДАНИЯ ВОДИТЕЛЕЙ (НОВЫЙ КРИТИЧЕСКИЙ ФАКТОР!)
-        gojek_waiting = day_data.get('gojek_driver_waiting_min', 0)
-        grab_waiting = day_data.get('grab_driver_waiting_min', 0)
+        # ФАКТОР 2: АНАЛИЗ ВРЕМЕНИ ОЖИДАНИЯ ВОДИТЕЛЕЙ С ОТКЛОНЕНИЯМИ
         
+        # 2.1 Gojek Driver Waiting
+        gojek_waiting = day_data.get('gojek_driver_waiting_min', 0)
         if gojek_waiting > 0:
-            if gojek_waiting >= 20:  # Больше 20 минут - критично
-                analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek Driver Waiting {gojek_waiting} мин")
-                analysis['impact_score'] += 35
-                analysis['critical_issues'].append("Критическое время ожидания Gojek")
-            elif gojek_waiting >= 15:  # Больше 15 минут - серьезно
-                analysis['factors'].append(f"⚠️ Gojek Driver Waiting {gojek_waiting} мин (высокое)")
-                analysis['impact_score'] += 25
-            elif gojek_waiting >= 10:  # Больше 10 минут - проблема
-                analysis['factors'].append(f"🕐 Gojek Driver Waiting {gojek_waiting} мин")
-                analysis['impact_score'] += 15
+            avg_gojek_waiting = monthly_averages['avg_gojek_waiting']
+            if avg_gojek_waiting > 0:
+                waiting_deviation = ((gojek_waiting - avg_gojek_waiting) / avg_gojek_waiting) * 100
+                if waiting_deviation >= 50:
+                    analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek Driver Waiting {gojek_waiting}мин (+{waiting_deviation:.0f}% от среднего)")
+                    analysis['impact_score'] += 35
+                    analysis['critical_issues'].append("Критическое время ожидания Gojek")
+                elif waiting_deviation >= 30:
+                    analysis['factors'].append(f"⚠️ Gojek Driver Waiting {gojek_waiting}мин (+{waiting_deviation:.0f}% выше)")
+                    analysis['impact_score'] += 25
+                elif waiting_deviation >= 15:
+                    analysis['factors'].append(f"🕐 Gojek Driver Waiting {gojek_waiting}мин (+{waiting_deviation:.0f}% выше)")
+                    analysis['impact_score'] += 15
+                elif waiting_deviation <= -30:  # Значительно лучше среднего
+                    analysis['factors'].append(f"✅ Gojek Driver Waiting {gojek_waiting}мин ({waiting_deviation:.0f}% лучше среднего)")
             else:
-                analysis['factors'].append(f"⏱️ Gojek Driver Waiting {gojek_waiting} мин")
-                analysis['impact_score'] += 5
+                # Если нет среднего, используем абсолютные значения
+                if gojek_waiting >= 20:
+                    analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek Driver Waiting {gojek_waiting} мин")
+                    analysis['impact_score'] += 35
+                elif gojek_waiting >= 15:
+                    analysis['factors'].append(f"⚠️ Gojek Driver Waiting {gojek_waiting} мин")
+                    analysis['impact_score'] += 25
                 
+        # 2.2 Grab Driver Waiting
+        grab_waiting = day_data.get('grab_driver_waiting_min', 0)
         if grab_waiting > 0:
-            if grab_waiting >= 20:  # Больше 20 минут - критично
-                analysis['factors'].append(f"🚨 КРИТИЧНО: Grab Driver Waiting {grab_waiting} мин")
-                analysis['impact_score'] += 35
-                analysis['critical_issues'].append("Критическое время ожидания Grab")
-            elif grab_waiting >= 15:  # Больше 15 минут - серьезно
-                analysis['factors'].append(f"⚠️ Grab Driver Waiting {grab_waiting} мин (высокое)")
-                analysis['impact_score'] += 25
-            elif grab_waiting >= 10:  # Больше 10 минут - проблема
-                analysis['factors'].append(f"🕐 Grab Driver Waiting {grab_waiting} мин")
-                analysis['impact_score'] += 15
+            avg_grab_waiting = monthly_averages['avg_grab_waiting']
+            if avg_grab_waiting > 0:
+                waiting_deviation = ((grab_waiting - avg_grab_waiting) / avg_grab_waiting) * 100
+                if waiting_deviation >= 50:
+                    analysis['factors'].append(f"🚨 КРИТИЧНО: Grab Driver Waiting {grab_waiting:.1f}мин (+{waiting_deviation:.0f}% от среднего)")
+                    analysis['impact_score'] += 35
+                    analysis['critical_issues'].append("Критическое время ожидания Grab")
+                elif waiting_deviation >= 30:
+                    analysis['factors'].append(f"⚠️ Grab Driver Waiting {grab_waiting:.1f}мин (+{waiting_deviation:.0f}% выше)")
+                    analysis['impact_score'] += 25
+                elif waiting_deviation >= 15:
+                    analysis['factors'].append(f"🕐 Grab Driver Waiting {grab_waiting:.1f}мин (+{waiting_deviation:.0f}% выше)")
+                    analysis['impact_score'] += 15
+                elif waiting_deviation <= -30:  # Значительно лучше среднего
+                    analysis['factors'].append(f"✅ Grab Driver Waiting {grab_waiting:.1f}мин ({waiting_deviation:.0f}% лучше среднего)")
             else:
-                analysis['factors'].append(f"⏱️ Grab Driver Waiting {grab_waiting:.1f} мин")
-                analysis['impact_score'] += 5
+                # Если нет среднего, используем абсолютные значения
+                if grab_waiting >= 20:
+                    analysis['factors'].append(f"🚨 КРИТИЧНО: Grab Driver Waiting {grab_waiting:.1f} мин")
+                    analysis['impact_score'] += 35
+                elif grab_waiting >= 15:
+                    analysis['factors'].append(f"⚠️ Grab Driver Waiting {grab_waiting:.1f} мин")
+                    analysis['impact_score'] += 25
                 
-        # ФАКТОР 3: ВРЕМЯ ДОСТАВКИ (КРИТИЧЕСКИЙ ФАКТОР!)
-        delivery_time_str = day_data.get('delivery_time', '00:00:00')
+        # ФАКТОР 3: КОМПЛЕКСНЫЙ АНАЛИЗ ВРЕМЕННЫХ ПОКАЗАТЕЛЕЙ (КРИТИЧЕСКИЙ!)
+        
+        # 3.1 Gojek Preparation Time
+        prep_time_str = day_data.get('gojek_preparation_time', '00:00:00')
+        if prep_time_str and prep_time_str != '00:00:00':
+            prep_minutes = self._parse_time_to_minutes(prep_time_str)
+            avg_prep = monthly_averages['avg_prep_time']
+            
+            if avg_prep > 0:
+                prep_deviation = ((prep_minutes - avg_prep) / avg_prep) * 100
+                if prep_deviation >= 50:  # Больше 50% от среднего
+                    analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek Preparation {prep_minutes:.1f}мин (+{prep_deviation:.0f}% от среднего)")
+                    analysis['impact_score'] += 30
+                    analysis['critical_issues'].append("Критическое время готовки Gojek")
+                elif prep_deviation >= 30:
+                    analysis['factors'].append(f"⚠️ Gojek Preparation {prep_minutes:.1f}мин (+{prep_deviation:.0f}% выше среднего)")
+                    analysis['impact_score'] += 20
+                elif prep_deviation >= 15:
+                    analysis['factors'].append(f"🕐 Gojek Preparation {prep_minutes:.1f}мин (+{prep_deviation:.0f}% выше)")
+                    analysis['impact_score'] += 10
+        
+        # 3.2 Gojek Delivery Time  
+        delivery_time_str = day_data.get('gojek_delivery_time', '00:00:00')
         if delivery_time_str and delivery_time_str != '00:00:00':
             delivery_minutes = self._parse_time_to_minutes(delivery_time_str)
+            avg_delivery = monthly_averages['avg_delivery_time']
             
-            if delivery_minutes >= 30:  # Больше 30 минут - критично
-                analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek Delivery Time {delivery_minutes:.1f} мин")
-                analysis['impact_score'] += 40
-                analysis['critical_issues'].append("Критическое время доставки Gojek")
-            elif delivery_minutes >= 20:  # Больше 20 минут - серьезно
-                analysis['factors'].append(f"⚠️ Gojek Delivery Time {delivery_minutes:.1f} мин (высокое)")
-                analysis['impact_score'] += 25
-            elif delivery_minutes >= 15:  # Больше 15 минут - проблема
-                analysis['factors'].append(f"🕐 Gojek Delivery Time {delivery_minutes:.1f} мин")
-                analysis['impact_score'] += 15
-            elif delivery_minutes >= 10:  # Больше 10 минут - заметно
-                analysis['factors'].append(f"⏱️ Gojek Delivery Time {delivery_minutes:.1f} мин")
-                analysis['impact_score'] += 8
+            if avg_delivery > 0:
+                delivery_deviation = ((delivery_minutes - avg_delivery) / avg_delivery) * 100
+                if delivery_deviation >= 50:  # Больше 50% от среднего
+                    analysis['factors'].append(f"🚨 КРИТИЧНО: Gojek Delivery {delivery_minutes:.1f}мин (+{delivery_deviation:.0f}% от среднего)")
+                    analysis['impact_score'] += 40
+                    analysis['critical_issues'].append("Критическое время доставки Gojek")
+                elif delivery_deviation >= 30:
+                    analysis['factors'].append(f"⚠️ Gojek Delivery {delivery_minutes:.1f}мин (+{delivery_deviation:.0f}% выше среднего)")
+                    analysis['impact_score'] += 25
+                elif delivery_deviation >= 15:
+                    analysis['factors'].append(f"🕐 Gojek Delivery {delivery_minutes:.1f}мин (+{delivery_deviation:.0f}% выше)")
+                    analysis['impact_score'] += 15
                 
         # ФАКТОР 4: Операционные проблемы
         if day_data['grab_closed'] > 0:
@@ -633,6 +727,8 @@ class EnhancedSalesAnalyzer:
                 recommendations.append("🚨 СРОЧНО: Проблемы с водителями Grab - долгое ожидание отпугивает клиентов")
             if "Критическое время доставки Gojek" in analysis['critical_issues']:
                 recommendations.append("🚨 СРОЧНО: Критическое время доставки Gojek - клиенты отменяют заказы")
+            if "Критическое время готовки Gojek" in analysis['critical_issues']:
+                recommendations.append("🚨 СРОЧНО: Проблемы на кухне - время готовки критически высокое")
                 
         # Операционные рекомендации
         operational_factors = [f for f in analysis['factors'] if any(x in f for x in ['закрыт', 'товара', 'перегружен'])]
