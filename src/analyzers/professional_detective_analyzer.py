@@ -394,10 +394,10 @@ class ProfessionalDetectiveAnalyzer:
                     for key in ['gojek_preparation_time', 'gojek_delivery_time']:
                         result[key] = '00:00:00'
                 
-                # Рассчитываем общие показатели
-                result['total_orders'] = result['grab_orders'] + result['gojek_orders']
-                result['total_ads_spend'] = result['grab_ads_spend'] + result['gojek_ads_spend']
-                result['total_ads_sales'] = result['grab_ads_sales'] + result['gojek_ads_sales']
+                # Рассчитываем общие показатели (с защитой от None/NaN)
+                result['total_orders'] = (result['grab_orders'] or 0) + (result['gojek_orders'] or 0)
+                result['total_ads_spend'] = (result['grab_ads_spend'] or 0) + (result['gojek_ads_spend'] or 0)
+                result['total_ads_sales'] = (result['grab_ads_sales'] or 0) + (result['gojek_ads_sales'] or 0)
                 
                 return result
                 
