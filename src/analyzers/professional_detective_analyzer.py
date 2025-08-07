@@ -412,9 +412,12 @@ class ProfessionalDetectiveAnalyzer:
         
         # 1. Проблемы с платформами
         grab_offline = day_data.get('grab_offline_rate', 0)
-        if grab_offline > 50:
-            factors.append(f"🚨 Grab недоступен {grab_offline:.0f}% времени")
+        if grab_offline > 100:
+            factors.append(f"🚨 Grab: высокий offline rate {grab_offline:.0f}%")
             impact_score += 40
+        elif grab_offline > 50:
+            factors.append(f"⚠️ Grab: повышенный offline rate {grab_offline:.0f}%")
+            impact_score += 30
         elif grab_offline > 20:
             factors.append(f"⚠️ Grab частично недоступен {grab_offline:.0f}% времени")
             impact_score += 20
@@ -456,7 +459,7 @@ class ProfessionalDetectiveAnalyzer:
         except:
             gojek_waiting = 0
         
-        # Grab driver_waiting_time может быть JSON, извлекаем среднее значение
+        # Grab driver_waiting_time в секундах, конвертируем в минуты
         grab_waiting = 0
         try:
             if grab_waiting_raw and str(grab_waiting_raw) != '0':
@@ -464,17 +467,20 @@ class ProfessionalDetectiveAnalyzer:
                 if isinstance(grab_waiting_raw, str):
                     grab_data = json.loads(grab_waiting_raw)
                     if isinstance(grab_data, dict) and 'average' in grab_data:
-                        grab_waiting = float(grab_data['average'])
+                        grab_waiting = float(grab_data['average']) / 60  # секунды в минуты
                     elif isinstance(grab_data, (int, float)):
-                        grab_waiting = float(grab_data)
+                        grab_waiting = float(grab_data) / 60  # секунды в минуты
                 elif isinstance(grab_waiting_raw, (int, float)):
-                    grab_waiting = float(grab_waiting_raw)
+                    grab_waiting = float(grab_waiting_raw) / 60  # секунды в минуты
         except:
             grab_waiting = 0
         
-        if grab_waiting > 15:
+        if grab_waiting > 15:  # > 15 минут
             factors.append(f"⏰ Долгое ожидание водителей Grab: {grab_waiting:.1f} мин")
             impact_score += 10
+        elif grab_waiting > 10:  # > 10 минут
+            factors.append(f"⏰ Повышенное ожидание водителей Grab: {grab_waiting:.1f} мин")
+            impact_score += 5
         
         if gojek_waiting > 15:
             factors.append(f"⏰ Долгое ожидание водителей Gojek: {gojek_waiting} мин")
