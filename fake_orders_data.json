@@ -10070,5 +10070,61 @@
     "quantity": "0",
     "amount": "0",
     "platform": "Grab"
+  },
+  {
+    "timestamp": "07/08/2025 16:34:07",
+    "restaurant": "Rasgulai (Uluwatu)",
+    "date": "07/08/2025",
+    "quantity": "20",
+    "amount": "60000",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "07/08/2025 16:36:01",
+    "restaurant": "Ducat",
+    "date": "07/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "07/08/2025 16:36:29",
+    "restaurant": "Ninja Sushi (Uluwatu)",
+    "date": "07/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "07/08/2025 16:37:31",
+    "restaurant": "My Place (Seminyak)",
+    "date": "07/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "07/08/2025 16:38:28",
+    "restaurant": "Immigrant (Canggu)",
+    "date": "07/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "07/08/2025 16:39:04",
+    "restaurant": "Bread and Breakfast (Canggu)",
+    "date": "07/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "07/08/2025 16:39:40",
+    "restaurant": "Rasgulai (Uluwatu)",
+    "date": "07/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
   }
 ]
