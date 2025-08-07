@@ -375,13 +375,13 @@ class IntegratedMLDetective:
     
     def _time_to_minutes(self, time_str):
         """Конвертирует время HH:MM:SS в минуты"""
-        if not time_str or time_str == '00:00:00':
+        if not time_str or time_str in ['00:00:00', '0:0:0', '0:00:00', '00:0:0']:
             return 0
         
         try:
             parts = time_str.split(':')
-            hours = int(parts[0])
-            minutes = int(parts[1])
+            hours = int(parts[0]) if parts[0] else 0
+            minutes = int(parts[1]) if len(parts) > 1 and parts[1] else 0
             return hours * 60 + minutes
         except:
             return 0
