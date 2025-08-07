@@ -20,7 +20,18 @@ import json
 import requests
 from datetime import datetime, timedelta
 import warnings
+import sys
+import os
 warnings.filterwarnings('ignore')
+
+# Добавляем путь к utils для импорта fake_orders_filter
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+try:
+    from src.utils.fake_orders_filter import get_fake_orders_filter
+    FAKE_ORDERS_AVAILABLE = True
+except ImportError:
+    print("⚠️ Fake orders filter недоступен")
+    FAKE_ORDERS_AVAILABLE = False
 
 class ProductionSalesAnalyzer:
     """Продакшн анализатор для детективного анализа продаж"""
@@ -31,6 +42,13 @@ class ProductionSalesAnalyzer:
         
         # Проверяем доступность ML
         self.ml_available = self._check_ml_availability()
+        
+        # Инициализируем fake orders filter
+        if FAKE_ORDERS_AVAILABLE:
+            self.fake_orders_filter = get_fake_orders_filter()
+            print(f"✅ Fake orders filter загружен: {len(self.fake_orders_filter.fake_orders_data)} записей")
+        else:
+            self.fake_orders_filter = None
         
     def _check_ml_availability(self):
         """Проверяет доступность ML библиотек"""
@@ -246,6 +264,21 @@ class ProductionSalesAnalyzer:
         impact_score = 0
         critical_issues = []
         
+        # Проверяем наличие fake orders
+        fake_orders_info = day_data.get('fake_orders_detected')
+        if fake_orders_info:
+            total_fake_orders = (fake_orders_info['grab_fake_orders'] + 
+                               fake_orders_info['gojek_fake_orders'])
+            total_fake_amount = (fake_orders_info['grab_fake_amount'] + 
+                               fake_orders_info['gojek_fake_amount'])
+            
+            if total_fake_orders > 0:
+                factors.append(f"🚨 FAKE ORDERS ИСКЛЮЧЕНЫ: {total_fake_orders} заказов ({total_fake_amount:,.0f} IDR)")
+                factors.append(f"   📱 Grab fake: {fake_orders_info['grab_fake_orders']} заказов ({fake_orders_info['grab_fake_amount']:,.0f} IDR)")
+                factors.append(f"   🛵 Gojek fake: {fake_orders_info['gojek_fake_orders']} заказов ({fake_orders_info['gojek_fake_amount']:,.0f} IDR)")
+                critical_issues.append("Fake orders обнаружены и исключены")
+                impact_score += 10  # Положительное влияние - данные очищены
+        
         # 1. Выключение программы
         if day_data.get('gojek_close_time', '00:00:00') != '00:00:00':
             outage_seconds = self._parse_time_string(day_data['gojek_close_time'])
@@ -343,6 +376,37 @@ class ProductionSalesAnalyzer:
         
         return results
     
+    def _apply_fake_orders_filter(self, restaurant_name, date, day_data):
+        """Применяет фильтр fake orders к данным"""
+        if not self.fake_orders_filter or not day_data:
+            return day_data, None
+        
+        # Получаем оригинальные данные
+        grab_sales = day_data.get('grab_sales', 0)
+        grab_orders = day_data.get('grab_orders', 0)
+        gojek_sales = day_data.get('gojek_sales', 0)
+        gojek_orders = day_data.get('gojek_orders', 0)
+        
+        # Применяем корректировку
+        adjustment = self.fake_orders_filter.adjust_sales_data(
+            restaurant_name, date, grab_sales, grab_orders, gojek_sales, gojek_orders
+        )
+        
+        # Обновляем данные
+        day_data['grab_sales'] = adjustment['grab_sales_adjusted']
+        day_data['grab_orders'] = adjustment['grab_orders_adjusted']
+        day_data['gojek_sales'] = adjustment['gojek_sales_adjusted']
+        day_data['gojek_orders'] = adjustment['gojek_orders_adjusted']
+        day_data['total_sales'] = day_data['grab_sales'] + day_data['gojek_sales']
+        day_data['total_orders'] = day_data['grab_orders'] + day_data['gojek_orders']
+        
+        # Сохраняем информацию о корректировке
+        fake_info = adjustment['fake_orders_removed']
+        if (fake_info['grab_fake_orders'] > 0 or fake_info['gojek_fake_orders'] > 0):
+            return day_data, fake_info
+        
+        return day_data, None
+
     def _get_day_data(self, restaurant_name, target_date):
         """Получает данные за конкретный день"""
         # Сначала найдем ID ресторана
@@ -416,6 +480,13 @@ class ProductionSalesAnalyzer:
             
             result['total_sales'] = result['grab_sales'] + result['gojek_sales']
             result['total_orders'] = result['grab_orders'] + result['gojek_orders']
+            
+            # Применяем фильтр fake orders
+            result, fake_info = self._apply_fake_orders_filter(restaurant_name, target_date, result)
+            
+            # Добавляем информацию о fake orders если есть
+            if fake_info:
+                result['fake_orders_detected'] = fake_info
             
             return result
     
