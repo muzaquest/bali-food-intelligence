@@ -264,20 +264,7 @@ class ProductionSalesAnalyzer:
         impact_score = 0
         critical_issues = []
         
-        # Проверяем наличие fake orders
-        fake_orders_info = day_data.get('fake_orders_detected')
-        if fake_orders_info:
-            total_fake_orders = (fake_orders_info['grab_fake_orders'] + 
-                               fake_orders_info['gojek_fake_orders'])
-            total_fake_amount = (fake_orders_info['grab_fake_amount'] + 
-                               fake_orders_info['gojek_fake_amount'])
-            
-            if total_fake_orders > 0:
-                factors.append(f"🚨 FAKE ORDERS ИСКЛЮЧЕНЫ: {total_fake_orders} заказов ({total_fake_amount:,.0f} IDR)")
-                factors.append(f"   📱 Grab fake: {fake_orders_info['grab_fake_orders']} заказов ({fake_orders_info['grab_fake_amount']:,.0f} IDR)")
-                factors.append(f"   🛵 Gojek fake: {fake_orders_info['gojek_fake_orders']} заказов ({fake_orders_info['gojek_fake_amount']:,.0f} IDR)")
-                critical_issues.append("Fake orders обнаружены и исключены")
-                impact_score += 10  # Положительное влияние - данные очищены
+        # Fake orders уже исключены в исполнительном резюме, здесь не показываем
         
         # 1. Выключение программы
         if day_data.get('gojek_close_time', '00:00:00') != '00:00:00':
