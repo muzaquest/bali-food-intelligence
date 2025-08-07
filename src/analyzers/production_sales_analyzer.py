@@ -29,6 +29,18 @@ class ProductionSalesAnalyzer:
         self.holidays_data = self._load_holidays()
         self.locations_data = self._load_locations()
         
+        # Проверяем доступность ML
+        self.ml_available = self._check_ml_availability()
+        
+    def _check_ml_availability(self):
+        """Проверяет доступность ML библиотек"""
+        try:
+            import sklearn
+            import shap
+            return True
+        except ImportError:
+            return False
+        
     def _load_holidays(self):
         """Загружаем данные о праздниках"""
         try:
@@ -58,11 +70,37 @@ class ProductionSalesAnalyzer:
             print(f"⚠️ Не удалось загрузить локации: {e}")
             return {}
     
-    def analyze_restaurant_performance(self, restaurant_name, start_date, end_date):
+    def analyze_restaurant_performance(self, restaurant_name, start_date, end_date, use_ml=True):
         """
         Главная функция анализа - совместимая с main.py
         Возвращает список строк для вывода
+        
+        Args:
+            restaurant_name: Название ресторана
+            start_date: Начальная дата
+            end_date: Конечная дата  
+            use_ml: Использовать ML интеграцию если доступна
         """
+        
+        # Если ML доступен и запрошен - используем интегрированный анализ
+        if use_ml and self.ml_available:
+            try:
+                from .integrated_ml_detective import IntegratedMLDetective
+                print("🤖 Используем ML-интегрированный анализ...")
+                
+                ml_detective = IntegratedMLDetective()
+                return ml_detective.analyze_with_ml_explanations(
+                    restaurant_name, start_date, end_date
+                )
+            except Exception as e:
+                print(f"⚠️ ML анализ недоступен: {e}")
+                print("📊 Переходим к стандартному детективному анализу...")
+        
+        # Стандартный детективный анализ
+        return self._standard_detective_analysis(restaurant_name, start_date, end_date)
+    
+    def _standard_detective_analysis(self, restaurant_name, start_date, end_date):
+        """Стандартный детективный анализ без ML"""
         try:
             # Определяем проблемные дни
             bad_days = self._find_bad_days(restaurant_name, start_date, end_date)
