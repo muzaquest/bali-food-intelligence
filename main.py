@@ -107,7 +107,7 @@ except ImportError:
 
 # Добавляем импорт нового профессионального анализа
 try:
-    from professional_detective_analysis import compare_periods as professional_compare_periods
+    # from professional_detective_analysis import compare_periods as professional_compare_periods  # УДАЛЕНО: заменено на ProfessionalDetectiveAnalyzer
     PROFESSIONAL_ANALYSIS_AVAILABLE = True
 except ImportError:
     PROFESSIONAL_ANALYSIS_AVAILABLE = False
@@ -2264,13 +2264,14 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("🔍 8.5 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН")
     print("-" * 40)
     
-    # Используем ОБНОВЛЕННЫЙ анализатор с fake orders фильтрацией
+    # Используем ПРОФЕССИОНАЛЬНЫЙ анализатор 
     if ML_DETECTIVE_AVAILABLE:
         try:
-            print("🚀 Запуск обновленного ProductionSalesAnalyzer...")
-            detective_analyzer = ProductionSalesAnalyzer()
-            detective_results = detective_analyzer.analyze_restaurant_performance(
-                restaurant_name, start_date, end_date, use_ml=True
+            print("🚀 Запуск профессионального детективного анализатора...")
+            from src.analyzers import ProfessionalDetectiveAnalyzer
+            detective_analyzer = ProfessionalDetectiveAnalyzer()
+            detective_results = detective_analyzer.analyze_sales_performance(
+                restaurant_name, start_date, end_date
             )
             print("📋 РЕЗУЛЬТАТЫ ДЕТЕКТИВНОГО АНАЛИЗА:")
             for result in detective_results:
