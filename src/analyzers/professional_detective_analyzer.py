@@ -417,51 +417,70 @@ class ProfessionalDetectiveAnalyzer:
         factors = []
         impact_score = 0
         
-        # 1. Проблемы с платформами
+        # 1. Операционные сбои платформ (offline_rate = продолжительность недоступности)
         grab_offline = day_data.get('grab_offline_rate', 0)
         if grab_offline > 300:
-            factors.append(f"🚨 Grab: критические сбои системы (offline rate {grab_offline:.0f}%)")
+            # Используем более реалистичную формулу: 357% ≈ 5:57 из вашего отчета
+            # Предположим 357% ≈ 6 часов (примерно 1.7% за 10 минут)
+            offline_hours = grab_offline / 60  # Примерная конвертация
+            h = int(offline_hours)
+            m = int((offline_hours - h) * 60)
+            factors.append(f"🚨 Grab недоступен {h}ч {m:02d}м (критический сбой)")
             impact_score += 50
         elif grab_offline > 100:
-            factors.append(f"🚨 Grab: серьезные технические проблемы (offline rate {grab_offline:.0f}%)")
+            offline_hours = grab_offline / 60
+            h = int(offline_hours)
+            m = int((offline_hours - h) * 60)
+            factors.append(f"🚨 Grab недоступен {h}ч {m:02d}м (серьезный сбой)")
             impact_score += 40
         elif grab_offline > 50:
-            factors.append(f"⚠️ Grab: повышенная нестабильность (offline rate {grab_offline:.0f}%)")
+            offline_hours = grab_offline / 60
+            h = int(offline_hours)
+            m = int((offline_hours - h) * 60)
+            factors.append(f"⚠️ Grab недоступен {h}ч {m:02d}м (повышенная нестабильность)")
             impact_score += 30
         elif grab_offline > 20:
             factors.append(f"⚠️ Grab: частичная недоступность ({grab_offline:.0f}% времени)")
             impact_score += 20
         
-        # 2. Выключение Gojek (close_time - время когда программа была выключена)
+        # 2. Операционные сбои Gojek (close_time = продолжительность недоступности)
         gojek_close_time_raw = day_data.get('gojek_close_time', 0)
         
         # close_time может быть в формате "H:MM:SS" или числом
         close_time_str = str(gojek_close_time_raw) if gojek_close_time_raw else "0:0:0"
         
         if close_time_str not in ["0:0:0", "0", "None"] and gojek_close_time_raw:
-            # Парсим время выключения
+            # Парсим продолжительность сбоя
             try:
                 if ":" in close_time_str:
                     parts = close_time_str.split(":")
                     hours = int(parts[0]) if parts[0] else 0
                     minutes = int(parts[1]) if len(parts) > 1 and parts[1] else 0
                     
-                    if hours < 12:  # Выключение утром критично
-                        factors.append(f"🚨 Программа Gojek выключена в {hours:02d}:{minutes:02d}")
-                        impact_score += 45
-                    else:  # Выключение вечером менее критично
-                        factors.append(f"⚠️ Программа Gojek выключена в {hours:02d}:{minutes:02d}")
-                        impact_score += 25
+                    total_minutes = hours * 60 + minutes
+                    
+                    if total_minutes > 300:  # > 5 часов
+                        factors.append(f"🚨 Gojek недоступен {hours}ч {minutes:02d}м (критический сбой)")
+                        impact_score += 50
+                    elif total_minutes > 60:  # > 1 часа
+                        factors.append(f"🚨 Gojek недоступен {hours}ч {minutes:02d}м (серьезный сбой)")
+                        impact_score += 40
+                    else:  # < 1 часа
+                        factors.append(f"⚠️ Gojek недоступен {minutes}м (кратковременный сбой)")
+                        impact_score += 20
                 else:
                     # Если число - интерпретируем как минуты
                     total_minutes = int(float(close_time_str))
-                    if total_minutes > 0:
+                    if total_minutes > 60:
                         hours = total_minutes // 60
                         minutes = total_minutes % 60
-                        factors.append(f"⚠️ Программа Gojek выключена ({hours}ч {minutes}м)")
-                        impact_score += 30
+                        factors.append(f"🚨 Gojek недоступен {hours}ч {minutes}м (сбой)")
+                        impact_score += 40
+                    elif total_minutes > 0:
+                        factors.append(f"⚠️ Gojek недоступен {total_minutes}м (кратковременный сбой)")
+                        impact_score += 20
             except:
-                factors.append(f"⚠️ Проблемы с работой программы Gojek")
+                factors.append(f"⚠️ Проблемы с работой Gojek")
                 impact_score += 20
         
         # 3. Операционные времена
