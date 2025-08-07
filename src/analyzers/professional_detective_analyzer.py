@@ -432,20 +432,36 @@ class ProfessionalDetectiveAnalyzer:
             factors.append(f"⚠️ Grab: частичная недоступность ({grab_offline:.0f}% времени)")
             impact_score += 20
         
-        # 2. Выключение Gojek
+        # 2. Выключение Gojek (close_time - время когда программа была выключена)
         gojek_close_time_raw = day_data.get('gojek_close_time', 0)
-        try:
-            gojek_close_time = int(gojek_close_time_raw) if gojek_close_time_raw else 0
-        except:
-            gojek_close_time = 0
-            
-        if gojek_close_time > 0:
-            close_minutes = gojek_close_time  # Уже в минутах
-            if close_minutes > 300:  # > 5 часов
-                factors.append(f"🚨 Gojek выключен на {close_minutes//60}ч {close_minutes%60}м")
-                impact_score += 35
-            elif close_minutes > 60:  # > 1 часа
-                factors.append(f"⚠️ Gojek выключен на {close_minutes//60}ч {close_minutes%60}м")
+        
+        # close_time может быть в формате "H:MM:SS" или числом
+        close_time_str = str(gojek_close_time_raw) if gojek_close_time_raw else "0:0:0"
+        
+        if close_time_str not in ["0:0:0", "0", "None"] and gojek_close_time_raw:
+            # Парсим время выключения
+            try:
+                if ":" in close_time_str:
+                    parts = close_time_str.split(":")
+                    hours = int(parts[0]) if parts[0] else 0
+                    minutes = int(parts[1]) if len(parts) > 1 and parts[1] else 0
+                    
+                    if hours < 12:  # Выключение утром критично
+                        factors.append(f"🚨 Программа Gojek выключена в {hours:02d}:{minutes:02d}")
+                        impact_score += 45
+                    else:  # Выключение вечером менее критично
+                        factors.append(f"⚠️ Программа Gojek выключена в {hours:02d}:{minutes:02d}")
+                        impact_score += 25
+                else:
+                    # Если число - интерпретируем как минуты
+                    total_minutes = int(float(close_time_str))
+                    if total_minutes > 0:
+                        hours = total_minutes // 60
+                        minutes = total_minutes % 60
+                        factors.append(f"⚠️ Программа Gojek выключена ({hours}ч {minutes}м)")
+                        impact_score += 30
+            except:
+                factors.append(f"⚠️ Проблемы с работой программы Gojek")
                 impact_score += 20
         
         # 3. Операционные времена
