@@ -406,20 +406,30 @@ class ProfessionalDetectiveAnalyzer:
             return None
     
     def _analyze_operational_issues(self, day_data: Dict) -> Tuple[List[str], int]:
-        """Анализирует операционные проблемы"""
+        """
+        Анализирует операционные проблемы
+        
+        offline_rate от Grab - метрика недоступности ресторана:
+        - 0% = нормальная работа
+        - >100% = накопительные сбои системы, технические проблемы
+        - >300% = критические системные сбои (как в случае 357%)
+        """
         factors = []
         impact_score = 0
         
         # 1. Проблемы с платформами
         grab_offline = day_data.get('grab_offline_rate', 0)
-        if grab_offline > 100:
-            factors.append(f"🚨 Grab: высокий offline rate {grab_offline:.0f}%")
+        if grab_offline > 300:
+            factors.append(f"🚨 Grab: критические сбои системы (offline rate {grab_offline:.0f}%)")
+            impact_score += 50
+        elif grab_offline > 100:
+            factors.append(f"🚨 Grab: серьезные технические проблемы (offline rate {grab_offline:.0f}%)")
             impact_score += 40
         elif grab_offline > 50:
-            factors.append(f"⚠️ Grab: повышенный offline rate {grab_offline:.0f}%")
+            factors.append(f"⚠️ Grab: повышенная нестабильность (offline rate {grab_offline:.0f}%)")
             impact_score += 30
         elif grab_offline > 20:
-            factors.append(f"⚠️ Grab частично недоступен {grab_offline:.0f}% времени")
+            factors.append(f"⚠️ Grab: частичная недоступность ({grab_offline:.0f}% времени)")
             impact_score += 20
         
         # 2. Выключение Gojek
