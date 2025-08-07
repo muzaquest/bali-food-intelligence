@@ -14,16 +14,15 @@ import warnings
 warnings.filterwarnings('ignore')
 from weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
 
-# ML Детективный анализ
+# ML Детективный анализ - ОБНОВЛЕННАЯ ВЕРСИЯ
 try:
-    from proper_ml_detective_analysis import ProperMLDetectiveAnalysis
+    # Новый путь к анализатору
+    from src.analyzers import ProductionSalesAnalyzer
     # Проверяем что все зависимости доступны
     import pandas as pd
     import numpy as np
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.metrics import mean_absolute_error, r2_score
-    import shap
     ML_DETECTIVE_AVAILABLE = True
+    print("✅ Обновленный ProductionSalesAnalyzer загружен")
 except ImportError as e:
     ML_DETECTIVE_AVAILABLE = False
     print(f"⚠️ ML Detective Analysis недоступен: {e}")
@@ -2265,18 +2264,22 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("🔍 8.5 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН")
     print("-" * 40)
     
-    # Используем РЕАЛЬНЫЙ ML-анализ
+    # Используем ОБНОВЛЕННЫЙ анализатор с fake orders фильтрацией
     if ML_DETECTIVE_AVAILABLE:
         try:
-            detective_analyzer = ProperMLDetectiveAnalysis()
+            print("🚀 Запуск обновленного ProductionSalesAnalyzer...")
+            detective_analyzer = ProductionSalesAnalyzer()
             detective_results = detective_analyzer.analyze_restaurant_performance(
-                restaurant_name, start_date, end_date
+                restaurant_name, start_date, end_date, use_ml=True
             )
+            print("📋 РЕЗУЛЬТАТЫ ДЕТЕКТИВНОГО АНАЛИЗА:")
             for result in detective_results:
                 print(result)
         except Exception as e:
-            print(f"⚠️ Ошибка ML детективного анализа: {e}")
-            print("📊 Используем ПРОДВИНУТЫЙ анализ без ML...")
+            print(f"⚠️ Ошибка обновленного анализатора: {e}")
+            print("📊 Используем fallback анализ...")
+            import traceback
+            traceback.print_exc()
             print()
             
             # Основной анализ трендов
