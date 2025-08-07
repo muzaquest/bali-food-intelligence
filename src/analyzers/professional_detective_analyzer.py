@@ -395,6 +395,7 @@ class ProfessionalDetectiveAnalyzer:
                         result[key] = '00:00:00'
                 
                 # Рассчитываем общие показатели (с защитой от None/NaN)
+                result['total_sales'] = (result['grab_sales'] or 0) + (result['gojek_sales'] or 0)
                 result['total_orders'] = (result['grab_orders'] or 0) + (result['gojek_orders'] or 0)
                 result['total_ads_spend'] = (result['grab_ads_spend'] or 0) + (result['gojek_ads_spend'] or 0)
                 result['total_ads_sales'] = (result['grab_ads_sales'] or 0) + (result['gojek_ads_sales'] or 0)
