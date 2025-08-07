@@ -215,6 +215,10 @@ class IntegratedMLDetective:
         # Добавляем признаки праздников
         df['is_holiday'] = df['date'].apply(self._check_holiday)
         
+        # Добавляем погодные данные (упрощенно для обучения)
+        df['precipitation'] = 0  # Будем получать из API при реальном анализе
+        df['temperature'] = 27   # Средняя температура для Бали
+        
         # Добавляем скользящие средние (исторические)
         df['sales_7day_avg'] = df['sales'].rolling(window=7, min_periods=1).mean().shift(1)
         df['sales_30day_avg'] = df['sales'].rolling(window=30, min_periods=1).mean().shift(1)
@@ -344,6 +348,15 @@ class IntegratedMLDetective:
             'is_holiday': 1 if self._check_holiday(target_date) else 0
         }
         
+        # Добавляем погодные данные
+        weather_data = self.detective._get_weather_data(restaurant_name, target_date)
+        if weather_data:
+            features['precipitation'] = weather_data['precipitation']
+            features['temperature'] = weather_data['temperature']
+        else:
+            features['precipitation'] = 0
+            features['temperature'] = 27  # средняя для Бали
+        
         # Добавляем исторические признаки
         historical_features = self._get_historical_features(restaurant_name, target_date)
         features.update(historical_features)
@@ -397,6 +410,8 @@ class IntegratedMLDetective:
             'is_holiday': '🎉 Праздник',
             'is_weekend': '📅 Выходной',
             'rating': '⭐ Рейтинг',
+            'precipitation': '🌧️ Осадки (мм)',
+            'temperature': '🌡️ Температура (°C)',
             'sales_7day_avg': '📈 Средние продажи (7 дней)',
             'sales_30day_avg': '📈 Средние продажи (30 дней)'
         }
@@ -418,8 +433,14 @@ class IntegratedMLDetective:
                 recommendations.append(f"Стабилизация Grab = потенциал +{impact_idr:,.0f} IDR")
             elif feature_name in ['preparation_minutes', 'delivery_minutes'] and shap_value < 0:
                 recommendations.append(f"Оптимизация времени = потенциал +{impact_idr:,.0f} IDR")
+            elif feature_name == 'precipitation' and shap_value < 0:
+                recommendations.append(f"Планирование под дождь = потенциал +{impact_idr:,.0f} IDR")
+            elif feature_name == 'is_holiday' and shap_value < 0:
+                recommendations.append(f"Учет праздников = потенциал +{impact_idr:,.0f} IDR")
             elif feature_name == 'total_ads_spend' and shap_value > 0:
                 recommendations.append(f"Увеличение рекламы = потенциал +{impact_idr:,.0f} IDR")
+            elif feature_name == 'rating' and shap_value < 0:
+                recommendations.append(f"Улучшение рейтинга = потенциал +{impact_idr:,.0f} IDR")
         
         if not recommendations:
             recommendations.append("Основные факторы работают нормально")
@@ -446,8 +467,10 @@ class IntegratedMLDetective:
             summary.append("💡 ОБЩИЕ ML РЕКОМЕНДАЦИИ:")
             summary.append("   1. 🚨 Стабильность платформ - критический фактор")
             summary.append("   2. ⏱️ Оптимизация операционных времен")
-            summary.append("   3. 📅 Планирование под внешние факторы")
-            summary.append("   4. 💰 Балансировка рекламных бюджетов")
+            summary.append("   3. 🌤️ Планирование под погодные условия")
+            summary.append("   4. 🎉 Учет праздников в планировании")
+            summary.append("   5. 💰 Балансировка рекламных бюджетов")
+            summary.append("   6. ⭐ Мониторинг качества обслуживания")
         else:
             summary.append("⚠️ ML модель не обучена - недостаточно данных")
         
