@@ -62,8 +62,8 @@ class IntegratedMLDetective:
         """
         print("🤖 Запуск интегрированного ML + детективного анализа...")
         
-        # 1. Получаем стандартный детективный анализ
-        detective_results = self.detective.analyze_restaurant_performance(
+        # 1. Получаем стандартный детективный анализ БЕЗ ML (избегаем рекурсии!)
+        detective_results = self.detective._standard_detective_analysis(
             restaurant_name, start_date, end_date
         )
         
