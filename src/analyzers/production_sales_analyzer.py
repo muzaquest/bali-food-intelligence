@@ -1586,58 +1586,20 @@ class ProductionSalesAnalyzer:
             results.append(f"📊 АНАЛИЗ РАБОЧИХ ДНЕЙ ({days_count} дней):")
             results.append(f"🏆 Лучший день: {best_day[0]} - {best_day[1]:,} IDR")
             
-            # Анализ факторов лучшего дня
-            best_day_analysis = self._analyze_specific_day(restaurant_name, best_day[0])
-            if best_day_analysis:
+            # ML анализ факторов лучшего дня
+            best_day_ml_analysis = self._get_ml_factors_analysis(restaurant_name, best_day[0], is_good_day=True)
+            if best_day_ml_analysis:
                 results.append("   🔍 Факторы успеха:")
-                # Берем только ключевые позитивные факторы
-                positive_factors = []
-                for line in best_day_analysis:
-                    if "✅" in line and ("отличный" in line.lower() or "хорош" in line.lower() or "выше" in line.lower()):
-                        # Убираем нумерацию и оставляем только суть
-                        clean_factor = line.strip()
-                        if ". " in clean_factor:
-                            clean_factor = clean_factor.split(". ", 1)[1]
-                        factor = f"      ✅ {clean_factor.replace('✅ ', '')}"
-                        positive_factors.append(factor)
-                    elif "☀️" in line or "🌤️" in line:
-                        clean_factor = line.strip()
-                        factor = f"      {clean_factor}"
-                        positive_factors.append(factor)
-                
-                for factor in positive_factors[:3]:  # Топ-3 фактора
-                    results.append(factor)
-                
-                if not positive_factors:
-                    results.append("      💡 Стандартные операционные условия")
+                results.extend(best_day_ml_analysis)
             
             results.append("")
             results.append(f"📉 Худший день: {worst_day[0]} - {worst_day[1]:,} IDR")
             
-            # Анализ факторов худшего дня
-            worst_day_analysis = self._analyze_specific_day(restaurant_name, worst_day[0])
-            if worst_day_analysis:
+            # ML анализ факторов худшего дня
+            worst_day_ml_analysis = self._get_ml_factors_analysis(restaurant_name, worst_day[0], is_good_day=False)
+            if worst_day_ml_analysis:
                 results.append("   🔍 Причины падения:")
-                # Берем только ключевые негативные факторы
-                negative_factors = []
-                for line in worst_day_analysis:
-                    if "⚠️" in line and ("выше" in line.lower() or "ниже" in line.lower() or "мин" in line.lower()):
-                        # Убираем нумерацию и оставляем только суть
-                        clean_factor = line.strip()
-                        if ". " in clean_factor:
-                            clean_factor = clean_factor.split(". ", 1)[1]
-                        factor = f"      ⚠️ {clean_factor.replace('⚠️ ', '')}"
-                        negative_factors.append(factor)
-                    elif "🌧️" in line or "⛈️" in line:
-                        clean_factor = line.strip()
-                        factor = f"      {clean_factor}"
-                        negative_factors.append(factor)
-                
-                for factor in negative_factors[:3]:  # Топ-3 фактора
-                    results.append(factor)
-                
-                if not negative_factors:
-                    results.append("      💡 Причины требуют дополнительного анализа")
+                results.extend(worst_day_ml_analysis)
             
             results.append("")
             results.append(f"📊 Разброс продаж: {range_percent:.1f}% (только рабочие дни)")
@@ -1891,6 +1853,114 @@ class ProductionSalesAnalyzer:
             
         except Exception as e:
             return [f"❌ Ошибка анализа маркетинговой эффективности: {e}"]
+
+    def _get_ml_factors_analysis(self, restaurant_name, target_date, is_good_day=True):
+        """
+        Получает ML анализ факторов для конкретного дня используя IntegratedMLDetective
+        с полным набором из 17+ факторов
+        """
+        try:
+            # Используем наш мощный ML анализатор
+            from .integrated_ml_detective import IntegratedMLDetective
+            
+            ml_detective = IntegratedMLDetective()
+            
+            # Получаем ML анализ факторов для конкретной даты
+            features = ml_detective._prepare_features_for_date(restaurant_name, target_date)
+            
+            if not features:
+                return ["      💡 Данные для ML анализа недоступны"]
+            
+            results = []
+            
+            # Анализируем ключевые факторы
+            key_factors = []
+            
+            # 🌤️ ПОГОДНЫЕ ФАКТОРЫ
+            if features.get('precipitation', 0) > 5:
+                key_factors.append(f"      🌧️ Сильный дождь: {features['precipitation']:.1f}мм")
+            elif features.get('precipitation', 0) > 1:
+                key_factors.append(f"      🌤️ Легкий дождь: {features['precipitation']:.1f}мм") 
+            elif features.get('precipitation', 0) == 0:
+                if is_good_day:
+                    key_factors.append(f"      ☀️ Хорошая погода (без дождя)")
+            
+            # 🎉 КАЛЕНДАРНЫЕ ФАКТОРЫ  
+            if features.get('is_holiday', 0) == 1:
+                if is_good_day:
+                    key_factors.append("      🎉 Праздничный день (+продажи)")
+                else:
+                    key_factors.append("      🎉 Праздник (возможно закрыты конкуренты)")
+                    
+            if features.get('is_weekend', 0) == 1:
+                if is_good_day:
+                    key_factors.append("      🗓️ Выходной день (+трафик)")
+                else:
+                    key_factors.append("      🗓️ Выходной (нестабильный трафик)")
+            
+            # ⚙️ ОПЕРАЦИОННЫЕ ФАКТОРЫ
+            if features.get('grab_offline_rate', 0) > 60:  # более часа
+                key_factors.append(f"      🚨 GRAB недоступен: {features['grab_offline_rate']:.0f}мин")
+            elif features.get('grab_offline_rate', 0) > 30:
+                key_factors.append(f"      ⚠️ GRAB сбои: {features['grab_offline_rate']:.0f}мин")
+                
+            if features.get('gojek_closed', 0) == 1:
+                key_factors.append("      🚨 GOJEK закрыт/недоступен")
+                
+            prep_time = features.get('preparation_minutes', 15)
+            if prep_time > 20:
+                key_factors.append(f"      ⚠️ Долгое приготовление: {prep_time:.1f}мин")
+            elif prep_time < 10 and is_good_day:
+                key_factors.append(f"      ✅ Быстрое приготовление: {prep_time:.1f}мин")
+                
+            delivery_time = features.get('delivery_minutes', 20)
+            if delivery_time > 30:
+                key_factors.append(f"      ⚠️ Долгая доставка: {delivery_time:.1f}мин")
+            elif delivery_time < 15 and is_good_day:
+                key_factors.append(f"      ✅ Быстрая доставка: {delivery_time:.1f}мин")
+            
+            # 📈 МАРКЕТИНГОВЫЕ ФАКТОРЫ
+            total_ads = features.get('total_ads_spend', 0)
+            impressions = features.get('impressions', 0)
+            
+            if total_ads > 500000:  # высокий рекламный бюджет
+                if is_good_day:
+                    key_factors.append(f"      📈 Высокий рекламный бюджет: {total_ads:,.0f} IDR")
+                else:
+                    key_factors.append(f"      💸 Высокие расходы на рекламу: {total_ads:,.0f} IDR")
+                    
+            if impressions > 5000:
+                if is_good_day:
+                    key_factors.append(f"      👁️ Высокий охват: {impressions:,.0f} показов")
+                    
+            # ⭐ КАЧЕСТВЕННЫЕ ФАКТОРЫ
+            rating = features.get('rating', 4.5)
+            if rating > 4.7:
+                if is_good_day:
+                    key_factors.append(f"      ⭐ Отличный рейтинг: {rating:.1f}/5.0")
+            elif rating < 4.3:
+                key_factors.append(f"      ⭐ Низкий рейтинг: {rating:.1f}/5.0")
+            
+            # 🌡️ ТЕМПЕРАТУРНЫЕ ФАКТОРЫ
+            temp = features.get('temperature', 27)
+            if temp > 32:
+                if not is_good_day:
+                    key_factors.append(f"      🌡️ Очень жарко: {temp:.0f}°C")
+            elif temp < 22:
+                if not is_good_day:
+                    key_factors.append(f"      🌡️ Прохладно: {temp:.0f}°C")
+            
+            # Возвращаем топ-5 факторов
+            if key_factors:
+                return key_factors[:5]
+            else:
+                if is_good_day:
+                    return ["      💡 Стандартные условия способствовали успеху"]
+                else:
+                    return ["      💡 Причины требуют дополнительного анализа"]
+                    
+        except Exception as e:
+            return [f"      ❌ Ошибка ML анализа: {e}"]
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
