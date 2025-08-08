@@ -1029,6 +1029,28 @@ class ProductionSalesAnalyzer:
                 
             restaurant_id = restaurant_result[0]
             
+            # Получаем общую статистику для расчета потерь
+            stats = self.get_period_statistics_with_corrections(restaurant_name, start_date, end_date)
+            total_sales = stats['grab_final_sales'] + stats['gojek_final_sales']
+            
+            # Рассчитываем количество дней в периоде
+            from datetime import datetime, timedelta
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            days_count = (end_dt - start_dt).days + 1
+            
+            # Среднедневная и среднечасовая выручка
+            daily_avg = total_sales / days_count
+            hourly_avg = daily_avg / 24
+            
+            # Доли платформ
+            grab_share = stats['grab_final_sales'] / total_sales if total_sales > 0 else 0
+            gojek_share = stats['gojek_final_sales'] / total_sales if total_sales > 0 else 0
+            
+            # Часовая выручка по платформам
+            grab_hourly = hourly_avg * grab_share
+            gojek_hourly = hourly_avg * gojek_share
+            
             # Анализ GRAB сбоев
             cursor.execute('''
             SELECT stat_date, offline_rate 
@@ -1052,28 +1074,53 @@ class ProductionSalesAnalyzer:
             ''', (restaurant_id, start_date, end_date))
             gojek_issues = cursor.fetchall()
             
+            # Рассчитываем общее время сбоев и потери
+            grab_total_hours = 0
+            gojek_total_hours = 0
+            
+            for date, rate in grab_issues:
+                total_minutes = rate
+                hours = total_minutes / 60
+                grab_total_hours += hours
+                
+            for date, close_time_str in gojek_issues:
+                # Парсим HH:MM:SS
+                time_parts = close_time_str.split(':')
+                hours = int(time_parts[0]) + int(time_parts[1])/60 + int(time_parts[2])/3600
+                gojek_total_hours += hours
+            
+            grab_losses = grab_total_hours * grab_hourly
+            gojek_losses = gojek_total_hours * gojek_hourly
+            total_losses = grab_losses + gojek_losses
+            
             results = []
             results.append("🔧 ОПЕРАЦИОННЫЕ СБОИ ПЛАТФОРМ:")
-            results.append(f"├── 📱 GRAB: {len(grab_issues)} критичных дня")
-            results.append(f"├── 🛵 GOJEK: {len(gojek_issues)} критичных дня")
-            results.append("└── 💸 Потенциальные потери: требует расчета")
+            results.append(f"├── 📱 GRAB: {len(grab_issues)} критичных дня ({grab_total_hours:.2f}ч общее время)")
+            results.append(f"├── 🛵 GOJEK: {len(gojek_issues)} критичных дня ({gojek_total_hours:.2f}ч общее время)")
+            results.append(f"└── 💸 Потенциальные потери: {total_losses:,.0f} IDR ({total_losses/total_sales*100:.2f}% от выручки)")
+            results.append(f"   ├── 📱 GRAB потери: {grab_losses:,.0f} IDR ({grab_total_hours:.2f}ч × {grab_hourly:,.0f} IDR/ч)")
+            results.append(f"   └── 🛵 GOJEK потери: {gojek_losses:,.0f} IDR ({gojek_total_hours:.2f}ч × {gojek_hourly:,.0f} IDR/ч)")
             results.append("")
             
             if grab_issues or gojek_issues:
                 results.append("🚨 КРИТИЧНЫЕ СБОИ (>1 часа):")
                 
                 issue_num = 1
-                for date, rate in grab_issues[:3]:
+                for date, rate in grab_issues[:5]:
                     # Правильная формула: offline_rate% / 60 = часы
                     total_minutes = rate
                     hours = int(total_minutes // 60)
                     minutes = int(total_minutes % 60)
-                    results.append(f"   {issue_num}. {date}: GRAB offline {hours}:{minutes:02d}:00 (потери: ~расчет требуется)")
+                    loss = (total_minutes / 60) * grab_hourly
+                    results.append(f"   {issue_num}. {date}: GRAB offline {hours}:{minutes:02d}:00 (потери: ~{loss:,.0f} IDR)")
                     issue_num += 1
                     
-                for date, close_time_str in gojek_issues[:3]:
+                for date, close_time_str in gojek_issues[:5]:
                     # close_time уже в формате HH:MM:SS
-                    results.append(f"   {issue_num}. {date}: GOJEK offline {close_time_str}")
+                    time_parts = close_time_str.split(':')
+                    hours_decimal = int(time_parts[0]) + int(time_parts[1])/60 + int(time_parts[2])/3600
+                    loss = hours_decimal * gojek_hourly
+                    results.append(f"   {issue_num}. {date}: GOJEK offline {close_time_str} (потери: ~{loss:,.0f} IDR)")
                     issue_num += 1
             
             conn.close()
