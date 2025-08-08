@@ -1585,7 +1585,61 @@ class ProductionSalesAnalyzer:
             
             results.append(f"📊 АНАЛИЗ РАБОЧИХ ДНЕЙ ({days_count} дней):")
             results.append(f"🏆 Лучший день: {best_day[0]} - {best_day[1]:,} IDR")
+            
+            # Анализ факторов лучшего дня
+            best_day_analysis = self._analyze_specific_day(restaurant_name, best_day[0])
+            if best_day_analysis:
+                results.append("   🔍 Факторы успеха:")
+                # Берем только ключевые позитивные факторы
+                positive_factors = []
+                for line in best_day_analysis:
+                    if "✅" in line and ("отличный" in line.lower() or "хорош" in line.lower() or "выше" in line.lower()):
+                        # Убираем нумерацию и оставляем только суть
+                        clean_factor = line.strip()
+                        if ". " in clean_factor:
+                            clean_factor = clean_factor.split(". ", 1)[1]
+                        factor = f"      ✅ {clean_factor.replace('✅ ', '')}"
+                        positive_factors.append(factor)
+                    elif "☀️" in line or "🌤️" in line:
+                        clean_factor = line.strip()
+                        factor = f"      {clean_factor}"
+                        positive_factors.append(factor)
+                
+                for factor in positive_factors[:3]:  # Топ-3 фактора
+                    results.append(factor)
+                
+                if not positive_factors:
+                    results.append("      💡 Стандартные операционные условия")
+            
+            results.append("")
             results.append(f"📉 Худший день: {worst_day[0]} - {worst_day[1]:,} IDR")
+            
+            # Анализ факторов худшего дня
+            worst_day_analysis = self._analyze_specific_day(restaurant_name, worst_day[0])
+            if worst_day_analysis:
+                results.append("   🔍 Причины падения:")
+                # Берем только ключевые негативные факторы
+                negative_factors = []
+                for line in worst_day_analysis:
+                    if "⚠️" in line and ("выше" in line.lower() or "ниже" in line.lower() or "мин" in line.lower()):
+                        # Убираем нумерацию и оставляем только суть
+                        clean_factor = line.strip()
+                        if ". " in clean_factor:
+                            clean_factor = clean_factor.split(". ", 1)[1]
+                        factor = f"      ⚠️ {clean_factor.replace('⚠️ ', '')}"
+                        negative_factors.append(factor)
+                    elif "🌧️" in line or "⛈️" in line:
+                        clean_factor = line.strip()
+                        factor = f"      {clean_factor}"
+                        negative_factors.append(factor)
+                
+                for factor in negative_factors[:3]:  # Топ-3 фактора
+                    results.append(factor)
+                
+                if not negative_factors:
+                    results.append("      💡 Причины требуют дополнительного анализа")
+            
+            results.append("")
             results.append(f"📊 Разброс продаж: {range_percent:.1f}% (только рабочие дни)")
             results.append(f"📈 Средние продажи: {avg_sales:,.0f} IDR/день")
             results.append(f"📊 Коэффициент вариации: {cv:.1f}% (стабильность продаж)")
