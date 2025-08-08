@@ -1105,7 +1105,9 @@ class ProductionSalesAnalyzer:
                 SUM(three_star_ratings) as stars_3,
                 SUM(four_star_ratings) as stars_4,
                 SUM(five_star_ratings) as stars_5,
-                SUM(orders) as total_orders
+                SUM(orders) as total_orders_raw,
+                SUM(cancelled_orders) as cancelled_orders,
+                SUM(potential_lost) as potential_lost
             FROM gojek_stats 
             WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
             ''', (restaurant_id, start_date, end_date))
@@ -1116,17 +1118,28 @@ class ProductionSalesAnalyzer:
             if not ratings_data or not any(ratings_data[:5]):
                 return ["⭐ Данные о рейтингах недоступны"]
             
-            stars_1, stars_2, stars_3, stars_4, stars_5, total_orders = ratings_data
+            stars_1, stars_2, stars_3, stars_4, stars_5, total_orders_raw, cancelled_orders, potential_lost = ratings_data
             total_ratings = sum(ratings_data[:5])
             
             if total_ratings == 0:
                 return ["⭐ Рейтинги отсутствуют за период"]
             
+            # Получаем fake orders для правильного расчета
+            if hasattr(self, 'fake_orders_filter') and self.fake_orders_filter:
+                fake_stats = self._get_fake_orders_for_period(restaurant_name, start_date, end_date)
+                gojek_fake_orders = fake_stats.get('gojek_fake_orders', 0)
+            else:
+                gojek_fake_orders = 0
+            
+            # Рассчитываем успешные заказы (за вычетом отмененных, потерянных и fake)
+            lost_orders = int(potential_lost / 150000) if potential_lost else 0  # примерно 150k за заказ
+            successful_orders = total_orders_raw - cancelled_orders - lost_orders - gojek_fake_orders
+            
             # Расчет средней оценки
             avg_rating = (1*stars_1 + 2*stars_2 + 3*stars_3 + 4*stars_4 + 5*stars_5) / total_ratings
             
             results = []
-            results.append("⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ")
+            results.append("⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ (GOJEK)")
             results.append("────────────────────────────────────────────────────────────────────────────")
             results.append(f"📊 Распределение оценок (всего: {total_ratings}):")
             results.append(f"  ⭐⭐⭐⭐⭐ 5 звезд: {stars_5} ({stars_5/total_ratings*100:.1f}%)")
@@ -1140,12 +1153,13 @@ class ProductionSalesAnalyzer:
             results.append("")
             
             bad_ratings = total_ratings - stars_5
-            if bad_ratings > 0 and total_orders > 0:
-                orders_per_bad_rating = total_orders / bad_ratings
+            if bad_ratings > 0 and successful_orders > 0:
+                orders_per_bad_rating = successful_orders / bad_ratings
                 results.append("📊 Частота плохих оценок (не 5★):")
                 results.append(f"  📈 Плохих оценок всего: {bad_ratings} из {total_ratings} ({bad_ratings/total_ratings*100:.1f}%)")
-                results.append(f"  📦 Заказов GOJEK на 1 плохую оценку: {orders_per_bad_rating:.1f}")
-                results.append(f"  💡 Это означает: каждый {int(orders_per_bad_rating)}-й заказ GOJEK получает оценку не 5★")
+                results.append(f"  📦 Успешных заказов GOJEK на 1 плохую оценку: {orders_per_bad_rating:.1f}")
+                results.append(f"  💡 Это означает: каждый {int(orders_per_bad_rating)}-й успешный заказ GOJEK получает оценку не 5★")
+                results.append(f"  🔧 Расчет: {successful_orders} успешных заказов (за вычетом {cancelled_orders} отмененных + {lost_orders} потерянных + {gojek_fake_orders} fake)")
             
             return results
             
