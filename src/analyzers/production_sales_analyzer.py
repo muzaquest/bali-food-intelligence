@@ -1273,6 +1273,32 @@ class ProductionSalesAnalyzer:
             results.append(f"├── 🎯 GRAB ROAS: {stats['grab_roas']:.2f}x ({'отличная' if stats['grab_roas'] > 10 else 'хорошая' if stats['grab_roas'] > 5 else 'низкая'} эффективность)")
             results.append(f"└── 🎯 GOJEK ROAS: {stats['gojek_roas']:.2f}x ({'превосходная' if stats['gojek_roas'] > 20 else 'отличная' if stats['gojek_roas'] > 10 else 'хорошая'} эффективность)")
             
+            results.append("")
+            results.append("💵 Реальные поступления ресторану:")
+            
+            # Расчет для GRAB
+            grab_platform_commission = stats['grab_final_sales'] - grab_payouts - stats['grab_ads_spend']
+            grab_total_deduction = stats['grab_final_sales'] - grab_payouts
+            grab_commission_rate = grab_total_deduction / stats['grab_final_sales'] * 100
+            grab_platform_rate = grab_platform_commission / stats['grab_final_sales'] * 100
+            grab_ads_rate = stats['grab_ads_spend'] / stats['grab_final_sales'] * 100
+            
+            # Расчет для GOJEK  
+            gojek_platform_commission = stats['gojek_final_sales'] - gojek_payouts - stats['gojek_ads_spend']
+            gojek_total_deduction = stats['gojek_final_sales'] - gojek_payouts
+            gojek_commission_rate = gojek_total_deduction / stats['gojek_final_sales'] * 100
+            gojek_platform_rate = gojek_platform_commission / stats['gojek_final_sales'] * 100
+            gojek_ads_rate = stats['gojek_ads_spend'] / stats['gojek_final_sales'] * 100
+            
+            total_receipts = grab_payouts + gojek_payouts
+            results.append(f"💰 Общие поступления: {total_receipts:,} IDR")
+            results.append(f"├── 📱 GRAB: {grab_payouts:,} IDR (выручка: {stats['grab_final_sales']:,} - удержания: {grab_commission_rate:.1f}%)")
+            results.append(f"│   ├── 🏛️ Комиссия платформы: {grab_platform_commission:,} IDR ({grab_platform_rate:.1f}%)")
+            results.append(f"│   └── 📈 Рекламный бюджет: {stats['grab_ads_spend']:,} IDR ({grab_ads_rate:.1f}%)")
+            results.append(f"└── 🛵 GOJEK: {gojek_payouts:,} IDR (выручка: {stats['gojek_final_sales']:,} - удержания: {gojek_commission_rate:.1f}%)")
+            results.append(f"    ├── 🏛️ Комиссия платформы: {gojek_platform_commission:,} IDR ({gojek_platform_rate:.1f}%)")
+            results.append(f"    └── 📈 Рекламный бюджет: {stats['gojek_ads_spend']:,} IDR ({gojek_ads_rate:.1f}%)")
+            
             conn.close()
             return results
             
