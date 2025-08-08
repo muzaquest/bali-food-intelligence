@@ -1860,13 +1860,11 @@ class ProductionSalesAnalyzer:
         с полным набором из 17+ факторов
         """
         try:
-            # Используем наш мощный ML анализатор
+            # Используем наш мощный ML анализатор БЕЗ создания нового экземпляра
             from .integrated_ml_detective import IntegratedMLDetective
             
-            ml_detective = IntegratedMLDetective()
-            
-            # Получаем ML анализ факторов для конкретной даты
-            features = ml_detective._prepare_features_for_date(restaurant_name, target_date)
+            # Получаем features напрямую без создания нового экземпляра  
+            features = self._get_features_for_date(restaurant_name, target_date)
             
             if not features:
                 return ["      💡 Данные для ML анализа недоступны"]
@@ -1961,6 +1959,94 @@ class ProductionSalesAnalyzer:
                     
         except Exception as e:
             return [f"      ❌ Ошибка ML анализа: {e}"]
+    
+    def _get_features_for_date(self, restaurant_name, target_date):
+        """Получает ML факторы для конкретной даты без создания новых экземпляров"""
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            
+            # Получаем ID ресторана
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            cursor = conn.cursor()
+            cursor.execute(restaurant_query)
+            restaurant_result = cursor.fetchone()
+            
+            if not restaurant_result:
+                conn.close()
+                return {}
+            
+            restaurant_id = restaurant_result[0]
+            
+            # Получаем данные за целевую дату
+            query = f"""
+            SELECT 
+                g.offline_rate,
+                gj.close_time,
+                gj.preparation_time,
+                gj.delivery_time,
+                g.ads_spend as grab_ads_spend,
+                gj.ads_spend as gojek_ads_spend,
+                g.impressions,
+                COALESCE(g.rating, gj.rating, 4.5) as rating,
+                (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders
+            FROM grab_stats g
+            FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id 
+                                           AND g.stat_date = gj.stat_date
+            WHERE (g.restaurant_id = {restaurant_id} OR gj.restaurant_id = {restaurant_id})
+            AND (g.stat_date = '{target_date}' OR gj.stat_date = '{target_date}')
+            """
+            
+            cursor.execute(query)
+            row = cursor.fetchone()
+            conn.close()
+            
+            if not row:
+                return {}
+            
+            # Подготавливаем признаки
+            from datetime import datetime
+            date_obj = datetime.strptime(target_date, '%Y-%m-%d')
+            
+            features = {
+                'is_weekend': 1 if date_obj.weekday() >= 5 else 0,
+                'day_of_week': date_obj.weekday(),
+                'grab_offline_rate': float(row[0]) if row[0] is not None else 0,
+                'gojek_closed': 1 if (row[1] is not None and row[1] != '00:00:00') else 0,
+                'preparation_minutes': self._time_to_minutes(row[2]) if row[2] is not None else 15,
+                'delivery_minutes': self._time_to_minutes(row[3]) if row[3] is not None else 20,
+                'total_ads_spend': float(row[4] or 0) + float(row[5] or 0),
+                'impressions': float(row[6]) if row[6] is not None else 0,
+                'rating': float(row[7]) if row[7] is not None else 4.5,
+                'total_orders': int(row[8]) if row[8] is not None else 0,
+                'is_holiday': 1 if target_date in self.holidays_data else 0
+            }
+            
+            # Добавляем погодные данные
+            weather_data = self._get_weather_data(restaurant_name, target_date)
+            if weather_data:
+                features['precipitation'] = weather_data['precipitation']
+                features['temperature'] = weather_data['temperature']
+            else:
+                features['precipitation'] = 0
+                features['temperature'] = 27  # средняя для Бали
+            
+            return features
+            
+        except Exception as e:
+            print(f"❌ Ошибка получения features: {e}")
+            return {}
+    
+    def _time_to_minutes(self, time_str):
+        """Конвертирует время HH:MM:SS в минуты"""
+        if not time_str or time_str == '00:00:00':
+            return 0
+        try:
+            parts = time_str.split(':')
+            if len(parts) >= 3:
+                return int(parts[0]) * 60 + int(parts[1]) + int(parts[2]) / 60.0
+        except:
+            pass
+        return 0
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
