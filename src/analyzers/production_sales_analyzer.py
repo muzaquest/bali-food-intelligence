@@ -870,10 +870,11 @@ class ProductionSalesAnalyzer:
                             quantity = int(order.get('quantity', 0))
                             amount = int(order.get('amount', 0))
                             
-                            if order.get('platform') == 'Grab':
+                            platform = order.get('platform', '').lower()
+                            if platform == 'grab':
                                 grab_fakes += quantity
                                 grab_fake_amount += amount
-                            elif order.get('platform') == 'Gojek':
+                            elif platform == 'gojek':
                                 gojek_fakes += quantity
                                 gojek_fake_amount += amount
                 except:
