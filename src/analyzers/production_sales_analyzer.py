@@ -967,6 +967,11 @@ class ProductionSalesAnalyzer:
         customer_analysis = self._get_customer_base_analysis(restaurant_name, start_date, end_date)
         results.extend(customer_analysis)
         
+        # Добавляем маркетинговую эффективность и воронку
+        results.append("")
+        marketing_analysis = self._get_marketing_effectiveness_analysis(restaurant_name, start_date, end_date)
+        results.extend(marketing_analysis)
+        
         # Добавляем финансовые показатели
         results.append("")
         financial_metrics = self._get_financial_metrics(restaurant_name, start_date, end_date)
@@ -1664,6 +1669,136 @@ class ProductionSalesAnalyzer:
             
         except Exception as e:
             return [f"❌ Ошибка анализа клиентской базы: {e}"]
+
+    def _get_marketing_effectiveness_analysis(self, restaurant_name, start_date, end_date):
+        """Анализ маркетинговой эффективности и воронки"""
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
+            
+            # Получаем restaurant_id
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            cursor.execute(restaurant_query)
+            restaurant_result = cursor.fetchone()
+            if not restaurant_result:
+                return []
+                
+            restaurant_id = restaurant_result[0]
+            
+            results = []
+            results.append("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА")
+            results.append("----------------------------------------")
+            
+            # GRAB маркетинговая воронка
+            cursor.execute('''
+            SELECT 
+                SUM(impressions) as total_impressions,
+                SUM(unique_menu_visits) as menu_visits,
+                SUM(unique_add_to_carts) as add_to_carts,
+                SUM(ads_orders) as ads_orders,
+                SUM(ads_spend) as ads_spend
+            FROM grab_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            ''', (restaurant_id, start_date, end_date))
+            
+            grab_funnel = cursor.fetchone()
+            impressions = grab_funnel[0] or 0
+            menu_visits = grab_funnel[1] or 0
+            add_to_carts = grab_funnel[2] or 0
+            ads_orders = grab_funnel[3] or 0
+            ads_spend = grab_funnel[4] or 0
+            
+            results.append("📊 Маркетинговая воронка (только GRAB - GOJEK не предоставляет данные воронки):")
+            results.append(f"  👁️ Показы рекламы: {impressions:,}")
+            
+            if impressions > 0 and menu_visits > 0:
+                ctr = menu_visits / impressions * 100
+                results.append(f"  🔗 Посещения меню: {menu_visits:,} (CTR: {ctr:.2f}%)")
+                
+                if add_to_carts > 0:
+                    visit_to_cart = add_to_carts / menu_visits * 100
+                    results.append(f"  🛒 Добавления в корзину: {add_to_carts:,} (конверсия: {visit_to_cart:.2f}% от кликов)")
+                    
+                    if ads_orders > 0:
+                        cart_to_order = ads_orders / add_to_carts * 100
+                        results.append(f"  📦 Заказы от рекламы: {ads_orders:,} (конверсия: {cart_to_order:.1f}% от корзины)")
+                        
+                        results.append("")
+                        results.append("  📊 КЛЮЧЕВЫЕ КОНВЕРСИИ:")
+                        
+                        impression_to_order = ads_orders / impressions * 100
+                        click_to_order = ads_orders / menu_visits * 100
+                        
+                        results.append(f"  • 🎯 Показ → Заказ: {impression_to_order:.2f}% (основная метрика эффективности)")
+                        results.append(f"  • 🔗 Клик → Заказ: {click_to_order:.1f}% (качество трафика)")
+                        results.append(f"  • 🛒 Корзина → Заказ: {cart_to_order:.1f}% (качество UX)")
+            
+            results.append("")
+            results.append("💸 Стоимость привлечения (только GRAB):")
+            
+            if menu_visits > 0:
+                cost_per_click = ads_spend / menu_visits
+                results.append(f"  💰 Стоимость клика: {cost_per_click:,.0f} IDR")
+                
+            if ads_orders > 0:
+                cost_per_order = ads_spend / ads_orders
+                results.append(f"  💰 Стоимость заказа: {cost_per_order:,.0f} IDR")
+            
+            # ROAS по месяцам
+            results.append("🎯 ROAS по месяцам (GRAB + GOJEK):")
+            
+            # GRAB по месяцам
+            cursor.execute('''
+            SELECT 
+                strftime('%Y-%m', stat_date) as month,
+                SUM(ads_sales) as monthly_ads_sales,
+                SUM(ads_spend) as monthly_ads_spend
+            FROM grab_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            GROUP BY strftime('%Y-%m', stat_date)
+            ORDER BY month
+            ''', (restaurant_id, start_date, end_date))
+            
+            grab_monthly = cursor.fetchall()
+            grab_dict = {month: (sales, spend) for month, sales, spend in grab_monthly}
+            
+            # GOJEK по месяцам
+            cursor.execute('''
+            SELECT 
+                strftime('%Y-%m', stat_date) as month,
+                SUM(ads_sales) as monthly_ads_sales,
+                SUM(ads_spend) as monthly_ads_spend
+            FROM gojek_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            GROUP BY strftime('%Y-%m', stat_date)
+            ORDER BY month
+            ''', (restaurant_id, start_date, end_date))
+            
+            gojek_monthly = cursor.fetchall()
+            gojek_dict = {month: (sales, spend) for month, sales, spend in gojek_monthly}
+            
+            # Объединяем и выводим результаты
+            for month in ['2025-04', '2025-05']:
+                month_name = 'Апрель' if month == '2025-04' else 'Май'
+                grab_sales, grab_spend = grab_dict.get(month, (0, 0))
+                gojek_sales, gojek_spend = gojek_dict.get(month, (0, 0))
+                
+                total_sales = grab_sales + gojek_sales
+                total_spend = grab_spend + gojek_spend
+                total_roas = total_sales / total_spend if total_spend > 0 else 0
+                
+                grab_roas = grab_sales / grab_spend if grab_spend > 0 else 0
+                gojek_roas = gojek_sales / gojek_spend if gojek_spend > 0 else 0
+                
+                results.append(f"  {month_name}: {total_roas:.2f}x")
+                results.append(f"    📱 GRAB: {grab_roas:.2f}x (продажи: {grab_sales:,} / бюджет: {grab_spend:,.0f})")
+                results.append(f"    🛵 GOJEK: {gojek_roas:.2f}x (продажи: {gojek_sales:,} / бюджет: {gojek_spend:,.0f})")
+            
+            conn.close()
+            return results
+            
+        except Exception as e:
+            return [f"❌ Ошибка анализа маркетинговой эффективности: {e}"]
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
