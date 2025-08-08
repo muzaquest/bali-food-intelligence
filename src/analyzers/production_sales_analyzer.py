@@ -1013,7 +1013,21 @@ class ProductionSalesAnalyzer:
         ratings_analysis = self._get_ratings_analysis(restaurant_name, start_date, end_date)
         results.extend(ratings_analysis)
         
+        # ДЕТЕКТИВНЫЙ АНАЛИЗ - САМАЯ ВАЖНАЯ ЧАСТЬ!
+        results.append("")
+        results.append("🔍 5. ДЕТЕКТИВНЫЙ АНАЛИЗ ПРОБЛЕМ")
+        results.append("----------------------------------------")
+        detective_analysis = self.generate_detective_analysis(restaurant_name, start_date, end_date)
+        results.extend(detective_analysis)
+        
         return results
+    
+    def generate_detective_analysis(self, restaurant_name, start_date, end_date):
+        """
+        ПУБЛИЧНЫЙ метод для детективного анализа - САМАЯ ВАЖНАЯ ЧАСТЬ!
+        Возвращает детальный анализ проблемных дней и их причин
+        """
+        return self.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=False)
     
     def _get_average_rating(self, restaurant_name, start_date, end_date):
         """Получает средний рейтинг за период"""
