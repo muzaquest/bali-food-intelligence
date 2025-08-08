@@ -957,6 +957,16 @@ class ProductionSalesAnalyzer:
         total_roas = stats['total_ads_sales'] / stats['total_ads_spend'] if stats['total_ads_spend'] > 0 else 0
         results.append(f"└── 🎯 ОБЩИЙ: {total_roas:.2f}x (продажи: {stats['total_ads_sales']:,} IDR / бюджет: {stats['total_ads_spend']:,} IDR)")
         
+        # Добавляем операционные сбои
+        results.append("")
+        operational_issues = self._get_operational_issues_analysis(restaurant_name, start_date, end_date)
+        results.extend(operational_issues)
+        
+        # Добавляем анализ рейтингов
+        results.append("")
+        ratings_analysis = self._get_ratings_analysis(restaurant_name, start_date, end_date)
+        results.extend(ratings_analysis)
+        
         return results
     
     def _get_average_rating(self, restaurant_name, start_date, end_date):
@@ -1003,6 +1013,141 @@ class ProductionSalesAnalyzer:
         except Exception as e:
             print(f"⚠️ Ошибка расчета рейтинга: {e}")
             return 4.5
+
+    def _get_operational_issues_analysis(self, restaurant_name, start_date, end_date):
+        """Анализ операционных сбоев платформ"""
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
+            
+            # Получаем restaurant_id
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            cursor.execute(restaurant_query)
+            restaurant_result = cursor.fetchone()
+            if not restaurant_result:
+                return []
+                
+            restaurant_id = restaurant_result[0]
+            
+            # Анализ GRAB сбоев
+            cursor.execute('''
+            SELECT stat_date, offline_rate 
+            FROM grab_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            AND offline_rate > 60
+            ORDER BY offline_rate DESC
+            ''', (restaurant_id, start_date, end_date))
+            grab_issues = cursor.fetchall()
+            
+            # Анализ GOJEK сбоев (close_time в формате HH:MM:SS, ищем >1 часа)
+            cursor.execute('''
+            SELECT stat_date, close_time 
+            FROM gojek_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            AND close_time IS NOT NULL AND close_time != ''
+            AND (CAST(substr(close_time, 1, instr(close_time, ':')-1) AS INTEGER) > 0 
+                 OR (CAST(substr(close_time, 1, instr(close_time, ':')-1) AS INTEGER) = 1 
+                     AND CAST(substr(close_time, instr(close_time, ':')+1, 2) AS INTEGER) > 0))
+            ORDER BY close_time DESC
+            ''', (restaurant_id, start_date, end_date))
+            gojek_issues = cursor.fetchall()
+            
+            results = []
+            results.append("🔧 ОПЕРАЦИОННЫЕ СБОИ ПЛАТФОРМ:")
+            results.append(f"├── 📱 GRAB: {len(grab_issues)} критичных дня")
+            results.append(f"├── 🛵 GOJEK: {len(gojek_issues)} критичных дня")
+            results.append("└── 💸 Потенциальные потери: требует расчета")
+            results.append("")
+            
+            if grab_issues or gojek_issues:
+                results.append("🚨 КРИТИЧНЫЕ СБОИ (>1 часа):")
+                
+                issue_num = 1
+                for date, rate in grab_issues[:3]:
+                    hours = rate / 100 * 24  # примерный расчет
+                    results.append(f"   {issue_num}. {date}: GRAB offline {hours:.1f}ч (offline rate: {rate}%)")
+                    issue_num += 1
+                    
+                for date, close_time_str in gojek_issues[:3]:
+                    # close_time уже в формате HH:MM:SS
+                    results.append(f"   {issue_num}. {date}: GOJEK offline {close_time_str}")
+                    issue_num += 1
+            
+            conn.close()
+            return results
+            
+        except Exception as e:
+            return [f"❌ Ошибка анализа сбоев: {e}"]
+    
+    def _get_ratings_analysis(self, restaurant_name, start_date, end_date):
+        """Анализ качества обслуживания и рейтингов"""
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
+            
+            # Получаем restaurant_id
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            cursor.execute(restaurant_query)
+            restaurant_result = cursor.fetchone()
+            if not restaurant_result:
+                return []
+                
+            restaurant_id = restaurant_result[0]
+            
+            # Получаем данные о рейтингах GOJEK
+            cursor.execute('''
+            SELECT 
+                SUM(one_star_ratings) as stars_1,
+                SUM(two_star_ratings) as stars_2,
+                SUM(three_star_ratings) as stars_3,
+                SUM(four_star_ratings) as stars_4,
+                SUM(five_star_ratings) as stars_5,
+                SUM(orders) as total_orders
+            FROM gojek_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            ''', (restaurant_id, start_date, end_date))
+            
+            ratings_data = cursor.fetchone()
+            conn.close()
+            
+            if not ratings_data or not any(ratings_data[:5]):
+                return ["⭐ Данные о рейтингах недоступны"]
+            
+            stars_1, stars_2, stars_3, stars_4, stars_5, total_orders = ratings_data
+            total_ratings = sum(ratings_data[:5])
+            
+            if total_ratings == 0:
+                return ["⭐ Рейтинги отсутствуют за период"]
+            
+            # Расчет средней оценки
+            avg_rating = (1*stars_1 + 2*stars_2 + 3*stars_3 + 4*stars_4 + 5*stars_5) / total_ratings
+            
+            results = []
+            results.append("⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ")
+            results.append("────────────────────────────────────────────────────────────────────────────")
+            results.append(f"📊 Распределение оценок (всего: {total_ratings}):")
+            results.append(f"  ⭐⭐⭐⭐⭐ 5 звезд: {stars_5} ({stars_5/total_ratings*100:.1f}%)")
+            results.append(f"  ⭐⭐⭐⭐ 4 звезды: {stars_4} ({stars_4/total_ratings*100:.1f}%)")
+            results.append(f"  ⭐⭐⭐ 3 звезды: {stars_3} ({stars_3/total_ratings*100:.1f}%)")
+            results.append(f"  ⭐⭐ 2 звезды: {stars_2} ({stars_2/total_ratings*100:.1f}%)")
+            results.append(f"  ⭐ 1 звезда: {stars_1} ({stars_1/total_ratings*100:.1f}%)")
+            results.append("")
+            results.append(f"📈 Индекс удовлетворенности: {avg_rating:.2f}/5.0")
+            results.append(f"🚨 Негативные отзывы (1-2★): {stars_1 + stars_2} ({(stars_1 + stars_2)/total_ratings*100:.1f}%)")
+            results.append("")
+            
+            bad_ratings = total_ratings - stars_5
+            if bad_ratings > 0 and total_orders > 0:
+                orders_per_bad_rating = total_orders / bad_ratings
+                results.append("📊 Частота плохих оценок (не 5★):")
+                results.append(f"  📈 Плохих оценок всего: {bad_ratings} из {total_ratings} ({bad_ratings/total_ratings*100:.1f}%)")
+                results.append(f"  📦 Заказов GOJEK на 1 плохую оценку: {orders_per_bad_rating:.1f}")
+                results.append(f"  💡 Это означает: каждый {int(orders_per_bad_rating)}-й заказ GOJEK получает оценку не 5★")
+            
+            return results
+            
+        except Exception as e:
+            return [f"❌ Ошибка анализа рейтингов: {e}"]
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
