@@ -957,6 +957,11 @@ class ProductionSalesAnalyzer:
         total_roas = stats['total_ads_sales'] / stats['total_ads_spend'] if stats['total_ads_spend'] > 0 else 0
         results.append(f"└── 🎯 ОБЩИЙ: {total_roas:.2f}x (продажи: {stats['total_ads_sales']:,} IDR / бюджет: {stats['total_ads_spend']:,} IDR)")
         
+        # Добавляем анализ продаж и трендов
+        results.append("")
+        sales_trends = self._get_sales_trends_analysis(restaurant_name, start_date, end_date)
+        results.extend(sales_trends)
+        
         # Добавляем финансовые показатели
         results.append("")
         financial_metrics = self._get_financial_metrics(restaurant_name, start_date, end_date)
@@ -1421,6 +1426,127 @@ class ProductionSalesAnalyzer:
             
         except Exception as e:
             return [f"❌ Ошибка получения операционных метрик: {e}"]
+
+    def _get_sales_trends_analysis(self, restaurant_name, start_date, end_date):
+        """Анализ продаж и трендов"""
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
+            
+            # Получаем restaurant_id
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            cursor.execute(restaurant_query)
+            restaurant_result = cursor.fetchone()
+            if not restaurant_result:
+                return []
+                
+            restaurant_id = restaurant_result[0]
+            
+            results = []
+            results.append("📈 2. АНАЛИЗ ПРОДАЖ И ТРЕНДОВ")
+            results.append("----------------------------------------")
+            
+            # Получаем продажи по дням (объединяем GRAB и GOJEK по датам)
+            cursor.execute('''
+            SELECT 
+                stat_date,
+                SUM(grab_sales + gojek_sales) as daily_total
+            FROM (
+                SELECT 
+                    stat_date,
+                    SUM(sales) as grab_sales,
+                    0 as gojek_sales
+                FROM grab_stats 
+                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                GROUP BY stat_date
+                UNION ALL
+                SELECT 
+                    stat_date,
+                    0 as grab_sales,
+                    SUM(sales) as gojek_sales
+                FROM gojek_stats 
+                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                GROUP BY stat_date
+            ) combined
+            GROUP BY stat_date
+            ORDER BY stat_date
+            ''', (restaurant_id, start_date, end_date, restaurant_id, start_date, end_date))
+            
+            daily_data = cursor.fetchall()
+            
+            # Группируем по месяцам
+            from datetime import datetime
+            monthly_sales = {}
+            monthly_days = {}
+            weekend_sales = []
+            weekday_sales = []
+            all_sales = []
+            
+            for date_str, sales in daily_data:
+                all_sales.append(sales)
+                
+                # Месячная группировка
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                month_key = date_obj.strftime('%Y-%m')
+                if month_key not in monthly_sales:
+                    monthly_sales[month_key] = 0
+                    monthly_days[month_key] = 0
+                monthly_sales[month_key] += sales
+                monthly_days[month_key] += 1
+                
+                # Выходные vs будни
+                weekday = date_obj.weekday()
+                if weekday >= 5:  # Суббота и воскресенье
+                    weekend_sales.append(sales)
+                else:
+                    weekday_sales.append(sales)
+            
+            # Динамика по месяцам
+            results.append("📊 Динамика по месяцам:")
+            for month_key in sorted(monthly_sales.keys()):
+                month_name = 'Апрель' if month_key == '2025-04' else 'Май'
+                avg_daily = monthly_sales[month_key] / monthly_days[month_key]
+                results.append(f"  {month_name}: {monthly_sales[month_key]:,} IDR ({monthly_days[month_key]} дней, {avg_daily:,.0f} IDR/день)")
+            
+            results.append("")
+            
+            # Выходные vs будни
+            avg_weekend = sum(weekend_sales) / len(weekend_sales) if weekend_sales else 0
+            avg_weekday = sum(weekday_sales) / len(weekday_sales) if weekday_sales else 0
+            weekend_effect = (avg_weekend - avg_weekday) / avg_weekday * 100 if avg_weekday > 0 else 0
+            
+            results.append("🗓️ Выходные vs Будни:")
+            results.append(f"  📅 Средние продажи в выходные: {avg_weekend:,.0f} IDR")
+            results.append(f"  📅 Средние продажи в будни: {avg_weekday:,.0f} IDR")
+            results.append(f"  📊 Эффект выходных: {weekend_effect:+.1f}%")
+            
+            # Анализ рабочих дней
+            days_count = len(all_sales)
+            max_sales = max(all_sales)
+            min_sales = min(all_sales)
+            avg_sales = sum(all_sales) / days_count
+            range_percent = (max_sales - min_sales) / min_sales * 100
+            
+            # Коэффициент вариации
+            import statistics
+            cv = statistics.stdev(all_sales) / avg_sales * 100 if avg_sales > 0 else 0
+            
+            # Находим даты лучшего и худшего дня
+            best_day = max(daily_data, key=lambda x: x[1])
+            worst_day = min(daily_data, key=lambda x: x[1])
+            
+            results.append(f"📊 АНАЛИЗ РАБОЧИХ ДНЕЙ ({days_count} дней):")
+            results.append(f"🏆 Лучший день: {best_day[0]} - {best_day[1]:,} IDR")
+            results.append(f"📉 Худший день: {worst_day[0]} - {worst_day[1]:,} IDR")
+            results.append(f"📊 Разброс продаж: {range_percent:.1f}% (только рабочие дни)")
+            results.append(f"📈 Средние продажи: {avg_sales:,.0f} IDR/день")
+            results.append(f"📊 Коэффициент вариации: {cv:.1f}% (стабильность продаж)")
+            
+            conn.close()
+            return results
+            
+        except Exception as e:
+            return [f"❌ Ошибка анализа продаж и трендов: {e}"]
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
