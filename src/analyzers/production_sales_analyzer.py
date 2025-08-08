@@ -947,8 +947,13 @@ class ProductionSalesAnalyzer:
         results.append(f"   └── 🛵 GOJEK: {total_gojek_clients:,} (новые: {stats['gojek_new_clients']}, активные: {stats['gojek_active_clients']}, возвратившиеся: {stats['gojek_returned_clients']})")
         results.append(f"   💡 Общий охват: {total_clients:,} уникальных клиентов")
         results.append(f"💸 Маркетинговый бюджет: {stats['total_ads_spend']:,} IDR ({stats['total_ads_spend']/stats['total_final_sales']*100:.1f}% от выручки)")
-        results.append(f"   ├── 📱 GRAB: {stats['grab_ads_spend']:,} IDR ({stats['grab_ads_spend']/stats['total_ads_spend']*100:.1f}% бюджета, {stats['grab_ads_spend']/stats['total_final_sales']*100:.1f}% выручки)")
-        results.append(f"   └── 🛵 GOJEK: {stats['gojek_ads_spend']:,} IDR ({stats['gojek_ads_spend']/stats['total_ads_spend']*100:.1f}% бюджета, {stats['gojek_ads_spend']/stats['total_final_sales']*100:.1f}% выручки)")
+        
+        # Процент от выручки каждой платформы
+        grab_percent_own = stats['grab_ads_spend']/stats['grab_final_sales']*100 if stats['grab_final_sales'] > 0 else 0
+        gojek_percent_own = stats['gojek_ads_spend']/stats['gojek_final_sales']*100 if stats['gojek_final_sales'] > 0 else 0
+        
+        results.append(f"   ├── 📱 GRAB: {stats['grab_ads_spend']:,} IDR ({stats['grab_ads_spend']/stats['total_ads_spend']*100:.1f}% бюджета, {grab_percent_own:.1f}% от выручки GRAB)")
+        results.append(f"   └── 🛵 GOJEK: {stats['gojek_ads_spend']:,} IDR ({stats['gojek_ads_spend']/stats['total_ads_spend']*100:.1f}% бюджета, {gojek_percent_own:.1f}% от выручки GOJEK)")
         results.append("")
         results.append("🎯 ROAS АНАЛИЗ:")
         results.append(f"├── 📱 GRAB: {stats['grab_roas']:.2f}x (продажи: {stats['grab_ads_sales']:,} IDR / бюджет: {stats['grab_ads_spend']:,} IDR)")
