@@ -962,6 +962,11 @@ class ProductionSalesAnalyzer:
         sales_trends = self._get_sales_trends_analysis(restaurant_name, start_date, end_date)
         results.extend(sales_trends)
         
+        # Добавляем детальный анализ клиентской базы
+        results.append("")
+        customer_analysis = self._get_customer_base_analysis(restaurant_name, start_date, end_date)
+        results.extend(customer_analysis)
+        
         # Добавляем финансовые показатели
         results.append("")
         financial_metrics = self._get_financial_metrics(restaurant_name, start_date, end_date)
@@ -1547,6 +1552,118 @@ class ProductionSalesAnalyzer:
             
         except Exception as e:
             return [f"❌ Ошибка анализа продаж и трендов: {e}"]
+
+    def _get_customer_base_analysis(self, restaurant_name, start_date, end_date):
+        """Детальный анализ клиентской базы"""
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
+            
+            # Получаем restaurant_id
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            cursor.execute(restaurant_query)
+            restaurant_result = cursor.fetchone()
+            if not restaurant_result:
+                return []
+                
+            restaurant_id = restaurant_result[0]
+            
+            results = []
+            results.append("👥 3. ДЕТАЛЬНЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ")
+            results.append("----------------------------------------")
+            
+            # GRAB клиенты
+            cursor.execute('''
+            SELECT 
+                SUM(new_customers) as new_customers,
+                SUM(repeated_customers) as repeated_customers, 
+                SUM(reactivated_customers) as reactivated_customers,
+                SUM(earned_new_customers) as earned_new,
+                SUM(earned_repeated_customers) as earned_repeated,
+                SUM(earned_reactivated_customers) as earned_reactivated
+            FROM grab_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            ''', (restaurant_id, start_date, end_date))
+            
+            grab_result = cursor.fetchone()
+            grab_new = grab_result[0] or 0
+            grab_repeat = grab_result[1] or 0
+            grab_react = grab_result[2] or 0
+            grab_new_earned = grab_result[3] or 0
+            grab_repeat_earned = grab_result[4] or 0
+            grab_react_earned = grab_result[5] or 0
+            
+            # GOJEK клиенты
+            cursor.execute('''
+            SELECT 
+                SUM(new_client) as new_clients,
+                SUM(active_client) as active_clients,
+                SUM(returned_client) as returned_clients
+            FROM gojek_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            ''', (restaurant_id, start_date, end_date))
+            
+            gojek_result = cursor.fetchone()
+            gojek_new = gojek_result[0] or 0
+            gojek_active = gojek_result[1] or 0
+            gojek_returned = gojek_result[2] or 0
+            
+            # Общая статистика
+            total_new = grab_new + gojek_new
+            total_repeat = grab_repeat + gojek_active
+            total_reactivated = grab_react + gojek_returned
+            total_clients = total_new + total_repeat + total_reactivated
+            
+            results.append("📊 Структура клиентской базы (GRAB + GOJEK):")
+            results.append(f"  🆕 Новые клиенты: {total_new:,} ({total_new/total_clients*100:.1f}%)")
+            results.append(f"    📱 GRAB: {grab_new:,} | 🛵 GOJEK: {gojek_new:,}")
+            results.append(f"  🔄 Повторные клиенты: {total_repeat:,} ({total_repeat/total_clients*100:.1f}%)")
+            results.append(f"    📱 GRAB: {grab_repeat:,} | 🛵 GOJEK: {gojek_active:,}")
+            results.append(f"  📲 Реактивированные: {total_reactivated:,} ({total_reactivated/total_clients*100:.1f}%)")
+            results.append(f"    📱 GRAB: {grab_react:,} | 🛵 GOJEK: {gojek_returned:,}")
+            results.append("")
+            
+            # Доходность по типам клиентов (только GRAB с рекламы)
+            grab_new_avg = grab_new_earned / grab_new if grab_new > 0 else 0
+            grab_repeat_avg = grab_repeat_earned / grab_repeat if grab_repeat > 0 else 0
+            grab_react_avg = grab_react_earned / grab_react if grab_react > 0 else 0
+            
+            results.append("💰 Доходность по типам клиентов (только GRAB, только с рекламы):")
+            results.append(f"  🆕 Новые: {grab_new_earned:,} IDR (средний чек: {grab_new_avg:,.0f} IDR) - только {grab_new:,} клиентов GRAB")
+            results.append(f"  🔄 Повторные: {grab_repeat_earned:,} IDR (средний чек: {grab_repeat_avg:,.0f} IDR) - только {grab_repeat:,} клиентов GRAB")
+            results.append(f"  📲 Реактивированные: {grab_react_earned:,} IDR (средний чек: {grab_react_avg:,.0f} IDR) - только {grab_react:,} клиентов GRAB")
+            results.append("")
+            results.append(f"  ⚠️ КРИТИЧНО: Данные о доходах от {gojek_new + gojek_active + gojek_returned:,} клиентов GOJEK ОТСУТСТВУЮТ в базе данных")
+            results.append("  📊 Это означает, что реальная доходность может быть выше указанной")
+            results.append("")
+            
+            # Приобретение новых клиентов по месяцам
+            cursor.execute('''
+            SELECT 
+                strftime('%Y-%m', stat_date) as month,
+                SUM(grab_new + gojek_new) as monthly_new
+            FROM (
+                SELECT stat_date, new_customers as grab_new, 0 as gojek_new FROM grab_stats 
+                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                UNION ALL
+                SELECT stat_date, 0 as grab_new, new_client as gojek_new FROM gojek_stats 
+                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            ) monthly
+            GROUP BY month
+            ORDER BY month
+            ''', (restaurant_id, start_date, end_date, restaurant_id, start_date, end_date))
+            
+            monthly_new = cursor.fetchall()
+            results.append("📈 Приобретение новых клиентов по месяцам:")
+            for month, new_count in monthly_new:
+                month_name = 'Апрель' if month == '2025-04' else 'Май'
+                results.append(f"  {month_name}: {new_count:,} новых клиентов")
+            
+            conn.close()
+            return results
+            
+        except Exception as e:
+            return [f"❌ Ошибка анализа клиентской базы: {e}"]
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
