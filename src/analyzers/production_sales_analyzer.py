@@ -948,12 +948,28 @@ class ProductionSalesAnalyzer:
         results.append(f"   💡 Общий охват: {total_clients:,} уникальных клиентов")
         results.append(f"💸 Маркетинговый бюджет: {stats['total_ads_spend']:,} IDR ({stats['total_ads_spend']/stats['total_final_sales']*100:.1f}% от выручки)")
         
-        # Процент от выручки каждой платформы
+        # Расчет всех трех метрик для профессионального анализа
+        grab_percent_total = stats['grab_ads_spend']/stats['total_final_sales']*100
+        gojek_percent_total = stats['gojek_ads_spend']/stats['total_final_sales']*100
+        
         grab_percent_own = stats['grab_ads_spend']/stats['grab_final_sales']*100 if stats['grab_final_sales'] > 0 else 0
         gojek_percent_own = stats['gojek_ads_spend']/stats['gojek_final_sales']*100 if stats['gojek_final_sales'] > 0 else 0
         
-        results.append(f"   ├── 📱 GRAB: {stats['grab_ads_spend']:,} IDR ({stats['grab_ads_spend']/stats['total_ads_spend']*100:.1f}% бюджета, {grab_percent_own:.1f}% от выручки GRAB)")
-        results.append(f"   └── 🛵 GOJEK: {stats['gojek_ads_spend']:,} IDR ({stats['gojek_ads_spend']/stats['total_ads_spend']*100:.1f}% бюджета, {gojek_percent_own:.1f}% от выручки GOJEK)")
+        grab_percent_ads = stats['grab_ads_spend']/stats['grab_ads_sales']*100 if stats['grab_ads_sales'] > 0 else 0
+        gojek_percent_ads = stats['gojek_ads_spend']/stats['gojek_ads_sales']*100 if stats['gojek_ads_sales'] > 0 else 0
+        
+        results.append("📊 Детализация маркетинговых затрат:")
+        results.append("   ┌─ 📱 GRAB:")
+        results.append(f"   │  💰 Бюджет: {stats['grab_ads_spend']:,} IDR ({stats['grab_ads_spend']/stats['total_ads_spend']*100:.1f}% общего бюджета)")
+        results.append(f"   │  📈 {grab_percent_total:.1f}% от общей выручки | {grab_percent_own:.1f}% от выручки GRAB | {grab_percent_ads:.1f}% от рекламных продаж")
+        results.append("   └─ 🛵 GOJEK:")
+        results.append(f"      💰 Бюджет: {stats['gojek_ads_spend']:,} IDR ({stats['gojek_ads_spend']/stats['total_ads_spend']*100:.1f}% общего бюджета)")
+        results.append(f"      📈 {gojek_percent_total:.1f}% от общей выручки | {gojek_percent_own:.1f}% от выручки GOJEK | {gojek_percent_ads:.1f}% от рекламных продаж")
+        results.append("")
+        results.append("💡 Интерпретация метрик:")
+        results.append("   • % от общей выручки → финансовая нагрузка на бизнес")
+        results.append("   • % от выручки канала → операционная эффективность платформы")
+        results.append("   • % от рекламных продаж → стоимость генерации рекламного дохода")
         results.append("")
         results.append("🎯 ROAS АНАЛИЗ:")
         results.append(f"├── 📱 GRAB: {stats['grab_roas']:.2f}x (продажи: {stats['grab_ads_sales']:,} IDR / бюджет: {stats['grab_ads_spend']:,} IDR)")
