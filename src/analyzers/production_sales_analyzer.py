@@ -1064,8 +1064,11 @@ class ProductionSalesAnalyzer:
                 
                 issue_num = 1
                 for date, rate in grab_issues[:3]:
-                    hours = rate / 100 * 24  # примерный расчет
-                    results.append(f"   {issue_num}. {date}: GRAB offline {hours:.1f}ч (offline rate: {rate}%)")
+                    # Правильная формула: offline_rate% / 60 = часы
+                    total_minutes = rate
+                    hours = int(total_minutes // 60)
+                    minutes = int(total_minutes % 60)
+                    results.append(f"   {issue_num}. {date}: GRAB offline {hours}:{minutes:02d}:00 (потери: ~расчет требуется)")
                     issue_num += 1
                     
                 for date, close_time_str in gojek_issues[:3]:
