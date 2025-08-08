@@ -713,6 +713,179 @@ class ProductionSalesAnalyzer:
             else:
                 return f"{hours}ч"
 
+    def get_period_statistics_with_corrections(self, restaurant_name, start_date, end_date):
+        """
+        Получает статистику за период с полными корректировками:
+        Итоговые данные = Исходные - Отмененные - Потерянные - Фейковые
+        """
+        try:
+            with sqlite3.connect('database.sqlite') as conn:
+                # Получаем ID ресторана
+                restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+                restaurant_df = pd.read_sql_query(restaurant_query, conn)
+                if restaurant_df.empty:
+                    return None
+                
+                restaurant_id = restaurant_df.iloc[0]['id']
+                
+                # Получаем исходные данные Grab
+                grab_query = f"""
+                SELECT 
+                    SUM(COALESCE(sales, 0)) as original_sales,
+                    SUM(COALESCE(orders, 0)) as original_orders,
+                    SUM(COALESCE(cancelled_orders, 0)) as cancelled_orders,
+                    SUM(COALESCE(ads_spend, 0)) as ads_spend,
+                    SUM(COALESCE(ads_sales, 0)) as ads_sales,
+                    SUM(COALESCE(payouts, 0)) as payouts,
+                    SUM(COALESCE(new_customers, 0)) as new_customers,
+                    SUM(COALESCE(repeated_customers, 0)) as repeated_customers,
+                    SUM(COALESCE(reactivated_customers, 0)) as reactivated_customers
+                FROM grab_stats
+                WHERE restaurant_id = {restaurant_id}
+                AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+                """
+                grab_df = pd.read_sql_query(grab_query, conn)
+                
+                # Получаем исходные данные Gojek
+                gojek_query = f"""
+                SELECT 
+                    SUM(COALESCE(sales, 0)) as original_sales,
+                    SUM(COALESCE(orders, 0)) as original_orders,
+                    SUM(COALESCE(cancelled_orders, 0)) as cancelled_orders,
+                    SUM(COALESCE(potential_lost, 0)) as potential_lost,
+                    SUM(COALESCE(ads_spend, 0)) as ads_spend,
+                    SUM(COALESCE(ads_sales, 0)) as ads_sales,
+                    SUM(COALESCE(new_client, 0)) as new_clients,
+                    SUM(COALESCE(active_client, 0)) as active_clients,
+                    SUM(COALESCE(returned_client, 0)) as returned_clients
+                FROM gojek_stats
+                WHERE restaurant_id = {restaurant_id}
+                AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+                """
+                gojek_df = pd.read_sql_query(gojek_query, conn)
+                
+                # Получаем фейковые заказы за период
+                fake_stats = self._get_fake_orders_for_period(restaurant_name, start_date, end_date)
+                
+                # Формируем результат
+                result = {
+                    'restaurant_name': restaurant_name,
+                    'period': f"{start_date} — {end_date}",
+                    
+                    # Grab данные
+                    'grab_original_orders': int(grab_df.iloc[0]['original_orders']) if not grab_df.empty else 0,
+                    'grab_original_sales': int(grab_df.iloc[0]['original_sales']) if not grab_df.empty else 0,
+                    'grab_cancelled_orders': int(grab_df.iloc[0]['cancelled_orders']) if not grab_df.empty else 0,
+                    'grab_fake_orders': fake_stats['grab_fake_orders'],
+                    'grab_fake_amount': fake_stats['grab_fake_amount'],
+                    
+                    # Gojek данные
+                    'gojek_original_orders': int(gojek_df.iloc[0]['original_orders']) if not gojek_df.empty else 0,
+                    'gojek_original_sales': int(gojek_df.iloc[0]['original_sales']) if not gojek_df.empty else 0,
+                    'gojek_cancelled_orders': int(gojek_df.iloc[0]['cancelled_orders']) if not gojek_df.empty else 0,
+                    'gojek_potential_lost': int(gojek_df.iloc[0]['potential_lost']) if not gojek_df.empty else 0,
+                    'gojek_fake_orders': fake_stats['gojek_fake_orders'],
+                    'gojek_fake_amount': fake_stats['gojek_fake_amount'],
+                    
+                    # Реклама
+                    'grab_ads_spend': int(grab_df.iloc[0]['ads_spend']) if not grab_df.empty else 0,
+                    'grab_ads_sales': int(grab_df.iloc[0]['ads_sales']) if not grab_df.empty else 0,
+                    'gojek_ads_spend': int(gojek_df.iloc[0]['ads_spend']) if not gojek_df.empty else 0,
+                    'gojek_ads_sales': int(gojek_df.iloc[0]['ads_sales']) if not gojek_df.empty else 0,
+                    
+                    # Выплаты
+                    'grab_payouts': int(grab_df.iloc[0]['payouts']) if not grab_df.empty else 0,
+                    
+                    # Клиенты
+                    'grab_new_customers': int(grab_df.iloc[0]['new_customers']) if not grab_df.empty else 0,
+                    'grab_repeated_customers': int(grab_df.iloc[0]['repeated_customers']) if not grab_df.empty else 0,
+                    'grab_reactivated_customers': int(grab_df.iloc[0]['reactivated_customers']) if not grab_df.empty else 0,
+                    'gojek_new_clients': int(gojek_df.iloc[0]['new_clients']) if not gojek_df.empty else 0,
+                    'gojek_active_clients': int(gojek_df.iloc[0]['active_clients']) if not gojek_df.empty else 0,
+                    'gojek_returned_clients': int(gojek_df.iloc[0]['returned_clients']) if not gojek_df.empty else 0,
+                }
+                
+                # Рассчитываем финальные (очищенные) данные
+                result['grab_final_orders'] = (result['grab_original_orders'] - 
+                                             result['grab_cancelled_orders'] - 
+                                             result['grab_fake_orders'])
+                result['gojek_final_orders'] = (result['gojek_original_orders'] - 
+                                              result['gojek_cancelled_orders'] - 
+                                              result['gojek_fake_orders'])
+                
+                result['grab_final_sales'] = result['grab_original_sales'] - result['grab_fake_amount']
+                result['gojek_final_sales'] = (result['gojek_original_sales'] - 
+                                             result['gojek_fake_amount'] - 
+                                             result['gojek_potential_lost'])
+                
+                # Итоговые данные
+                result['total_final_orders'] = result['grab_final_orders'] + result['gojek_final_orders']
+                result['total_final_sales'] = result['grab_final_sales'] + result['gojek_final_sales']
+                result['total_ads_spend'] = result['grab_ads_spend'] + result['gojek_ads_spend']
+                result['total_ads_sales'] = result['grab_ads_sales'] + result['gojek_ads_sales']
+                
+                # Средний чек
+                result['grab_avg_check'] = (result['grab_final_sales'] / result['grab_final_orders'] 
+                                          if result['grab_final_orders'] > 0 else 0)
+                result['gojek_avg_check'] = (result['gojek_final_sales'] / result['gojek_final_orders'] 
+                                           if result['gojek_final_orders'] > 0 else 0)
+                
+                # ROAS
+                result['grab_roas'] = (result['grab_ads_sales'] / result['grab_ads_spend'] 
+                                     if result['grab_ads_spend'] > 0 else 0)
+                result['gojek_roas'] = (result['gojek_ads_sales'] / result['gojek_ads_spend'] 
+                                      if result['gojek_ads_spend'] > 0 else 0)
+                
+                return result
+                
+        except Exception as e:
+            print(f"❌ Ошибка получения статистики: {e}")
+            return None
+    
+    def _get_fake_orders_for_period(self, restaurant_name, start_date, end_date):
+        """Подсчитывает фейковые заказы за период"""
+        if not self.fake_orders_filter:
+            return {'grab_fake_orders': 0, 'gojek_fake_orders': 0, 
+                   'grab_fake_amount': 0, 'gojek_fake_amount': 0}
+        
+        # Конвертируем даты в формат fake orders (DD/MM/YYYY)
+        from datetime import datetime
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        grab_fakes = 0
+        gojek_fakes = 0
+        grab_fake_amount = 0
+        gojek_fake_amount = 0
+        
+        # Получаем данные из фильтра
+        for order in self.fake_orders_filter.fake_orders_data:
+            if order.get('restaurant') == restaurant_name:
+                try:
+                    order_date_str = order.get('date', '')
+                    if '/' in order_date_str:
+                        order_dt = datetime.strptime(order_date_str, '%d/%m/%Y')
+                        
+                        if start_dt <= order_dt <= end_dt:
+                            quantity = int(order.get('quantity', 0))
+                            amount = int(order.get('amount', 0))
+                            
+                            if order.get('platform') == 'Grab':
+                                grab_fakes += quantity
+                                grab_fake_amount += amount
+                            elif order.get('platform') == 'Gojek':
+                                gojek_fakes += quantity
+                                gojek_fake_amount += amount
+                except:
+                    continue
+        
+        return {
+            'grab_fake_orders': grab_fakes,
+            'gojek_fake_orders': gojek_fakes,
+            'grab_fake_amount': grab_fake_amount,
+            'gojek_fake_amount': gojek_fake_amount
+        }
+
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
     """Обертка для совместимости с main.py"""
