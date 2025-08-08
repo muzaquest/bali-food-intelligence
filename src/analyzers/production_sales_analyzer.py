@@ -1553,10 +1553,13 @@ class ProductionSalesAnalyzer:
             
             # Анализ рабочих дней
             days_count = len(all_sales)
+            if not all_sales:
+                return [f"❌ Нет данных о продажах за период {start_date} - {end_date}"]
+            
             max_sales = max(all_sales)
             min_sales = min(all_sales)
             avg_sales = sum(all_sales) / days_count
-            range_percent = (max_sales - min_sales) / min_sales * 100
+            range_percent = (max_sales - min_sales) / min_sales * 100 if min_sales > 0 else 0
             
             # Коэффициент вариации
             import statistics
