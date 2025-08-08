@@ -957,6 +957,16 @@ class ProductionSalesAnalyzer:
         total_roas = stats['total_ads_sales'] / stats['total_ads_spend'] if stats['total_ads_spend'] > 0 else 0
         results.append(f"└── 🎯 ОБЩИЙ: {total_roas:.2f}x (продажи: {stats['total_ads_sales']:,} IDR / бюджет: {stats['total_ads_spend']:,} IDR)")
         
+        # Добавляем финансовые показатели
+        results.append("")
+        financial_metrics = self._get_financial_metrics(restaurant_name, start_date, end_date)
+        results.extend(financial_metrics)
+        
+        # Добавляем операционные метрики
+        results.append("")
+        operational_metrics = self._get_operational_metrics(restaurant_name, start_date, end_date)
+        results.extend(operational_metrics)
+        
         # Добавляем операционные сбои
         results.append("")
         operational_issues = self._get_operational_issues_analysis(restaurant_name, start_date, end_date)
@@ -1212,6 +1222,179 @@ class ProductionSalesAnalyzer:
             
         except Exception as e:
             return [f"❌ Ошибка анализа рейтингов: {e}"]
+
+    def _get_financial_metrics(self, restaurant_name, start_date, end_date):
+        """Получение финансовых показателей"""
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
+            
+            # Получаем restaurant_id
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            cursor.execute(restaurant_query)
+            restaurant_result = cursor.fetchone()
+            if not restaurant_result:
+                return []
+                
+            restaurant_id = restaurant_result[0]
+            
+            results = []
+            results.append("💳 ФИНАНСОВЫЕ ПОКАЗАТЕЛИ")
+            results.append("──────────────────────────────────────────────────────────────────────────────")
+            
+            # Получаем выплаты
+            cursor.execute('''
+            SELECT SUM(payouts) FROM grab_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            ''', (restaurant_id, start_date, end_date))
+            grab_payouts = cursor.fetchone()[0] or 0
+            
+            cursor.execute('''
+            SELECT SUM(payouts) FROM gojek_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            ''', (restaurant_id, start_date, end_date))
+            gojek_payouts = cursor.fetchone()[0] or 0
+            
+            # Получаем статистику для ROAS
+            stats = self.get_period_statistics_with_corrections(restaurant_name, start_date, end_date)
+            
+            results.append("💰 Выплаты:")
+            results.append(f"├── 📱 GRAB: {grab_payouts:,} IDR")
+            if gojek_payouts > 0:
+                results.append(f"└── 🛵 GOJEK: {gojek_payouts:,} IDR")
+            else:
+                results.append("└── 🛵 GOJEK: данные недоступны")
+            
+            results.append("")
+            results.append("📊 Рекламная эффективность:")
+            results.append(f"├── 💰 Общие рекламные продажи: {stats['total_ads_sales']:,} IDR")
+            total_sales = stats['grab_final_sales'] + stats['gojek_final_sales']
+            results.append(f"├── 📈 Доля от общих продаж: {stats['total_ads_sales']/total_sales*100:.1f}%")
+            results.append(f"├── 🎯 GRAB ROAS: {stats['grab_roas']:.2f}x ({'отличная' if stats['grab_roas'] > 10 else 'хорошая' if stats['grab_roas'] > 5 else 'низкая'} эффективность)")
+            results.append(f"└── 🎯 GOJEK ROAS: {stats['gojek_roas']:.2f}x ({'превосходная' if stats['gojek_roas'] > 20 else 'отличная' if stats['gojek_roas'] > 10 else 'хорошая'} эффективность)")
+            
+            conn.close()
+            return results
+            
+        except Exception as e:
+            return [f"❌ Ошибка получения финансовых показателей: {e}"]
+    
+    def _get_operational_metrics(self, restaurant_name, start_date, end_date):
+        """Получение операционных метрик"""
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
+            
+            # Получаем restaurant_id
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            cursor.execute(restaurant_query)
+            restaurant_result = cursor.fetchone()
+            if not restaurant_result:
+                return []
+                
+            restaurant_id = restaurant_result[0]
+            
+            results = []
+            results.append("⏰ ОПЕРАЦИОННЫЕ МЕТРИКИ")
+            results.append("──────────────────────────────────────────────────────────────────────────────")
+            
+            # GRAB метрики (driver_waiting_time это JSON)
+            cursor.execute('''
+            SELECT driver_waiting_time FROM grab_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            AND driver_waiting_time IS NOT NULL AND driver_waiting_time != ''
+            ''', (restaurant_id, start_date, end_date))
+            grab_waiting_results = cursor.fetchall()
+            
+            # Парсим JSON и получаем среднее время ожидания GRAB
+            grab_waiting_times = []
+            for row in grab_waiting_results:
+                try:
+                    import json
+                    if row[0]:
+                        data = json.loads(row[0])
+                        if isinstance(data, dict) and 'min' in data:
+                            grab_waiting_times.append(float(data['min']))
+                        elif isinstance(data, (int, float)):
+                            grab_waiting_times.append(float(data))
+                except:
+                    continue
+            
+            grab_waiting = sum(grab_waiting_times) / len(grab_waiting_times) if grab_waiting_times else 0
+            
+            # GOJEK метрики (время в формате TIME: HH:MM:SS, driver_waiting в минутах)
+            cursor.execute('''
+            SELECT preparation_time, delivery_time, driver_waiting 
+            FROM gojek_stats 
+            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+            AND preparation_time IS NOT NULL
+            ''', (restaurant_id, start_date, end_date))
+            gojek_results = cursor.fetchall()
+            
+            gojek_prep_times = []
+            gojek_delivery_times = []
+            gojek_waiting_times = []
+            
+            for row in gojek_results:
+                try:
+                    # Парсим TIME поля (HH:MM:SS -> минуты)
+                    if row[0]:  # preparation_time
+                        prep_parts = str(row[0]).split(':')
+                        prep_minutes = int(prep_parts[0]) * 60 + int(prep_parts[1]) + int(prep_parts[2]) / 60
+                        gojek_prep_times.append(prep_minutes)
+                    
+                    if row[1]:  # delivery_time  
+                        del_parts = str(row[1]).split(':')
+                        del_minutes = int(del_parts[0]) * 60 + int(del_parts[1]) + int(del_parts[2]) / 60
+                        gojek_delivery_times.append(del_minutes)
+                    
+                    if row[2] is not None:  # driver_waiting (уже в минутах)
+                        gojek_waiting_times.append(float(row[2]))
+                except:
+                    continue
+            
+            gojek_prep = sum(gojek_prep_times) / len(gojek_prep_times) if gojek_prep_times else 0
+            gojek_delivery = sum(gojek_delivery_times) / len(gojek_delivery_times) if gojek_delivery_times else 0
+            gojek_waiting = sum(gojek_waiting_times) / len(gojek_waiting_times) if gojek_waiting_times else 0
+            
+            results.append("🟢 GRAB:")
+            results.append(f"└── ⏰ Время ожидания водителей: {grab_waiting:.1f} мин")
+            results.append("")
+            results.append("🟠 GOJEK:")
+            results.append(f"├── ⏱️ Время приготовления: {gojek_prep:.1f} мин")
+            results.append(f"├── 🚗 Время доставки: {gojek_delivery:.1f} мин")
+            results.append(f"└── ⏰ Время ожидания водителей: {gojek_waiting:.1f} мин")
+            results.append("")
+            
+            # Добавляем операционную эффективность (отмененные заказы и потери)
+            stats = self.get_period_statistics_with_corrections(restaurant_name, start_date, end_date)
+            
+            results.append("⚠️ ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ:")
+            results.append("🚫 Отмененные заказы:")
+            results.append(f"├── 📱 GRAB: {stats['grab_cancelled_orders']} заказа (отмена по ресторану)")
+            results.append(f"└── 🛵 GOJEK: {stats['gojek_cancelled_orders']} заказа (дефицит товара)")
+            total_cancelled = stats['grab_cancelled_orders'] + stats['gojek_cancelled_orders']
+            total_orders = stats['grab_original_orders'] + stats['gojek_original_orders']
+            results.append(f"💡 Всего отмененных: {total_cancelled} заказов ({total_cancelled/total_orders*100:.1f}% от общих)")
+            results.append("")
+            
+            results.append("💔 Реальные потери от операционных проблем:")
+            # Расчет потерь GRAB по среднему чеку
+            grab_avg_check = stats['grab_final_sales'] / stats['grab_final_orders'] if stats['grab_final_orders'] > 0 else 0
+            grab_cancelled_losses = stats['grab_cancelled_orders'] * grab_avg_check
+            
+            results.append(f"├── 💸 GRAB отмененные: {grab_cancelled_losses:,.0f} IDR ({stats['grab_cancelled_orders']} × {grab_avg_check:,.0f} средний чек)")
+            results.append(f"├── 💸 GOJEK потерянные: {stats['gojek_potential_lost']:,} IDR (конкретные заказы)")
+            
+            total_losses = grab_cancelled_losses + stats['gojek_potential_lost']
+            total_sales = stats['grab_final_sales'] + stats['gojek_final_sales']
+            results.append(f"└── 📊 Общие потери: {total_losses:,.0f} IDR ({total_losses/total_sales*100:.2f}% от выручки)")
+            
+            conn.close()
+            return results
+            
+        except Exception as e:
+            return [f"❌ Ошибка получения операционных метрик: {e}"]
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
