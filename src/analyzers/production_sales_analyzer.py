@@ -2124,6 +2124,43 @@ class ProductionSalesAnalyzer:
         confidence = min(95, 60 + len(shap_explanations) * 5)
         
         return int(confidence)
+    
+    def _time_to_minutes(self, time_str):
+        """Конвертирует время HH:MM:SS в минуты"""
+        if not time_str or time_str == '00:00:00':
+            return 0
+        try:
+            parts = str(time_str).split(':')
+            if len(parts) >= 3:
+                return int(parts[0]) * 60 + int(parts[1]) + int(parts[2]) / 60.0
+            elif len(parts) == 2:
+                return int(parts[0]) * 60 + int(parts[1])
+        except:
+            pass
+        return 0
+    
+    def _get_weather_data(self, restaurant_name, date_str):
+        """Получает погодные данные для даты"""
+        try:
+            # Простая симуляция погодных данных (в реальности из API)
+            import hashlib
+            
+            # Генерируем стабильные данные на основе даты
+            date_hash = int(hashlib.md5(date_str.encode()).hexdigest()[:8], 16)
+            
+            # Симулируем погоду для Бали
+            precipitation = (date_hash % 100) / 10.0  # 0-10 мм
+            temperature = 25 + (date_hash % 10)  # 25-35°C
+            
+            return {
+                'precipitation': precipitation,
+                'temperature': temperature
+            }
+        except:
+            return {
+                'precipitation': 0,
+                'temperature': 27
+            }
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
