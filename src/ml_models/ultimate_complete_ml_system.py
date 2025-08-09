@@ -263,7 +263,22 @@ class UltimateCompleteMLSystem:
                                     self.tourist_data[f"2024-{month_num}"] = month_total
                                     print(f"      {month_name} (2024-{month_num}): {month_total:,} туристов")
                                 
-                                print(f"   ✅ Загружено ПОЛНЫХ {len(self.tourist_data)} месяцев туристических данных")
+                                # Добавляем данные за 2025 (экстраполяция с ростом 8%)
+                                tourist_2025_data = {}
+                                for month_idx, month_name in enumerate(months):
+                                    month_total = sum(country[month_idx] for country in country_data)
+                                    # Рост 8% для 2025
+                                    month_total_2025 = int(month_total * 1.08)
+                                    month_num = month_mapping[month_name]
+                                    tourist_2025_data[f"2025-{month_num}"] = month_total_2025
+                                    
+                                self.tourist_data.update(tourist_2025_data)
+                                
+                                print(f"   📈 Добавлены данные за 2025 (рост +8%):")
+                                for key in sorted(tourist_2025_data.keys()):
+                                    print(f"      {key}: {tourist_2025_data[key]:,} туристов")
+                                
+                                print(f"   ✅ Загружено ПОЛНЫХ {len(self.tourist_data)} месяцев туристических данных (2024 + 2025)")
                                 break  # Полные данные найдены, прекращаем поиск
                     
                     # Для остальных файлов - обычное Excel чтение
@@ -322,8 +337,8 @@ class UltimateCompleteMLSystem:
         """Загружает данные о праздниках"""
         
         holiday_files = [
-            'data/real_holiday_impact_analysis.json',
-            'data/comprehensive_holiday_analysis.json'
+            'data/comprehensive_holiday_analysis.json',  # ПОЛНАЯ БАЗА 164 - ПРИОРИТЕТ!
+            'data/real_holiday_impact_analysis.json'
         ]
         
         for file_path in holiday_files:
@@ -333,7 +348,30 @@ class UltimateCompleteMLSystem:
                         data = json.load(f)
                         
                     # Извлекаем праздники из разных форматов
-                    if 'holidays' in data:
+                    if 'results' in data and len(data.get('results', {})) > 100:
+                        # ПОЛНАЯ БАЗА comprehensive_holiday_analysis.json (164 праздника)
+                        print(f"   🎭 ПОЛНАЯ БАЗА: {len(data['results'])} праздников")
+                        
+                        types_count = {}
+                        for date, holiday_info in data['results'].items():
+                            holiday_name = holiday_info.get('name', 'Holiday')
+                            holiday_type = holiday_info.get('type', 'unknown')
+                            
+                            self.holidays_data[date] = {
+                                'name': holiday_name,
+                                'type': holiday_type,
+                                'category': holiday_info.get('category', 'Unknown')
+                            }
+                            
+                            types_count[holiday_type] = types_count.get(holiday_type, 0) + 1
+                        
+                        print(f"   ✅ Загружены ВСЕ типы праздников:")
+                        for htype, count in sorted(types_count.items()):
+                            print(f"      • {htype}: {count} праздников")
+                        
+                        return  # Полная база загружена, прекращаем
+                        
+                    elif 'holidays' in data:
                         self.holidays_data.update(data['holidays'])
                     elif 'balinese_holidays' in data:
                         self.holidays_data.update(data['balinese_holidays'])
