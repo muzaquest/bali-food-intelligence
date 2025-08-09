@@ -208,63 +208,112 @@ class UltimateCompleteMLSystem:
         """Загружает туристические данные"""
         
         tourist_files = [
-            'data/tourism/1.-Data-Kunjungan-2024.xls',  # ПОЛНАЯ БАЗА 74KB - НЕ УДАЛЯТЬ!
+            'data/tourism/Kunjungan_Wisatawan_Bali_2024.xls',  # ПОЛНЫЕ 12 МЕСЯЦЕВ - ПРИОРИТЕТ!
+            'data/tourism/1.-Data-Kunjungan-2024.xls',  # Только 5 месяцев (резерв)
             'data/tourism/1.-Data-Kunjungan-2025-3.xls',
             '1.-Data-Kunjungan-2024.xls',  # Резервная копия
             '1.-Data-Kunjungan-2025-3.xls',  # Резервная копия
-            'data/Table-1-7-Final-1-1.xls',
-            'data/tourism/Kunjungan_Wisatawan_Bali_2024.xls'
+            'data/Table-1-7-Final-1-1.xls'
         ]
         
         for file_path in tourist_files:
             if os.path.exists(file_path):
                 try:
-                    df = pd.read_excel(file_path, engine='xlrd' if file_path.endswith('.xls') else 'openpyxl')
-                    
-                    # ПРАВИЛЬНЫЙ парсинг для файла Data-Kunjungan-2024.xls
-                    if 'Data-Kunjungan-2024' in file_path and len(df) > 1:
-                        print(f"   📊 Парсинг полного файла {file_path}...")
+                    # Специальная обработка для файла Kunjungan_Wisatawan_Bali_2024.xls (он в CSV формате)
+                    if 'Kunjungan_Wisatawan_Bali_2024' in file_path:
+                        print(f"   📊 Парсинг ПОЛНОГО файла за 2024 {file_path}...")
                         
-                        # Находим строку TOTAL (обычно последняя значимая строка)
-                        total_row = None
-                        for i, row in df.iterrows():
-                            if isinstance(row.iloc[1], str) and 'total' in str(row.iloc[1]).lower():
-                                total_row = i
+                        # Читаем как текстовый файл и парсим вручную
+                        with open(file_path, 'r') as f:
+                            lines = f.readlines()
+                        
+                        # Находим строку с заголовками
+                        header_line = None
+                        for i, line in enumerate(lines):
+                            if 'Country,Jan,Feb' in line:
+                                header_line = i
                                 break
                         
-                        if total_row is not None:
-                            months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUNE', 'JULY', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-                            month_mapping = {
-                                'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 
-                                'MAY': '05', 'JUNE': '06', 'JULY': '07', 'AUG': '08',
-                                'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
-                            }
+                        if header_line is not None:
+                            # Парсим данные по странам
+                            country_data = []
+                            for i in range(header_line + 1, len(lines)):
+                                line = lines[i].strip()
+                                if line and ',' in line:
+                                    parts = line.split(',')
+                                    if len(parts) >= 13:
+                                        try:
+                                            month_values = [int(parts[j]) for j in range(1, 13)]
+                                            country_data.append(month_values)
+                                        except ValueError:
+                                            continue
                             
-                            # Извлекаем данные по месяцам из строки TOTAL
-                            for col_idx in range(2, min(14, len(df.columns))):  # Колонки 2-13 это месяцы
-                                if col_idx - 2 < len(months):
-                                    month_name = months[col_idx - 2]
+                            # Суммируем по месяцам
+                            if country_data:
+                                months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                                month_mapping = {
+                                    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                                    'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                                    'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                                }
+                                
+                                for month_idx, month_name in enumerate(months):
+                                    month_total = sum(country[month_idx] for country in country_data)
                                     month_num = month_mapping[month_name]
-                                    
-                                    try:
-                                        tourists = float(df.iloc[total_row, col_idx])
-                                        if not pd.isna(tourists) and tourists > 0:
-                                            self.tourist_data[f"2024-{month_num}"] = int(tourists)
-                                            print(f"      {month_name} (2024-{month_num}): {int(tourists):,} туристов")
-                                    except (ValueError, TypeError):
-                                        pass
+                                    self.tourist_data[f"2024-{month_num}"] = month_total
+                                    print(f"      {month_name} (2024-{month_num}): {month_total:,} туристов")
+                                
+                                print(f"   ✅ Загружено ПОЛНЫХ {len(self.tourist_data)} месяцев туристических данных")
+                                break  # Полные данные найдены, прекращаем поиск
+                    
+                    # Для остальных файлов - обычное Excel чтение
+                    else:
+                        df = pd.read_excel(file_path, engine='xlrd' if file_path.endswith('.xls') else 'openpyxl')
                         
-                        if self.tourist_data:
-                            print(f"   ✅ Загружено {len(self.tourist_data)} месяцев туристических данных")
-                            break  # Если загрузили данные, прекращаем перебор файлов
-                        
-                    # Простая обработка для других файлов
-                    elif len(df) > 0:
-                        for i, row in df.iterrows():
-                            tourists = sum([val for val in row.values if isinstance(val, (int, float)) and val > 0 and val < 10000000])
-                            if tourists > 0 and i < 12:
-                                month = i + 1 if i < 12 else (i % 12) + 1
-                                self.tourist_data[f"2024-{month:02d}"] = tourists
+                        # ПРАВИЛЬНЫЙ парсинг для файла Data-Kunjungan-2024.xls
+                        if 'Data-Kunjungan-2024' in file_path and len(df) > 1:
+                            print(f"   📊 Парсинг полного файла {file_path}...")
+                            
+                            # Находим строку TOTAL (обычно последняя значимая строка)
+                            total_row = None
+                            for i, row in df.iterrows():
+                                if isinstance(row.iloc[1], str) and 'total' in str(row.iloc[1]).lower():
+                                    total_row = i
+                                    break
+                            
+                            if total_row is not None:
+                                months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUNE', 'JULY', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+                                month_mapping = {
+                                    'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 
+                                    'MAY': '05', 'JUNE': '06', 'JULY': '07', 'AUG': '08',
+                                    'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+                                }
+                                
+                                # Извлекаем данные по месяцам из строки TOTAL
+                                for col_idx in range(2, min(14, len(df.columns))):  # Колонки 2-13 это месяцы
+                                    if col_idx - 2 < len(months):
+                                        month_name = months[col_idx - 2]
+                                        month_num = month_mapping[month_name]
+                                        
+                                        try:
+                                            tourists = float(df.iloc[total_row, col_idx])
+                                            if not pd.isna(tourists) and tourists > 0:
+                                                self.tourist_data[f"2024-{month_num}"] = int(tourists)
+                                                print(f"      {month_name} (2024-{month_num}): {int(tourists):,} туристов")
+                                        except (ValueError, TypeError):
+                                            pass
+                                
+                                if self.tourist_data:
+                                    print(f"   ✅ Загружено {len(self.tourist_data)} месяцев туристических данных")
+                                    break  # Если загрузили данные, прекращаем перебор файлов
+                                
+                        # Простая обработка для других файлов
+                        elif len(df) > 0:
+                            for i, row in df.iterrows():
+                                tourists = sum([val for val in row.values if isinstance(val, (int, float)) and val > 0 and val < 10000000])
+                                if tourists > 0 and i < 12:
+                                    month = i + 1 if i < 12 else (i % 12) + 1
+                                    self.tourist_data[f"2024-{month:02d}"] = tourists
                                 
                 except Exception as e:
                     print(f"   ⚠️ Ошибка загрузки {file_path}: {e}")
