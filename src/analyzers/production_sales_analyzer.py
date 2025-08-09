@@ -16,6 +16,7 @@
 
 import sqlite3
 import pandas as pd
+import numpy as np
 import json
 import requests
 from datetime import datetime, timedelta
@@ -1856,197 +1857,273 @@ class ProductionSalesAnalyzer:
 
     def _get_ml_factors_analysis(self, restaurant_name, target_date, is_good_day=True):
         """
-        Получает ML анализ факторов для конкретного дня используя IntegratedMLDetective
-        с полным набором из 17+ факторов
+        НАСТОЯЩИЙ ML анализ факторов используя UltimateCompleteMLSystem + SHAP
+        Анализирует ПРИЧИНЫ изменений продаж, а не тривиальные корреляции
         """
         try:
-            # Используем наш мощный ML анализатор БЕЗ создания нового экземпляра
-            from .integrated_ml_detective import IntegratedMLDetective
+            print(f"🤖 Запуск НАСТОЯЩЕГО ML анализа для {target_date}...")
             
-            # Получаем features напрямую без создания нового экземпляра  
-            features = self._get_features_for_date(restaurant_name, target_date)
+            # Используем полную ML систему
+            from ..ml_models.ultimate_complete_ml_system import UltimateCompleteMLSystem
             
-            if not features:
-                return ["      💡 Данные для ML анализа недоступны"]
+            ml_system = UltimateCompleteMLSystem()
             
+            # Обучаем модель если еще не обучена
+            if not ml_system.trained_model:
+                print("🧠 Обучение ML модели...")
+                dataset = ml_system.build_ultimate_dataset()
+                success = ml_system.train_ultimate_model(dataset)
+                
+                if not success:
+                    return ["      ❌ Не удалось обучить ML модель"]
+            
+            # Получаем данные за целевую дату
+            target_data = self._get_ml_day_data(restaurant_name, target_date)
+            
+            if not target_data:
+                return ["      ❌ Нет данных для ML анализа"]
+            
+            # Готовим данные для SHAP анализа
+            feature_vector = self._prepare_ml_features(target_data, ml_system)
+            
+            if feature_vector is None:
+                return ["      ❌ Не удалось подготовить данные для ML"]
+            
+            # Получаем SHAP объяснения
+            shap_explanations = self._get_shap_explanations(feature_vector, ml_system)
+            
+            if not shap_explanations:
+                return ["      ❌ SHAP анализ недоступен"]
+            
+            # Форматируем результаты
             results = []
             
-            # Анализируем ключевые факторы
-            key_factors = []
-            
-            # 🌤️ ПОГОДНЫЕ ФАКТОРЫ
-            if features.get('precipitation', 0) > 5:
-                key_factors.append(f"      🌧️ Сильный дождь: {features['precipitation']:.1f}мм")
-            elif features.get('precipitation', 0) > 1:
-                key_factors.append(f"      🌤️ Легкий дождь: {features['precipitation']:.1f}мм") 
-            elif features.get('precipitation', 0) == 0:
-                if is_good_day:
-                    key_factors.append(f"      ☀️ Хорошая погода (без дождя)")
-            
-            # 🎉 КАЛЕНДАРНЫЕ ФАКТОРЫ  
-            if features.get('is_holiday', 0) == 1:
-                if is_good_day:
-                    key_factors.append("      🎉 Праздничный день (+продажи)")
-                else:
-                    key_factors.append("      🎉 Праздник (возможно закрыты конкуренты)")
-                    
-            if features.get('is_weekend', 0) == 1:
-                if is_good_day:
-                    key_factors.append("      🗓️ Выходной день (+трафик)")
-                else:
-                    key_factors.append("      🗓️ Выходной (нестабильный трафик)")
-            
-            # ⚙️ ОПЕРАЦИОННЫЕ ФАКТОРЫ
-            if features.get('grab_offline_rate', 0) > 60:  # более часа
-                key_factors.append(f"      🚨 GRAB недоступен: {features['grab_offline_rate']:.0f}мин")
-            elif features.get('grab_offline_rate', 0) > 30:
-                key_factors.append(f"      ⚠️ GRAB сбои: {features['grab_offline_rate']:.0f}мин")
+            # Показываем топ-5 факторов влияния
+            for i, (feature, shap_value, contribution) in enumerate(shap_explanations[:5], 1):
                 
-            if features.get('gojek_closed', 0) == 1:
-                key_factors.append("      🚨 GOJEK закрыт/недоступен")
+                # Конвертируем в читаемый формат
+                readable_factor = self._format_ml_factor(feature, shap_value, contribution, is_good_day)
                 
-            prep_time = features.get('preparation_minutes', 15)
-            if prep_time > 20:
-                key_factors.append(f"      ⚠️ Долгое приготовление: {prep_time:.1f}мин")
-            elif prep_time < 10 and is_good_day:
-                key_factors.append(f"      ✅ Быстрое приготовление: {prep_time:.1f}мин")
-                
-            delivery_time = features.get('delivery_minutes', 20)
-            if delivery_time > 30:
-                key_factors.append(f"      ⚠️ Долгая доставка: {delivery_time:.1f}мин")
-            elif delivery_time < 15 and is_good_day:
-                key_factors.append(f"      ✅ Быстрая доставка: {delivery_time:.1f}мин")
+                if readable_factor:
+                    results.append(f"      {i}. {readable_factor}")
             
-            # 📈 МАРКЕТИНГОВЫЕ ФАКТОРЫ
-            total_ads = features.get('total_ads_spend', 0)
-            impressions = features.get('impressions', 0)
+            # Добавляем статистическую значимость
+            if len(results) > 0:
+                confidence = self._calculate_ml_confidence(shap_explanations)
+                results.append(f"      💡 ML уверенность: {confidence}%")
             
-            if total_ads > 500000:  # высокий рекламный бюджет
-                if is_good_day:
-                    key_factors.append(f"      📈 Высокий рекламный бюджет: {total_ads:,.0f} IDR")
-                else:
-                    key_factors.append(f"      💸 Высокие расходы на рекламу: {total_ads:,.0f} IDR")
-                    
-            if impressions > 5000:
-                if is_good_day:
-                    key_factors.append(f"      👁️ Высокий охват: {impressions:,.0f} показов")
-                    
-            # ⭐ КАЧЕСТВЕННЫЕ ФАКТОРЫ
-            rating = features.get('rating', 4.5)
-            if rating > 4.7:
-                if is_good_day:
-                    key_factors.append(f"      ⭐ Отличный рейтинг: {rating:.1f}/5.0")
-            elif rating < 4.3:
-                key_factors.append(f"      ⭐ Низкий рейтинг: {rating:.1f}/5.0")
+            return results if results else ["      💡 Факторы в пределах нормы"]
             
-            # 🌡️ ТЕМПЕРАТУРНЫЕ ФАКТОРЫ
-            temp = features.get('temperature', 27)
-            if temp > 32:
-                if not is_good_day:
-                    key_factors.append(f"      🌡️ Очень жарко: {temp:.0f}°C")
-            elif temp < 22:
-                if not is_good_day:
-                    key_factors.append(f"      🌡️ Прохладно: {temp:.0f}°C")
-            
-            # Возвращаем топ-5 факторов
-            if key_factors:
-                return key_factors[:5]
-            else:
-                if is_good_day:
-                    return ["      💡 Стандартные условия способствовали успеху"]
-                else:
-                    return ["      💡 Причины требуют дополнительного анализа"]
-                    
         except Exception as e:
-            return [f"      ❌ Ошибка ML анализа: {e}"]
+            print(f"❌ Ошибка НАСТОЯЩЕГО ML анализа: {e}")
+            return [f"      ❌ ML анализ недоступен: {e}"]
     
-    def _get_features_for_date(self, restaurant_name, target_date):
-        """Получает ML факторы для конкретной даты без создания новых экземпляров"""
+    def _get_ml_day_data(self, restaurant_name, target_date):
+        """Получает данные за конкретный день для ML анализа"""
         try:
             conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
             
             # Получаем ID ресторана
-            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
-            cursor = conn.cursor()
-            cursor.execute(restaurant_query)
+            cursor.execute("SELECT id FROM restaurants WHERE name = ?", (restaurant_name,))
             restaurant_result = cursor.fetchone()
             
             if not restaurant_result:
                 conn.close()
-                return {}
+                return None
             
             restaurant_id = restaurant_result[0]
             
-            # Получаем данные за целевую дату
-            query = f"""
+            # Получаем полные данные за день (как в UltimateCompleteMLSystem)
+            query = """
             SELECT 
+                g.stat_date,
+                r.name as restaurant_name,
+                
+                -- Операционные факторы (НАСТОЯЩИЕ ПРИЧИНЫ!)
                 g.offline_rate,
-                gj.close_time,
                 gj.preparation_time,
-                gj.delivery_time,
+                gj.delivery_time, 
+                gj.driver_waiting,
+                gj.close_time,
+                
+                -- Качественные факторы
+                COALESCE(g.rating, gj.rating, 4.5) as rating,
+                
+                -- Маркетинговые факторы
                 g.ads_spend as grab_ads_spend,
                 gj.ads_spend as gojek_ads_spend,
                 g.impressions,
-                COALESCE(g.rating, gj.rating, 4.5) as rating,
-                (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders
-            FROM grab_stats g
-            FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id 
-                                           AND g.stat_date = gj.stat_date
-            WHERE (g.restaurant_id = {restaurant_id} OR gj.restaurant_id = {restaurant_id})
-            AND (g.stat_date = '{target_date}' OR gj.stat_date = '{target_date}')
+                g.ads_sales as grab_ads_sales,
+                gj.ads_sales as gojek_ads_sales,
+                
+                -- Результирующие данные (для контекста)
+                g.sales as grab_sales,
+                gj.sales as gojek_sales,
+                g.orders as grab_orders,
+                gj.orders as gojek_orders
+                
+            FROM restaurants r
+            LEFT JOIN grab_stats g ON r.id = g.restaurant_id AND g.stat_date = ?
+            LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id AND gj.stat_date = ?
+            WHERE r.id = ?
             """
             
-            cursor.execute(query)
+            cursor.execute(query, (target_date, target_date, restaurant_id))
             row = cursor.fetchone()
+            
             conn.close()
             
             if not row:
-                return {}
+                return None
             
-            # Подготавливаем признаки
-            from datetime import datetime
-            date_obj = datetime.strptime(target_date, '%Y-%m-%d')
-            
-            features = {
-                'is_weekend': 1 if date_obj.weekday() >= 5 else 0,
-                'day_of_week': date_obj.weekday(),
-                'grab_offline_rate': float(row[0]) if row[0] is not None else 0,
-                'gojek_closed': 1 if (row[1] is not None and row[1] != '00:00:00') else 0,
-                'preparation_minutes': self._time_to_minutes(row[2]) if row[2] is not None else 15,
-                'delivery_minutes': self._time_to_minutes(row[3]) if row[3] is not None else 20,
-                'total_ads_spend': float(row[4] or 0) + float(row[5] or 0),
-                'impressions': float(row[6]) if row[6] is not None else 0,
-                'rating': float(row[7]) if row[7] is not None else 4.5,
-                'total_orders': int(row[8]) if row[8] is not None else 0,
-                'is_holiday': 1 if target_date in self.holidays_data else 0
-            }
-            
-            # Добавляем погодные данные
-            weather_data = self._get_weather_data(restaurant_name, target_date)
-            if weather_data:
-                features['precipitation'] = weather_data['precipitation']
-                features['temperature'] = weather_data['temperature']
-            else:
-                features['precipitation'] = 0
-                features['temperature'] = 27  # средняя для Бали
-            
-            return features
+            # Преобразуем в словарь
+            columns = [desc[0] for desc in cursor.description]
+            return dict(zip(columns, row))
             
         except Exception as e:
-            print(f"❌ Ошибка получения features: {e}")
-            return {}
+            print(f"❌ Ошибка получения данных дня: {e}")
+            return None
     
-    def _time_to_minutes(self, time_str):
-        """Конвертирует время HH:MM:SS в минуты"""
-        if not time_str or time_str == '00:00:00':
-            return 0
+    def _prepare_ml_features(self, day_data, ml_system):
+        """Подготавливает вектор признаков для ML анализа"""
         try:
-            parts = time_str.split(':')
-            if len(parts) >= 3:
-                return int(parts[0]) * 60 + int(parts[1]) + int(parts[2]) / 60.0
-        except:
-            pass
-        return 0
+            from datetime import datetime
+            
+            # Базовые календарные признаки
+            date_obj = datetime.strptime(day_data['stat_date'], '%Y-%m-%d')
+            
+            features = {
+                # Календарные
+                'day_of_week': date_obj.weekday(),
+                'is_weekend': 1 if date_obj.weekday() >= 5 else 0,
+                'month': date_obj.month,
+                
+                # Операционные факторы
+                'grab_offline_rate': float(day_data.get('offline_rate', 0) or 0),
+                'gojek_closed': 1 if (day_data.get('close_time') and day_data['close_time'] != '00:00:00') else 0,
+                'preparation_minutes': self._time_to_minutes(day_data.get('preparation_time')),
+                'delivery_minutes': self._time_to_minutes(day_data.get('delivery_time')),
+                'driver_waiting_minutes': float(day_data.get('driver_waiting', 0) or 0),
+                
+                # Качественные факторы
+                'rating': float(day_data.get('rating', 4.5) or 4.5),
+                
+                # Маркетинговые факторы
+                'total_ads_spend': float(day_data.get('grab_ads_spend', 0) or 0) + float(day_data.get('gojek_ads_spend', 0) or 0),
+                'impressions': float(day_data.get('impressions', 0) or 0),
+                'grab_ads_sales': float(day_data.get('grab_ads_sales', 0) or 0),
+                'gojek_ads_sales': float(day_data.get('gojek_ads_sales', 0) or 0),
+            }
+            
+            # Добавляем внешние факторы
+            # Праздники
+            is_holiday = day_data['stat_date'] in self.holidays_data
+            features['is_holiday'] = 1 if is_holiday else 0
+            
+            # Погода
+            weather_data = self._get_weather_data(day_data['restaurant_name'], day_data['stat_date'])
+            if weather_data:
+                features['weather_precipitation'] = weather_data.get('precipitation', 0)
+                features['weather_temperature'] = weather_data.get('temperature', 27)
+            else:
+                features['weather_precipitation'] = 0
+                features['weather_temperature'] = 27
+            
+            # Конвертируем в numpy array в правильном порядке
+            if hasattr(ml_system, 'ultimate_feature_importance'):
+                feature_names = list(ml_system.ultimate_feature_importance.keys())
+                feature_vector = []
+                
+                for fname in feature_names:
+                    value = features.get(fname, 0)
+                    feature_vector.append(float(value))
+                
+                return np.array(feature_vector).reshape(1, -1)
+            
+            return None
+            
+        except Exception as e:
+            print(f"❌ Ошибка подготовки признаков: {e}")
+            return None
+    
+    def _get_shap_explanations(self, feature_vector, ml_system):
+        """Получает SHAP объяснения для вектора признаков"""
+        try:
+            import shap
+            
+            # Создаем SHAP explainer
+            explainer = shap.TreeExplainer(ml_system.trained_model)
+            
+            # Получаем SHAP values
+            shap_values = explainer.shap_values(feature_vector)
+            
+            # Получаем имена признаков
+            feature_names = list(ml_system.ultimate_feature_importance.keys())
+            
+            # Создаем список объяснений
+            explanations = []
+            
+            for i, (feature_name, shap_value) in enumerate(zip(feature_names, shap_values[0])):
+                if abs(shap_value) > 10000:  # Значимые факторы (больше 10K IDR влияния)
+                    contribution = "positive" if shap_value > 0 else "negative"
+                    explanations.append((feature_name, shap_value, contribution))
+            
+            # Сортируем по абсолютному влиянию
+            explanations.sort(key=lambda x: abs(x[1]), reverse=True)
+            
+            return explanations
+            
+        except Exception as e:
+            print(f"❌ Ошибка SHAP анализа: {e}")
+            return []
+    
+    def _format_ml_factor(self, feature_name, shap_value, contribution, is_good_day):
+        """Форматирует ML фактор в читаемый вид"""
+        
+        abs_value = abs(shap_value)
+        effect_idr = f"{abs_value:,.0f} IDR"
+        
+        # Определяем эмодзи
+        if contribution == "positive":
+            emoji = "✅" if is_good_day else "⚠️"
+            effect = "способствовал" if is_good_day else "усугубил ситуацию"
+        else:
+            emoji = "⚠️" if is_good_day else "📉"
+            effect = "помешал" if is_good_day else "стал причиной"
+        
+        # Читаемые названия факторов
+        factor_names = {
+            'grab_offline_rate': f'GRAB сбои ({shap_value/60:.0f}мин)',
+            'gojek_closed': 'GOJEK недоступен',
+            'preparation_minutes': f'Время приготовления ({shap_value:.0f}мин)',
+            'delivery_minutes': f'Время доставки ({shap_value:.0f}мин)',
+            'driver_waiting_minutes': f'Ожидание водителей ({shap_value:.0f}мин)',
+            'rating': f'Рейтинг ({shap_value:.1f})',
+            'weather_precipitation': f'Осадки ({shap_value:.1f}мм)',
+            'weather_temperature': f'Температура ({shap_value:.0f}°C)',
+            'is_holiday': 'Праздничный день',
+            'is_weekend': 'Выходной день',
+            'total_ads_spend': f'Рекламный бюджет ({effect_idr})',
+            'impressions': f'Показы рекламы ({shap_value:,.0f})',
+        }
+        
+        factor_desc = factor_names.get(feature_name, feature_name)
+        
+        return f"{emoji} {factor_desc} {effect} (+/-{effect_idr})"
+    
+    def _calculate_ml_confidence(self, shap_explanations):
+        """Рассчитывает уверенность ML модели"""
+        if not shap_explanations:
+            return 0
+        
+        # Простая метрика: сумма абсолютных SHAP values
+        total_impact = sum(abs(shap_val) for _, shap_val, _ in shap_explanations)
+        
+        # Нормализуем до процентов (чем больше факторов, тем выше уверенность)
+        confidence = min(95, 60 + len(shap_explanations) * 5)
+        
+        return int(confidence)
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
