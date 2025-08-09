@@ -219,16 +219,53 @@ class UltimateCompleteMLSystem:
         for file_path in tourist_files:
             if os.path.exists(file_path):
                 try:
-                    df = pd.read_excel(file_path)
-                    # Простая обработка - берем общие цифры по месяцам
-                    if len(df) > 0:
+                    df = pd.read_excel(file_path, engine='xlrd' if file_path.endswith('.xls') else 'openpyxl')
+                    
+                    # ПРАВИЛЬНЫЙ парсинг для файла Data-Kunjungan-2024.xls
+                    if 'Data-Kunjungan-2024' in file_path and len(df) > 1:
+                        print(f"   📊 Парсинг полного файла {file_path}...")
+                        
+                        # Находим строку TOTAL (обычно последняя значимая строка)
+                        total_row = None
                         for i, row in df.iterrows():
-                            # Пытаемся извлечь месяц и количество туристов
-                            # Это упрощенная логика, в реальности нужен более точный парсинг
-                            month = i + 1 if i < 12 else (i % 12) + 1
-                            tourists = sum([val for val in row.values if isinstance(val, (int, float)) and val > 0])
-                            if tourists > 0:
+                            if isinstance(row.iloc[1], str) and 'total' in str(row.iloc[1]).lower():
+                                total_row = i
+                                break
+                        
+                        if total_row is not None:
+                            months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUNE', 'JULY', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+                            month_mapping = {
+                                'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 
+                                'MAY': '05', 'JUNE': '06', 'JULY': '07', 'AUG': '08',
+                                'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+                            }
+                            
+                            # Извлекаем данные по месяцам из строки TOTAL
+                            for col_idx in range(2, min(14, len(df.columns))):  # Колонки 2-13 это месяцы
+                                if col_idx - 2 < len(months):
+                                    month_name = months[col_idx - 2]
+                                    month_num = month_mapping[month_name]
+                                    
+                                    try:
+                                        tourists = float(df.iloc[total_row, col_idx])
+                                        if not pd.isna(tourists) and tourists > 0:
+                                            self.tourist_data[f"2024-{month_num}"] = int(tourists)
+                                            print(f"      {month_name} (2024-{month_num}): {int(tourists):,} туристов")
+                                    except (ValueError, TypeError):
+                                        pass
+                        
+                        if self.tourist_data:
+                            print(f"   ✅ Загружено {len(self.tourist_data)} месяцев туристических данных")
+                            break  # Если загрузили данные, прекращаем перебор файлов
+                        
+                    # Простая обработка для других файлов
+                    elif len(df) > 0:
+                        for i, row in df.iterrows():
+                            tourists = sum([val for val in row.values if isinstance(val, (int, float)) and val > 0 and val < 10000000])
+                            if tourists > 0 and i < 12:
+                                month = i + 1 if i < 12 else (i % 12) + 1
                                 self.tourist_data[f"2024-{month:02d}"] = tourists
+                                
                 except Exception as e:
                     print(f"   ⚠️ Ошибка загрузки {file_path}: {e}")
                     
