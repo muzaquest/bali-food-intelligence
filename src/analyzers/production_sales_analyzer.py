@@ -1864,7 +1864,10 @@ class ProductionSalesAnalyzer:
             print(f"🤖 Запуск НАСТОЯЩЕГО ML анализа для {target_date}...")
             
             # Используем полную ML систему
-            from ..ml_models.ultimate_complete_ml_system import UltimateCompleteMLSystem
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            from ml_models.ultimate_complete_ml_system import UltimateCompleteMLSystem
             
             ml_system = UltimateCompleteMLSystem()
             
@@ -2064,7 +2067,17 @@ class ProductionSalesAnalyzer:
             # Создаем список объяснений
             explanations = []
             
+            # КРИТИЧНО: Исключаем тривиальные факторы - они РЕЗУЛЬТАТ, а не ПРИЧИНА!
+            trivial_factors = {
+                'total_orders', 'total_aov', 'total_sales', 'total_revenue',
+                'grab_orders', 'gojek_orders', 'grab_aov', 'gojek_aov'
+            }
+            
             for i, (feature_name, shap_value) in enumerate(zip(feature_names, shap_values[0])):
+                # Пропускаем тривиальные факторы - это результаты, а не причины!
+                if feature_name in trivial_factors:
+                    continue
+                    
                 if abs(shap_value) > 10000:  # Значимые факторы (больше 10K IDR влияния)
                     contribution = "positive" if shap_value > 0 else "negative"
                     explanations.append((feature_name, shap_value, contribution))
