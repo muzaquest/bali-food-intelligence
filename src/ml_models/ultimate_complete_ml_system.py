@@ -208,10 +208,12 @@ class UltimateCompleteMLSystem:
         """Загружает туристические данные"""
         
         tourist_files = [
-            '1.-Data-Kunjungan-2024.xls',
-            '1.-Data-Kunjungan-2025-3.xls',
+            'data/tourism/1.-Data-Kunjungan-2024.xls',  # ПОЛНАЯ БАЗА 74KB - НЕ УДАЛЯТЬ!
+            'data/tourism/1.-Data-Kunjungan-2025-3.xls',
+            '1.-Data-Kunjungan-2024.xls',  # Резервная копия
+            '1.-Data-Kunjungan-2025-3.xls',  # Резервная копия
             'data/Table-1-7-Final-1-1.xls',
-            'data/Kunjungan_Wisatawan_Bali_2024.xls'
+            'data/tourism/Kunjungan_Wisatawan_Bali_2024.xls'
         ]
         
         for file_path in tourist_files:
