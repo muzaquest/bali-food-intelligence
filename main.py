@@ -3385,7 +3385,7 @@ def main():
     )
     
     parser.add_argument('command', 
-                       choices=['list', 'analyze', 'market', 'check-apis'],
+                                               choices=['list', 'analyze', 'market', 'check-apis', 'train-ml'],
                        help='Команда для выполнения')
     
     parser.add_argument('restaurant', nargs='?', 
@@ -3428,6 +3428,13 @@ def main():
             
         elif args.command == 'check-apis':
             check_api_status()
+        
+        elif args.command == 'train-ml':
+            from src.ml_models.global_trainer import train_global_model
+            res = train_global_model()
+            print("✅ Глобальная модель обучена и сохранена")
+            print(res.metrics)
+
     
     except KeyboardInterrupt:
         print("\n\n🛑 Анализ прерван пользователем")
