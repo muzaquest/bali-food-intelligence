@@ -2448,7 +2448,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write(f"🔬 Использованы все 63 параметра + 3 API интеграции\n\n")
             
             # Исполнительное резюме
-            f.write("📊 ИСПОЛНИТЕЛЬНОЕ РЕЗЮМЕ\n")
+            f.write("📊 1. ИСПОЛНИТЕЛЬНОЕ РЕЗЮМЕ\n")
             f.write("-" * 50 + "\n")
             f.write(f"💰 Общая выручка: {total_sales:,.0f} IDR\n")
             f.write(f"📦 Общие заказы: {total_orders:,.0f}\n")
@@ -2458,9 +2458,27 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write(f"👥 Обслужено клиентов: {total_customers:,.0f}\n")
             f.write(f"🎯 ROAS: {avg_roas:.2f}x\n")
             f.write(f"📈 ROI маркетинга: {format_roi(roi_percentage)}\n\n")
+
+            # Разбивка продаж
+            f.write("📊 РАЗБИВКА ПРОДАЖ\n")
+            f.write("-" * 50 + "\n")
+            organic_sales = total_sales - marketing_sales
+            organic_percentage = (organic_sales / total_sales * 100) if total_sales > 0 else 0
+            marketing_percentage = (marketing_sales / total_sales * 100) if total_sales > 0 else 0
+            f.write(f"💰 Общая выручка: {total_sales:,.0f} IDR (все продажи)\n")
+            f.write(f"📈 Продажи от рекламы: {marketing_sales:,.0f} IDR ({marketing_percentage:.1f}%)\n")
+            f.write(f"🌱 Органические продажи: {organic_sales:,.0f} IDR ({organic_percentage:.1f}%)\n\n")
+
+            # Реальные выплаты ресторану
+            f.write("💰 РЕАЛЬНЫЕ ВЫПЛАТЫ РЕСТОРАНУ (PAYOUTS)\n")
+            f.write("-" * 50 + "\n")
+            f.write(f"💸 Общие выплаты: {total_payouts:,.0f} IDR ({100-avg_commission:.1f}% от продаж)\n")
+            f.write(f"   ├── 📱 GRAB: {grab_payouts:,.0f} IDR (комиссия: {grab_commission_pct:.1f}%)\n")
+            f.write(f"   └── 🛵 GOJEK: {gojek_payouts:,.0f} IDR (комиссия: {gojek_commission_pct:.1f}%)\n")
+            f.write(f"📊 Средняя комиссия: {avg_commission:.1f}%\n\n")
             
-            # Динамика по месяцам
-            f.write("📈 ДИНАМИКА ПО МЕСЯЦАМ\n")
+            # 2. Анализ продаж и трендов
+            f.write("📈 2. АНАЛИЗ ПРОДАЖ И ТРЕНДОВ\n")
             f.write("-" * 50 + "\n")
             for month, sales in monthly_sales.items():
                 month_name = month_names.get(month, f"Месяц {month}")
@@ -2468,10 +2486,22 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 days_in_month = len(month_data)
                 daily_avg = sales / days_in_month if days_in_month > 0 else 0
                 f.write(f"{month_name}: {sales:,.0f} IDR ({days_in_month} дней, {daily_avg:,.0f} IDR/день)\n")
+            
+            # Лучший/худший рабочий день
+            if len(working_days) > 1:
+                best_day = working_days.loc[working_days['total_sales'].idxmax()]
+                worst_day = working_days.loc[working_days['total_sales'].idxmin()]
+                f.write("\n")
+                f.write("📊 АНАЛИЗ РАБОЧИХ ДНЕЙ\n")
+                f.write("-" * 50 + "\n")
+                f.write(f"🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR\n")
+                f.write(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR\n")
+                sales_variance = ((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100) if worst_day['total_sales']>0 else 0
+                f.write(f"📊 Разброс продаж: {sales_variance:.1f}% (только рабочие дни)\n")
             f.write("\n")
             
-            # Клиентская база
-            f.write("👥 КЛИЕНТСКАЯ БАЗА\n")
+            # 3. Детальный анализ клиентской базы
+            f.write("👥 3. ДЕТАЛЬНЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ\n")
             f.write("-" * 50 + "\n")
             if 'new_rate' in locals():
                 f.write(f"🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)\n")
@@ -2481,9 +2511,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                     f.write(f"🏆 Премия лояльности: +{loyalty_premium:.1f}%\n")
             f.write("\n")
             
-            # Маркетинговая эффективность
-            f.write("📈 МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ\n")
+            # 4. Маркетинговая эффективность и воронка
+            f.write("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА\n")
             f.write("-" * 50 + "\n")
+
+            # Разбивка маркетинга по платформам (ROAS)
+            f.write("🎯 ROAS АНАЛИЗ (продажи от рекламы)\n")
+            f.write("-" * 50 + "\n")
+            f.write(f"├── 📱 GRAB: {grab_marketing_sales/ grab_marketing_spend if grab_marketing_spend>0 else 0:.2f}x (реклама→продажи: {grab_marketing_sales:,.0f} IDR / бюджет: {grab_marketing_spend:,.0f} IDR)\n")
+            f.write(f"├── 🛵 GOJEK: {gojek_marketing_sales/ gojek_marketing_spend if gojek_marketing_spend>0 else 0:.2f}x (реклама→продажи: {gojek_marketing_sales:,.0f} IDR / бюджет: {gojek_marketing_spend:,.0f} IDR)\n")
+            total_roas_save = (grab_marketing_sales + gojek_marketing_sales) / (grab_marketing_spend + gojek_marketing_spend) if (grab_marketing_spend + gojek_marketing_spend) > 0 else 0
+            f.write(f"└── 🎯 ОБЩИЙ: {total_roas_save:.2f}x (реклама→продажи: {grab_marketing_sales + gojek_marketing_sales:,.0f} IDR / бюджет: {grab_marketing_spend + gojek_marketing_spend:,.0f} IDR)\n\n")
+
             if total_impressions > 0:
                 f.write(f"👁️ Показы рекламы: {total_impressions:,.0f}\n")
                 f.write(f"🔗 CTR: {ctr:.2f}%\n")
@@ -2515,8 +2554,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 f.write(f"  Май: {may_roas_save:.2f}x\n")
             f.write("\n")
             
-            # Операционные показатели
-            f.write("⚠️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ\n")
+            # 5. Операционная эффективность
+            f.write("⚠️ 5. ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ\n")
             f.write("-" * 50 + "\n")
             f.write(f"🚫 Дней с отменами 'закрыто': {days_with_closure_cancellations} ({(days_with_closure_cancellations/len(data)*100):.1f}%)\n")
             f.write(f"📦 Дней с дефицитом: {out_of_stock_days} ({(out_of_stock_days/len(data)*100):.1f}%)\n")
