@@ -274,7 +274,7 @@ class ProductionSalesAnalyzer:
             results.append(f"🟢 Grab: {day_data['grab_sales']:,.0f} IDR ({day_data['grab_orders']} заказов)")
             results.append(f"🟠 Gojek: {day_data['gojek_sales']:,.0f} IDR ({day_data['gojek_orders']} заказов)")
             
-            # Пытаемся использовать ML анализ, но с быстрым fallback
+            # Пытаемся использовать ML анализ, но с детальным fallback
             try:
                 ml_factors = self._get_ml_factors_analysis(restaurant_name, target_date, day_data['total_sales'])
                 
@@ -286,7 +286,7 @@ class ProductionSalesAnalyzer:
                 else:
                     raise Exception("ML анализ недоступен")
             except:
-                # Быстрый детективный анализ без ML
+                # Детальный детективный анализ как в README
                 results.append("")
                 results.append("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ ФАКТОРОВ:")
                 detective_factors = self._get_quick_detective_analysis(restaurant_name, target_date, day_data)
