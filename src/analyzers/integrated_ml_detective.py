@@ -20,6 +20,9 @@ import requests
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
+import os
+import json
+import joblib
 
 # ML библиотеки (опциональные)
 try:
@@ -55,6 +58,17 @@ class IntegratedMLDetective:
                 random_state=42,
                 n_jobs=-1
             )
+            # Try load global model
+            try:
+                model_path = os.path.join('models', 'global_sales_rf.joblib')
+                feats_path = os.path.join('models', 'global_sales_rf_features.json')
+                if os.path.exists(model_path) and os.path.exists(feats_path):
+                    self.ml_model = joblib.load(model_path)
+                    with open(feats_path, 'r', encoding='utf-8') as f:
+                        self.feature_names = json.load(f).get('features', [])
+                    self.model_trained = True
+            except Exception:
+                pass
     
     def analyze_with_ml_explanations(self, restaurant_name, start_date, end_date):
         """
