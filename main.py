@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
-from weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
+from src.utils.weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
 
 # ML Детективный анализ - ОБНОВЛЕННАЯ ВЕРСИЯ
 try:
@@ -1230,6 +1230,31 @@ def analyze_platform_downtime(restaurant_id, start_date, end_date):
         conn.close()
     
     return results
+
+
+def get_restaurant_location(restaurant_name: str):
+    """Возвращает координаты и зону ресторана из data/bali_restaurant_locations.json"""
+    locations_path = os.path.join('data', 'bali_restaurant_locations.json')
+    try:
+        with open(locations_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        for item in data.get('restaurants', []):
+            if item.get('name') == restaurant_name:
+                return item
+        normalized = restaurant_name.strip().lower()
+        for item in data.get('restaurants', []):
+            if item.get('name', '').strip().lower() == normalized:
+                return item
+    except Exception as e:
+        print(f"⚠️ Не удалось загрузить координаты для {restaurant_name}: {e}")
+    return {
+        'name': restaurant_name,
+        'latitude': -8.4095,
+        'longitude': 115.1889,
+        'location': 'Denpasar',
+        'area': 'Denpasar',
+        'zone': 'Central'
+    }
 
 
 def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
@@ -2926,475 +2951,15 @@ def analyze_market(start_date=None, end_date=None):
         top_daily_sales = leaders.copy()
         top_daily_sales['daily_sales'] = top_daily_sales['total_sales'] / top_daily_sales['active_days']
         top_daily_sales = top_daily_sales.nlargest(5, 'daily_sales')
-        
         print("🎯 ТОП-5 по ROAS:")
         roas_leaders = leaders[leaders['marketing_spend'] > 0].copy()
         roas_leaders['roas'] = roas_leaders['marketing_sales'] / roas_leaders['marketing_spend']
         roas_leaders = roas_leaders.nlargest(5, 'roas')
         for i, row in roas_leaders.iterrows():
             print(f"   {row['name']}: {row['roas']:.1f}x")
-        
         print(f"\n⭐ ТОП-5 по рейтингу:")
         for i, row in top_rating.iterrows():
             print(f"   {row['name']}: {row['avg_rating']:.2f}/5.0")
-        
-        print(f"\n📊 ТОП-5 по дневным продажам:")
-        for i, row in top_daily_sales.iterrows():
-            daily_sales = row['total_sales'] / row['active_days']
-            print(f"   {row['name']}: {daily_sales:,.0f} IDR/день")
-        
-        print()
-        
-        # 5. МАРКЕТИНГОВЫЙ АНАЛИЗ
-        print("📈 5. МАРКЕТИНГОВЫЙ АНАЛИЗ")
-        print("-" * 40)
-        
-        total_marketing_spend = stats['total_marketing_spend']
-        total_marketing_sales = stats['total_marketing_sales']
-        
-        if total_marketing_spend > 0:
-            print(f"💸 Общие затраты на маркетинг: {total_marketing_spend:,.0f} IDR")
-            print(f"💰 Общая выручка от маркетинга: {total_marketing_sales:,.0f} IDR")
-            print(f"🎯 Средний ROAS рынка: {market_roas:.2f}x")
-            print(f"📊 ROI рынка: {((total_marketing_sales - total_marketing_spend) / total_marketing_spend * 100):+.1f}%")
-            
-            # Распределение маркетинговых бюджетов
-            marketing_active = leaders[leaders['marketing_spend'] > 0]
-            if not marketing_active.empty:
-                print(f"\n📊 Маркетинговая активность (ТОП-15 лидеров):")
-                print(f"   • Ресторанов с рекламой: {len(marketing_active)}/{len(leaders)} ({(len(marketing_active)/len(leaders)*100):.1f}% покрытие)")
-                print(f"   • Средний бюджет: {marketing_active['marketing_spend'].mean():,.0f} IDR")
-                print(f"   • Медианный бюджет: {marketing_active['marketing_spend'].median():,.0f} IDR")
-                
-                # Крупнейшие рекламодатели
-                top_spenders = marketing_active.nlargest(5, 'marketing_spend')
-                print(f"\n💰 ТОП-5 рекламодателей:")
-                for i, row in top_spenders.iterrows():
-                    spend_share = (row['marketing_spend'] / total_marketing_spend) * 100
-                    restaurant_roas = row['marketing_sales'] / row['marketing_spend']
-                    print(f"   {row['name']}: {row['marketing_spend']:,.0f} IDR ({spend_share:.1f}% рынка, ROAS: {restaurant_roas:.1f}x)")
-        
-        print()
-        
-        # 6. AI-АНАЛИЗ РЫНКА
-        print("🤖 6. AI-АНАЛИЗ РЫНКА И ИНСАЙТЫ")
-        print("-" * 40)
-        
-        # Создаем сводные данные для анализа
-        market_data = {
-            'total_restaurants': int(stats['active_restaurants']),
-            'total_sales': float(stats['market_sales']),
-            'total_orders': int(stats['market_orders']),
-            'avg_order_value': float(avg_order_value),
-            'market_roas': float(market_roas),
-            'avg_rating': float(stats['market_avg_rating']),
-            'leader_dominance': float(leaders.iloc[0]['total_sales'] / stats['market_sales'] * 100) if not leaders.empty else 0
-        }
-        
-        # AI анализ рынка
-        openai_analyzer = OpenAIAnalyzer()
-        market_insights = generate_market_insights(market_data, leaders)
-        print(market_insights)
-        
-        print()
-        
-        # 6.5. ДЕТЕКТИВНЫЙ АНАЛИЗ РЫНОЧНЫХ АНОМАЛИЙ
-        print("🔍 6.5 ДЕТЕКТИВНЫЙ АНАЛИЗ РЫНОЧНЫХ АНОМАЛИЙ")
-        print("-" * 40)
-        
-        # Анализируем рыночные аномалии и причины
-        market_detective_analysis = detect_market_anomalies_and_causes(leaders, start_date, end_date)
-        print(market_detective_analysis)
-        
-        print()
-        
-        # 7. СТРАТЕГИЧЕСКИЕ ВЫВОДЫ
-        print("🎯 7. СТРАТЕГИЧЕСКИЕ ВЫВОДЫ И РЕКОМЕНДАЦИИ")
-        print("-" * 40)
-        
-        strategic_insights = []
-        
-        # Анализ концентрации рынка
-        top3_share = leaders.head(3)['total_sales'].sum() / stats['market_sales'] * 100 if not leaders.empty else 0
-        if top3_share > 50:
-            strategic_insights.append(f"🏆 Высокая концентрация: ТОП-3 контролируют {top3_share:.1f}% рынка")
-        else:
-            strategic_insights.append(f"🎯 Фрагментированный рынок: ТОП-3 имеют {top3_share:.1f}% доли")
-        
-        # Анализ ROAS
-        if market_roas > 5:
-            strategic_insights.append(f"📈 ПРЕВОСХОДНО: Высокоэффективный рынок (ROAS {market_roas:.1f}x)")
-        elif market_roas > 3:
-            strategic_insights.append(f"✅ ХОРОШО: Эффективный маркетинг (ROAS {market_roas:.1f}x)")
-        else:
-            strategic_insights.append(f"⚠️ ПРОБЛЕМА: Низкая эффективность маркетинга (ROAS {market_roas:.1f}x)")
-        
-        # Анализ среднего чека
-        if avg_order_value > 300000:
-            strategic_insights.append("💎 Премиальный рынок с высоким средним чеком")
-        elif avg_order_value > 200000:
-            strategic_insights.append("🏷️ Рынок среднего ценового сегмента")
-        else:
-            strategic_insights.append("💰 Бюджетно-ориентированный рынок")
-        
-        # Качество обслуживания
-        if stats['market_avg_rating'] > 4.5:
-            strategic_insights.append("⭐ Высокие стандарты качества на рынке")
-        else:
-            strategic_insights.append("⚠️ Есть возможности для улучшения качества")
-        
-        for insight in strategic_insights:
-            print(f"• {insight}")
-        
-        print()
-        
-        # Сохраняем детальный рыночный отчет
-        try:
-            os.makedirs('reports', exist_ok=True)
-            
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"reports/market_analysis_{start_date}_{end_date}_{timestamp}.txt"
-            
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write("═" * 100 + "\n")
-                f.write(f"🌍 MUZAQUEST ANALYTICS - ДЕТАЛЬНЫЙ РЫНОЧНЫЙ ОТЧЕТ\n")
-                f.write("═" * 100 + "\n")
-                f.write(f"📅 Период анализа: {start_date} → {end_date}\n")
-                f.write(f"📊 Создан: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write(f"🔬 Использованы все 63 параметра + 3 API интеграции\n\n")
-                
-                # Обзор рынка
-                f.write("📊 ОБЗОР РЫНКА\n")
-                f.write("-" * 50 + "\n")
-                f.write(f"🏪 Активных ресторанов: {stats['active_restaurants']:.0f}\n")
-                f.write(f"💰 Общие продажи: {stats['market_sales']:,.0f} IDR\n")
-                f.write(f"📦 Общие заказы: {stats['market_orders']:,.0f}\n")
-                f.write(f"💵 Средний чек: {avg_order_value:,.0f} IDR\n")
-                f.write(f"⭐ Средний рейтинг: {stats['market_avg_rating']:.2f}/5.0\n")
-                f.write(f"🎯 ROAS рынка: {market_roas:.2f}x\n\n")
-                
-                # Лидеры рынка
-                f.write("🏆 ЛИДЕРЫ РЫНКА (ТОП-10)\n")
-                f.write("-" * 50 + "\n")
-                for i, row in leaders.head(10).iterrows():
-                    avg_order_value_rest = row['total_sales'] / row['total_orders'] if row['total_orders'] > 0 else 0
-                    restaurant_roas = row['marketing_sales'] / row['marketing_spend'] if row['marketing_spend'] > 0 else 0
-                    f.write(f"{i+1:2d}. {row['name']}: {row['total_sales']:,.0f} IDR\n")
-                    f.write(f"    📦 {row['total_orders']:,} заказов | 💰 {avg_order_value_rest:,.0f} IDR/заказ\n")
-                    f.write(f"    ⭐ {row['avg_rating']:.2f} | 🎯 ROAS: {restaurant_roas:.1f}x\n\n")
-                
-                # Сегментация
-                f.write("📈 СЕГМЕНТАЦИЯ РЫНКА\n")
-                f.write("-" * 50 + "\n")
-                f.write(f"💎 Премиум (350K+ IDR): {len(premium_segment)} ресторанов\n")
-                f.write(f"🏷️ Средний (200-350K IDR): {len(mid_segment)} ресторанов\n")
-                f.write(f"💰 Бюджетный (<200K IDR): {len(budget_segment)} ресторанов\n\n")
-                
-                # AI инсайты
-                f.write("🤖 AI-АНАЛИЗ РЫНКА\n")
-                f.write("-" * 50 + "\n")
-                f.write(market_insights + "\n\n")
-                
-                # Детективный анализ рыночных аномалий
-                f.write("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ РЫНОЧНЫХ АНОМАЛИЙ\n")
-                f.write("-" * 50 + "\n")
-                f.write(market_detective_analysis + "\n\n")
-                
-                # Стратегические выводы
-                f.write("🎯 СТРАТЕГИЧЕСКИЕ ВЫВОДЫ\n")
-                f.write("-" * 50 + "\n")
-                for insight in strategic_insights:
-                    f.write(f"• {insight}\n")
-                
-                f.write("\n" + "═" * 100 + "\n")
-                f.write("📊 Отчет создан системой Muzaquest Analytics\n")
-                f.write("🔬 Проанализированы все 63 параметра + 3 API интеграции\n")
-                f.write("🎯 Рекомендации основаны на лучших практиках ресторанного бизнеса\n")
-            
-            print(f"💾 Детальный рыночный отчет сохранен: {filename}")
-            
-        except Exception as e:
-            print(f"❌ Ошибка сохранения отчета: {e}")
-        
-        conn.close()
-        
-    except Exception as e:
-        print(f"❌ Ошибка при анализе рынка: {e}")
-
-def generate_market_insights(market_data, leaders_df):
-    """Генерирует рыночные инсайты"""
-    
-    insights = []
-    insights.append("🎯 ДЕТАЛЬНЫЙ РЫНОЧНЫЙ АНАЛИЗ И СТРАТЕГИЧЕСКИЕ ИНСАЙТЫ")
-    insights.append("=" * 80)
-    
-    # Анализ размера рынка
-    total_sales = market_data['total_sales']
-    total_restaurants = market_data['total_restaurants']
-    total_orders = market_data['total_orders']
-    market_roas = market_data['market_roas']
-    
-    # ИСПРАВЛЕНО: Правильный расчет среднего чека
-    correct_avg_order_value = total_sales / total_orders if total_orders > 0 else 0
-    
-    insights.append(f"💰 РАЗМЕР И СТРУКТУРА РЫНКА:")
-    insights.append(f"   • Общий оборот: {total_sales:,.0f} IDR")
-    insights.append(f"   • Средняя выручка на ресторан: {(total_sales/total_restaurants):,.0f} IDR")
-    insights.append(f"   • Средний чек рынка: {correct_avg_order_value:,.0f} IDR")
-    
-    # Оценка размера рынка (корректно для Бали)
-    total_sales_billions = total_sales / 1000000000
-    insights.append(f"   💰 РАЗМЕР АНАЛИЗИРУЕМОГО СЕГМЕНТА: {total_sales_billions:.0f} млрд IDR")
-    insights.append(f"   📊 ВАЖНО: Это данные по {total_restaurants} клиентам MUZAQUEST, не весь рынок Бали")
-    insights.append(f"   🎯 СЕГМЕНТ: Выборка из ресторанного рынка Бали (преимущественно delivery-платформы)")
-    
-    # Добавляем детальные туристические данные
-    tourist_insights = get_tourist_insights()
-    insights.append(tourist_insights)
-    
-    # Анализ концентрации
-    if not leaders_df.empty:
-        leader_share = (leaders_df.iloc[0]['total_sales'] / total_sales) * 100
-        top3_share = (leaders_df.head(3)['total_sales'].sum() / total_sales) * 100
-        
-        insights.append(f"\n🏆 КОНКУРЕНТНАЯ СРЕДА:")
-        insights.append(f"   • Лидер рынка: {leader_share:.1f}% доли")
-        insights.append(f"   • ТОП-3: {top3_share:.1f}% рынка")
-        
-        if leader_share > 25:
-            insights.append(f"   ⚠️ ДОМИНИРОВАНИЕ: Сильное лидерство одного игрока")
-        elif top3_share > 60:
-            insights.append(f"   🎯 ОЛИГОПОЛИЯ: Несколько крупных игроков")
-        else:
-            insights.append(f"   ✅ КОНКУРЕНЦИЯ: Фрагментированный рынок")
-    
-    # Анализ эффективности
-    insights.append(f"\n⚡ ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ:")
-    insights.append(f"   • ROAS рынка: {market_roas:.2f}x")
-    
-    if market_roas > 10:
-        insights.append(f"   🏆 ПРЕВОСХОДНО: Исключительная эффективность маркетинга")
-        insights.append(f"   💡 Стратегия: Рынок готов для масштабирования инвестиций")
-    elif market_roas > 5:
-        insights.append(f"   ✅ ОТЛИЧНО: Высокоэффективный маркетинг")
-        insights.append(f"   💡 Стратегия: Увеличивать рекламные бюджеты")
-    elif market_roas > 3:
-        insights.append(f"   ⚠️ СРЕДНЕ: Приемлемая эффективность")
-        insights.append(f"   💡 Стратегия: Оптимизировать таргетинг и креативы")
-    else:
-        insights.append(f"   🚨 НИЗКО: Проблемы с эффективностью")
-        insights.append(f"   💡 Стратегия: Кардинально пересмотреть маркетинг")
-    
-    # Анализ ценообразования
-    insights.append(f"\n💰 ЦЕНОВОЕ ПОЗИЦИОНИРОВАНИЕ:")
-    if correct_avg_order_value > 400000:
-        insights.append(f"   💎 ПРЕМИУМ РЫНОК: Высокий средний чек")
-        insights.append(f"   💡 Возможность: Развитие luxury-сегмента")
-    elif correct_avg_order_value > 250000:
-        insights.append(f"   🏷️ СРЕДНИЙ СЕГМЕНТ: Сбалансированное ценообразование")
-        insights.append(f"   💡 Возможность: Upsell и премиализация")
-    else:
-        insights.append(f"   💰 МАССОВЫЙ РЫНОК: Доступные цены")
-        insights.append(f"   💡 Возможность: Повышение value proposition")
-    
-    # Качество обслуживания
-    avg_rating = market_data['avg_rating']
-    insights.append(f"\n⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ:")
-    insights.append(f"   • Средний рейтинг: {avg_rating:.2f}/5.0")
-    
-    if avg_rating > 4.7:
-        insights.append(f"   🏆 ПРЕВОСХОДНО: Высочайшие стандарты")
-    elif avg_rating > 4.5:
-        insights.append(f"   ✅ ОТЛИЧНО: Высокое качество")
-    elif avg_rating > 4.0:
-        insights.append(f"   ⚠️ ХОРОШО: Есть возможности для улучшения")
-    else:
-        insights.append(f"   🚨 ПРОБЛЕМА: Низкое качество обслуживания")
-    
-    # Стратегические рекомендации для рынка
-    insights.append(f"\n🚀 СТРАТЕГИЧЕСКИЕ ПРИОРИТЕТЫ РЫНКА:")
-    
-    priorities = []
-    
-    if market_roas < 3:
-        priorities.append("🔥 #1 КРИТИЧНО: Повысить эффективность маркетинга")
-    if avg_rating < 4.5:
-        priorities.append("⭐ #2 ВАЖНО: Улучшить качество обслуживания")
-    if market_data['leader_dominance'] > 30:
-        priorities.append("🎯 #3 СТРАТЕГИЯ: Усилить конкуренцию")
-    if correct_avg_order_value < 250000:
-        priorities.append("💰 #4 ВОЗМОЖНОСТЬ: Премиализация предложения")
-    
-    if not priorities:
-        priorities.append("✅ Рынок развивается сбалансированно")
-        priorities.append("📈 Фокус на устойчивом росте")
-    
-    for priority in priorities[:5]:
-        insights.append(f"   {priority}")
-    
-    # Прогнозы
-    insights.append(f"\n📊 ПРОГНОЗЫ НА СЛЕДУЮЩИЙ ПЕРИОД:")
-    if market_roas > 5:
-        growth_potential = 25
-    elif market_roas > 3:
-        growth_potential = 15
-    else:
-        growth_potential = 5
-    
-    insights.append(f"   • Потенциал роста рынка: {growth_potential}%")
-    insights.append(f"   • Целевой ROAS: {(market_roas * 1.1):.1f}x (+10%)")
-    insights.append(f"   • Целевой средний чек: {(correct_avg_order_value * 1.1):,.0f} IDR (+10%)")
-    insights.append(f"   • Целевой рейтинг: {min(avg_rating + 0.2, 5.0):.1f}/5.0")
-    
-    return '\n'.join(insights)
-
-def check_api_status():
-    """Проверяет статус всех API"""
-    print("\n🌐 СТАТУС API ИНТЕГРАЦИЙ")
-    print("=" * 60)
-    
-    # Проверка OpenAI
-    openai_key = os.getenv('OPENAI_API_KEY')
-    if openai_key and openai_key != 'your_openai_api_key_here':
-        print("✅ OpenAI API: Настроен")
-        if OPENAI_AVAILABLE:
-            print("✅ OpenAI библиотека: Установлена")
-        else:
-            print("❌ OpenAI библиотека: Не установлена (pip install openai)")
-    else:
-        print("❌ OpenAI API: Не настроен (нужен .env файл)")
-    
-    # Проверка Weather API
-    weather_key = os.getenv('WEATHER_API_KEY')
-    if weather_key and weather_key != 'your_openweathermap_api_key_here':
-        print("✅ Weather API: Настроен")
-        # Тестовый запрос
-        try:
-            weather_api = WeatherAPI()
-            test_weather = weather_api.get_weather_data("2025-06-01")
-            if 'temperature' in test_weather:
-                print("✅ Weather API: Работает")
-            else:
-                print("⚠️ Weather API: Используется симуляция")
-        except:
-            print("⚠️ Weather API: Ошибка подключения")
-    else:
-        print("❌ Weather API: Не настроен (используется симуляция)")
-    
-    # Проверка Calendar API
-    calendar_key = os.getenv('CALENDAR_API_KEY')
-    if calendar_key and calendar_key != 'your_calendarific_api_key_here':
-        print("✅ Calendar API: Настроен")
-        try:
-            calendar_api = CalendarAPI()
-            test_holidays = calendar_api.get_holidays(2025)
-            if test_holidays:
-                print("✅ Calendar API: Работает")
-            else:
-                print("⚠️ Calendar API: Используется локальная база")
-        except:
-            print("⚠️ Calendar API: Ошибка подключения")
-    else:
-        print("❌ Calendar API: Не настроен (используется локальная база)")
-    
-    print()
-    print("💡 Для настройки API:")
-    print("   1. Скопируйте .env.example в .env")
-    print("   2. Добавьте ваши API ключи")
-    print("   3. Перезапустите систему")
-
-def main():
-    """Главная функция CLI"""
-    
-    print("""
-🎯 MUZAQUEST ANALYTICS - ПОЛНЫЙ АНАЛИЗ ВСЕХ ПАРАМЕТРОВ + API
-═══════════════════════════════════════════════════════════════════════════════
-""")
-    
-    parser = argparse.ArgumentParser(
-        description="Muzaquest Analytics - Полный анализ всех параметров + API",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-ПРИМЕРЫ ИСПОЛЬЗОВАНИЯ:
-  
-  📋 Список ресторанов:
-    python main.py list
-  
-  🔬 Полный анализ ресторана (ВСЕ 63 параметра + API):
-    python main.py analyze "Ika Canggu"
-    python main.py analyze "Ika Canggu" --start 2025-04-01 --end 2025-06-22
-  
-  🌍 Анализ всего рынка:
-    python main.py market
-    python main.py market --start 2025-04-01 --end 2025-06-22
-    
-  🌐 Проверка статуса API:
-    python main.py check-apis
-
-НОВЫЕ ВОЗМОЖНОСТИ:
-  👥 Анализ клиентской базы (новые/повторные/реактивированные)
-  📈 Маркетинговая воронка (показы → клики → конверсии)
-  ⚠️ Операционные проблемы (закрыт/занят/нет товара)
-  ⭐ Детальные рейтинги (1-5 звезд)
-  ⏱️ Анализ времени обслуживания
-  🌤️ Анализ влияния погоды (Weather API)
-  📅 Анализ влияния праздников (Calendar API) 
-  🤖 AI-инсайты и рекомендации (OpenAI API)
-        """
-    )
-    
-    parser.add_argument('command', 
-                       choices=['list', 'analyze', 'market', 'check-apis'],
-                       help='Команда для выполнения')
-    
-    parser.add_argument('restaurant', nargs='?', 
-                       help='Название ресторана для анализа')
-    
-    parser.add_argument('--start', 
-                       help='Дата начала периода (YYYY-MM-DD)')
-    
-    parser.add_argument('--end', 
-                       help='Дата окончания периода (YYYY-MM-DD)')
-    
-    args = parser.parse_args()
-    
-    # Проверяем наличие базы данных
-    if args.command != 'check-apis' and not os.path.exists('database.sqlite'):
-        print("❌ База данных 'database.sqlite' не найдена!")
-        print("   📁 База данных должна находиться в корневой папке проекта")
-        print("   📥 Скачайте базу данных командой:")
-        print("   wget https://github.com/muzaquest/bali-food-intelligence/raw/main/database.sqlite")
-        print()
-        print("   🚨 ВАЖНО: НЕ размещайте базу в папке data/ - она должна быть в корне!")
-        sys.exit(1)
-    
-    try:
-        if args.command == 'list':
-            list_restaurants()
-            
-        elif args.command == 'analyze':
-            if not args.restaurant:
-                print("❌ Укажите название ресторана для анализа")
-                print("   Используйте: python main.py analyze \"Название ресторана\"")
-                sys.exit(1)
-            
-            analyze_restaurant(args.restaurant, args.start, args.end)
-            
-        elif args.command == 'market':
-            analyze_market(args.start, args.end)
-            
-        elif args.command == 'check-apis':
-            check_api_status()
-    
-    except KeyboardInterrupt:
-        print("\n\n🛑 Анализ прерван пользователем")
-        sys.exit(0)
-    
-    except Exception as e:
-        print(f"\n❌ Критическая ошибка: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
 def detect_sales_anomalies_and_causes(restaurant_data, weather_data, start_date, end_date):
     """Реальный анализ причин падений/роста продаж на основе данных"""
     
@@ -4235,7 +3800,7 @@ def analyze_sales_trends(data):
     # ДОБАВЛЯЕМ АНАЛИЗ ПОГОДЫ (если доступен)
     try:
         # Пытаемся получить погодные данные для анализа
-        from weather_intelligence import get_weather_intelligence
+        from src.utils.weather_intelligence import get_weather_intelligence
         weather_info = get_weather_intelligence()
         if weather_info:
             insights.append("")
