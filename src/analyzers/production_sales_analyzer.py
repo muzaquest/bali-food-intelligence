@@ -170,7 +170,7 @@ class ProductionSalesAnalyzer:
             ]
     
     def _find_bad_days(self, restaurant_name, start_date, end_date):
-        """Находит дни с критическим падением продаж"""
+        """Находит дни с критическим падением продаж (>30% от медианы)"""
         with sqlite3.connect('database.sqlite') as conn:
             # Сначала найдем ID ресторана
             restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
@@ -181,26 +181,31 @@ class ProductionSalesAnalyzer:
                 
             restaurant_id = restaurant_df.iloc[0]['id']
             
-            # Получаем все даты с продажами из обеих таблиц
+            # ИСПРАВЛЕННЫЙ ЗАПРОС: правильно объединяем данные GRAB + GOJEK
             query = f"""
-            WITH all_dates AS (
-                SELECT stat_date FROM grab_stats 
-                WHERE restaurant_id = {restaurant_id} 
-                AND stat_date BETWEEN '{start_date}' AND '{end_date}'
-                UNION 
-                SELECT stat_date FROM gojek_stats 
-                WHERE restaurant_id = {restaurant_id}
-                AND stat_date BETWEEN '{start_date}' AND '{end_date}'
-            ),
-            combined_sales AS (
-                SELECT 
-                    ad.stat_date,
-                    COALESCE(g.sales, 0) + COALESCE(gj.sales, 0) as total_sales
-                FROM all_dates ad
-                LEFT JOIN grab_stats g ON ad.stat_date = g.stat_date AND g.restaurant_id = {restaurant_id}
-                LEFT JOIN gojek_stats gj ON ad.stat_date = gj.stat_date AND gj.restaurant_id = {restaurant_id}
-            )
-            SELECT * FROM combined_sales 
+            SELECT 
+                COALESCE(g.stat_date, gj.stat_date) as stat_date,
+                COALESCE(g.sales, 0) as grab_sales,
+                COALESCE(gj.sales, 0) as gojek_sales,
+                COALESCE(g.sales, 0) + COALESCE(gj.sales, 0) as total_sales,
+                COALESCE(g.orders, 0) + COALESCE(gj.orders, 0) as total_orders,
+                COALESCE(g.offline_rate, 0) as grab_offline_rate,
+                CASE 
+                    WHEN gj.close_time IS NULL THEN 0
+                    WHEN typeof(gj.close_time) = 'text' THEN 
+                        CASE 
+                            WHEN gj.close_time LIKE '%:%' THEN 
+                                CAST(substr(gj.close_time, 1, instr(gj.close_time, ':')-1) AS INTEGER) * 60 + 
+                                CAST(substr(gj.close_time, instr(gj.close_time, ':')+1, 2) AS INTEGER)
+                            ELSE CAST(gj.close_time AS INTEGER)
+                        END
+                    ELSE CAST(gj.close_time AS INTEGER)
+                END as gojek_close_minutes
+            FROM grab_stats g 
+            FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
+            WHERE COALESCE(g.restaurant_id, gj.restaurant_id) = {restaurant_id}
+                AND COALESCE(g.stat_date, gj.stat_date) BETWEEN '{start_date}' AND '{end_date}'
+                AND (COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) > 0
             ORDER BY stat_date
             """
             
@@ -209,160 +214,154 @@ class ProductionSalesAnalyzer:
         if len(df) < 7:  # Недостаточно данных
             return []
         
-        # Рассчитываем скользящее среднее
-        df['sales_7day_avg'] = df['total_sales'].rolling(window=7, center=True).mean()
-        
-        # Находим дни с падением больше 20%
-        bad_days = []
-        for _, row in df.iterrows():
-            if pd.isna(row['sales_7day_avg']) or row['sales_7day_avg'] == 0:
-                continue
-                
-            drop_percent = ((row['sales_7day_avg'] - row['total_sales']) / row['sales_7day_avg']) * 100
-            if drop_percent >= 20:  # Падение больше 20%
-                bad_days.append((row['stat_date'], drop_percent, 'relative_drop'))
-        
-        # Добавляем дни с критически низкими абсолютными продажами
+        # Считаем медиану для периода
         median_sales = df['total_sales'].median()
-        low_threshold = median_sales * 0.7  # 70% от медианы
+        
+        # НОВЫЙ АЛГОРИТМ: ищем дни с падением >30% от медианы (как в аудите)
+        threshold = 0.70  # Менее 70% от медианы = критичный день
+        critical_days = []
         
         for _, row in df.iterrows():
-            if row['total_sales'] < low_threshold:
-                # Проверяем что этот день еще не добавлен
-                if not any(day[0] == row['stat_date'] for day in bad_days):
-                    below_median_percent = ((median_sales - row['total_sales']) / median_sales) * 100
-                    bad_days.append((row['stat_date'], below_median_percent, 'absolute_low'))
+            if row['total_sales'] < median_sales * threshold:
+                drop_pct = ((median_sales - row['total_sales']) / median_sales * 100)
+                
+                # Определяем основную причину падения
+                main_issue = "Требует ML анализа"
+                if row['grab_sales'] == 0:
+                    main_issue = "GRAB отсутствует"
+                elif row['grab_offline_rate'] > 300:  # >5 часов
+                    hours = row['grab_offline_rate'] // 60
+                    mins = row['grab_offline_rate'] % 60
+                    main_issue = f"GRAB offline {hours}ч {mins}м"
+                elif row['grab_offline_rate'] > 60:  # >1 час
+                    main_issue = f"GRAB offline {row['grab_offline_rate']:.0f}мин"
+                elif row['gojek_sales'] == 0:
+                    main_issue = "GOJEK отсутствует"
+                elif row['gojek_close_minutes'] > 300:  # >5 часов
+                    hours = row['gojek_close_minutes'] // 60
+                    mins = row['gojek_close_minutes'] % 60
+                    main_issue = f"GOJEK offline {hours}ч {mins}м"
+                elif row['gojek_close_minutes'] > 60:  # >1 час
+                    main_issue = f"GOJEK offline {row['gojek_close_minutes']:.0f}мин"
+                
+                critical_days.append((row['stat_date'], drop_pct, 'critical_drop', main_issue))
         
-        # Сортируем по величине проблемы
-        bad_days.sort(key=lambda x: x[1], reverse=True)
-        return bad_days
+        # Сортируем по величине падения (самые критичные первые)
+        critical_days.sort(key=lambda x: x[1], reverse=True)
+        return critical_days
     
     def _analyze_specific_day(self, restaurant_name, target_date):
-        """Детальный анализ конкретного дня"""
-        # Получаем данные дня
-        day_data = self._get_day_data(restaurant_name, target_date)
-        if not day_data:
-            return ["❌ Нет данных за этот день"]
-        
-        # Получаем среднемесячные показатели
-        monthly_averages = self._get_monthly_averages(restaurant_name, target_date)
-        
-        # Получаем погоду
-        weather_data = self._get_weather_data(restaurant_name, target_date)
-        
-        # Проверяем праздники
-        holiday_info = self.holidays_data.get(target_date)
-        
-        results = []
-        
-        # Основные показатели
-        results.append(f"💰 Продажи: {day_data['total_sales']:,.0f} IDR ({day_data['total_orders']} заказов)")
-        results.append(f"🟢 Grab: {day_data['grab_sales']:,.0f} IDR ({day_data['grab_orders']} заказов)")
-        results.append(f"🟠 Gojek: {day_data['gojek_sales']:,.0f} IDR ({day_data['gojek_orders']} заказов)")
-        
-        # Анализ факторов
-        factors = []
-        impact_score = 0
-        critical_issues = []
-        
-        # Fake orders уже исключены в исполнительном резюме, здесь не показываем
-        
-        # 1. Выключение программы
-        if day_data.get('gojek_close_time', '00:00:00') != '00:00:00':
-            outage_seconds = self._parse_time_string(day_data['gojek_close_time'])
-            if outage_seconds >= 18000:  # > 5 часов
-                factors.append(f"🚨 КРИТИЧНО: Gojek выключен {self._format_duration(outage_seconds)}")
-                impact_score += 50
-                critical_issues.append("Критическое выключение Gojek")
-            elif outage_seconds >= 3600:  # > 1 часа
-                factors.append(f"⚠️ Gojek выключен {self._format_duration(outage_seconds)}")
-                impact_score += 30
-        
-        if day_data.get('grab_offline_rate', 0) > 0:
-            offline_rate = day_data['grab_offline_rate']
-            if offline_rate >= 300:  # > 5 часов
-                factors.append(f"🚨 КРИТИЧНО: Grab offline {offline_rate:.1f}%")
-                impact_score += 50
-                critical_issues.append("Критическое выключение Grab")
-            elif offline_rate >= 60:  # > 1 часа
-                factors.append(f"⚠️ Grab offline {offline_rate:.1f}%")
-                impact_score += 30
-        
-        # 2. Временные показатели с отклонениями
-        time_impact = self._analyze_time_factors(day_data, monthly_averages, factors, critical_issues)
-        impact_score += time_impact
-        
-        # 3. Реклама и ROAS
-        ads_impact = self._analyze_advertising(day_data, factors, critical_issues)
-        impact_score += ads_impact
-        
-        # 4. Погода
-        if weather_data:
-            if weather_data['precipitation'] > 10:
-                factors.append(f"🌧️ Сильный дождь ({weather_data['precipitation']:.1f}мм)")
-                impact_score += 25
-            elif weather_data['precipitation'] > 5:
-                factors.append(f"🌦️ Умеренный дождь ({weather_data['precipitation']:.1f}мм)")
-                impact_score += 15
-            elif weather_data['precipitation'] > 0:
-                factors.append(f"🌤️ Легкий дождь ({weather_data['precipitation']:.1f}мм)")
-                impact_score += 5
-        
-        # 5. Праздники
-        if holiday_info:
-            factors.append(f"🎉 {holiday_info.get('name', 'Праздник')}")
-            impact_score += 25
-        
-        # 6. Рейтинги
-        gojek_rating = day_data.get('gojek_rating', 0)
-        grab_rating = day_data.get('grab_rating', 0)
-        
-        if gojek_rating > 0 and gojek_rating < 4.5:
-            factors.append(f"⭐ Низкий рейтинг Gojek: {gojek_rating}")
-            impact_score += 20
-        elif gojek_rating > 0 and gojek_rating < 4.7:
-            factors.append(f"⭐ Средний рейтинг Gojek: {gojek_rating}")
-            impact_score += 10
+        """Детальный ML анализ конкретного дня с использованием всех 17+ факторов"""
+        try:
+            # Получаем данные дня
+            day_data = self._get_day_data(restaurant_name, target_date)
+            if not day_data:
+                return ["❌ Нет данных за этот день"]
             
-        if grab_rating > 0 and grab_rating < 4.5:
-            factors.append(f"⭐ Низкий рейтинг Grab: {grab_rating}")
-            impact_score += 20
-        elif grab_rating > 0 and grab_rating < 4.7:
-            factors.append(f"⭐ Средний рейтинг Grab: {grab_rating}")
-            impact_score += 10
-        
-        # 7. День недели
-        weekday = pd.to_datetime(target_date).strftime('%A')
-        if weekday in ['Sunday', 'Monday']:
-            factors.append(f"📅 Слабый день недели ({weekday})")
-            impact_score += 5
-        
-        # Выводим факторы
-        if factors:
-            results.append("")
-            results.append("🔍 ФАКТОРЫ ВЛИЯНИЯ:")
-            for i, factor in enumerate(factors[:5], 1):  # Топ-5 факторов
-                results.append(f"   {i}. {factor}")
-        
-        # Критические проблемы
-        if critical_issues:
-            results.append("")
-            results.append("🚨 КРИТИЧЕСКИЕ ПРОБЛЕМЫ:")
-            for issue in critical_issues:
-                results.append(f"   • {issue}")
-        
-        # Оценка влияния
-        results.append("")
-        if impact_score >= 70:
-            results.append("📊 ОЦЕНКА: 🔴 КРИТИЧЕСКОЕ негативное влияние")
-        elif impact_score >= 40:
-            results.append("📊 ОЦЕНКА: 🟡 ВЫСОКОЕ негативное влияние") 
-        elif impact_score >= 20:
-            results.append("📊 ОЦЕНКА: 🟠 СРЕДНЕЕ негативное влияние")
-        else:
-            results.append("📊 ОЦЕНКА: 🟢 НИЗКОЕ негативное влияние")
-        
-        return results
+            # Получаем среднемесячные показатели
+            monthly_averages = self._get_monthly_averages(restaurant_name, target_date)
+            
+            # Получаем погоду
+            weather_data = self._get_weather_data(restaurant_name, target_date)
+            
+            results = []
+            
+            # Заголовок анализа
+            results.append(f"📅 ДАТА: {target_date}")
+            
+            # Основные показатели
+            results.append(f"💰 Продажи: {day_data['total_sales']:,.0f} IDR ({day_data['total_orders']} заказов)")
+            results.append(f"🟢 Grab: {day_data['grab_sales']:,.0f} IDR ({day_data['grab_orders']} заказов)")
+            results.append(f"🟠 Gojek: {day_data['gojek_sales']:,.0f} IDR ({day_data['gojek_orders']} заказов)")
+            
+            # КРИТИЧЕСКОЕ ОБНОВЛЕНИЕ: используем ML анализ для определения факторов
+            ml_factors = self._get_ml_factors_analysis(restaurant_name, target_date, day_data['total_sales'])
+            
+            if ml_factors:
+                results.append("")
+                results.append("🤖 ML АНАЛИЗ ФАКТОРОВ ВЛИЯНИЯ:")
+                for factor in ml_factors:
+                    results.append(f"   {factor}")
+            else:
+                # Fallback к ручному анализу только если ML недоступен
+                results.append("")
+                results.append("🔍 БАЗОВЫЙ АНАЛИЗ ФАКТОРОВ:")
+                
+                # Анализ технических проблем
+                technical_issues = []
+                
+                # 1. GRAB проблемы
+                if day_data['grab_sales'] == 0:
+                    technical_issues.append("🚨 GRAB данные отсутствуют - полная недоступность")
+                elif day_data.get('grab_offline_rate', 0) > 300:  # >5 часов
+                    hours = day_data['grab_offline_rate'] // 60
+                    mins = day_data['grab_offline_rate'] % 60
+                    technical_issues.append(f"🚨 GRAB offline {hours}ч {mins}м - критический сбой")
+                elif day_data.get('grab_offline_rate', 0) > 60:  # >1 час
+                    technical_issues.append(f"⚠️ GRAB offline {day_data['grab_offline_rate']:.0f}мин")
+                
+                # 2. GOJEK проблемы
+                if day_data['gojek_sales'] == 0:
+                    technical_issues.append("🚨 GOJEK данные отсутствуют - возможна техническая проблема")
+                elif day_data.get('gojek_close_time', '00:00:00') != '00:00:00':
+                    outage_seconds = self._parse_time_string(day_data['gojek_close_time'])
+                    if outage_seconds >= 18000:  # > 5 часов
+                        technical_issues.append(f"🚨 GOJEK offline {self._format_duration(outage_seconds)} - критический сбой")
+                    elif outage_seconds >= 3600:  # > 1 часа
+                        technical_issues.append(f"⚠️ GOJEK offline {self._format_duration(outage_seconds)}")
+                
+                # 3. Операционные показатели
+                operational_issues = []
+                time_impact = self._analyze_time_factors(day_data, monthly_averages, operational_issues, [])
+                
+                # 4. Реклама и эффективность
+                advertising_issues = []
+                ads_impact = self._analyze_advertising(day_data, advertising_issues, [])
+                
+                # 5. Погода
+                weather_issues = []
+                if weather_data:
+                    if weather_data['precipitation'] > 10:
+                        weather_issues.append(f"🌧️ Сильный дождь ({weather_data['precipitation']:.1f}мм)")
+                    elif weather_data['precipitation'] > 5:
+                        weather_issues.append(f"🌦️ Умеренный дождь ({weather_data['precipitation']:.1f}мм)")
+                    elif weather_data['precipitation'] > 0:
+                        weather_issues.append(f"🌤️ Легкий дождь ({weather_data['precipitation']:.1f}мм)")
+                
+                # Выводим анализ по категориям
+                if technical_issues:
+                    results.append("   🔧 ТЕХНИЧЕСКИЕ ПРОБЛЕМЫ:")
+                    for issue in technical_issues:
+                        results.append(f"      • {issue}")
+                
+                if operational_issues:
+                    results.append("   ⚙️ ОПЕРАЦИОННЫЕ ФАКТОРЫ:")
+                    for issue in operational_issues:
+                        results.append(f"      • {issue}")
+                
+                if advertising_issues:
+                    results.append("   📈 МАРКЕТИНГ И РЕКЛАМА:")
+                    for issue in advertising_issues:
+                        results.append(f"      • {issue}")
+                
+                if weather_issues:
+                    results.append("   🌤️ ПОГОДНЫЕ УСЛОВИЯ:")
+                    for issue in weather_issues:
+                        results.append(f"      • {issue}")
+                
+                # Если ничего не найдено
+                if not any([technical_issues, operational_issues, advertising_issues, weather_issues]):
+                    results.append("   ✅ Все основные показатели в норме")
+                    results.append("   🔍 Рекомендуется углубленный ML анализ всех 17+ факторов")
+            
+            return results
+            
+        except Exception as e:
+            return [
+                f"❌ Ошибка ML анализа дня {target_date}: {str(e)}",
+                "🔧 Используется упрощенный анализ...",
+                f"💰 Продажи: {day_data.get('total_sales', 0):,.0f} IDR" if day_data else "Нет данных"
+            ]
     
     def _apply_fake_orders_filter(self, restaurant_name, date, day_data):
         """Применяет фильтр fake orders к данным"""
