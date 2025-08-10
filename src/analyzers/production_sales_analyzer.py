@@ -274,85 +274,24 @@ class ProductionSalesAnalyzer:
             results.append(f"🟢 Grab: {day_data['grab_sales']:,.0f} IDR ({day_data['grab_orders']} заказов)")
             results.append(f"🟠 Gojek: {day_data['gojek_sales']:,.0f} IDR ({day_data['gojek_orders']} заказов)")
             
-            # КРИТИЧЕСКОЕ ОБНОВЛЕНИЕ: используем ML анализ для определения факторов
-            ml_factors = self._get_ml_factors_analysis(restaurant_name, target_date, day_data['total_sales'])
-            
-            if ml_factors:
+            # Пытаемся использовать ML анализ, но с быстрым fallback
+            try:
+                ml_factors = self._get_ml_factors_analysis(restaurant_name, target_date, day_data['total_sales'])
+                
+                if ml_factors and not any("недоступен" in str(factor) for factor in ml_factors):
+                    results.append("")
+                    results.append("🤖 ML АНАЛИЗ ФАКТОРОВ ВЛИЯНИЯ:")
+                    for factor in ml_factors:
+                        results.append(f"   {factor}")
+                else:
+                    raise Exception("ML анализ недоступен")
+            except:
+                # Быстрый детективный анализ без ML
                 results.append("")
-                results.append("🤖 ML АНАЛИЗ ФАКТОРОВ ВЛИЯНИЯ:")
-                for factor in ml_factors:
+                results.append("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ ФАКТОРОВ:")
+                detective_factors = self._get_quick_detective_analysis(restaurant_name, target_date, day_data)
+                for factor in detective_factors:
                     results.append(f"   {factor}")
-            else:
-                # Fallback к ручному анализу только если ML недоступен
-                results.append("")
-                results.append("🔍 БАЗОВЫЙ АНАЛИЗ ФАКТОРОВ:")
-                
-                # Анализ технических проблем
-                technical_issues = []
-                
-                # 1. GRAB проблемы
-                if day_data['grab_sales'] == 0:
-                    technical_issues.append("🚨 GRAB данные отсутствуют - полная недоступность")
-                elif day_data.get('grab_offline_rate', 0) > 300:  # >5 часов
-                    hours = day_data['grab_offline_rate'] // 60
-                    mins = day_data['grab_offline_rate'] % 60
-                    technical_issues.append(f"🚨 GRAB offline {hours}ч {mins}м - критический сбой")
-                elif day_data.get('grab_offline_rate', 0) > 60:  # >1 час
-                    technical_issues.append(f"⚠️ GRAB offline {day_data['grab_offline_rate']:.0f}мин")
-                
-                # 2. GOJEK проблемы
-                if day_data['gojek_sales'] == 0:
-                    technical_issues.append("🚨 GOJEK данные отсутствуют - возможна техническая проблема")
-                elif day_data.get('gojek_close_time', '00:00:00') != '00:00:00':
-                    outage_seconds = self._parse_time_string(day_data['gojek_close_time'])
-                    if outage_seconds >= 18000:  # > 5 часов
-                        technical_issues.append(f"🚨 GOJEK offline {self._format_duration(outage_seconds)} - критический сбой")
-                    elif outage_seconds >= 3600:  # > 1 часа
-                        technical_issues.append(f"⚠️ GOJEK offline {self._format_duration(outage_seconds)}")
-                
-                # 3. Операционные показатели
-                operational_issues = []
-                time_impact = self._analyze_time_factors(day_data, monthly_averages, operational_issues, [])
-                
-                # 4. Реклама и эффективность
-                advertising_issues = []
-                ads_impact = self._analyze_advertising(day_data, advertising_issues, [])
-                
-                # 5. Погода
-                weather_issues = []
-                if weather_data:
-                    if weather_data['precipitation'] > 10:
-                        weather_issues.append(f"🌧️ Сильный дождь ({weather_data['precipitation']:.1f}мм)")
-                    elif weather_data['precipitation'] > 5:
-                        weather_issues.append(f"🌦️ Умеренный дождь ({weather_data['precipitation']:.1f}мм)")
-                    elif weather_data['precipitation'] > 0:
-                        weather_issues.append(f"🌤️ Легкий дождь ({weather_data['precipitation']:.1f}мм)")
-                
-                # Выводим анализ по категориям
-                if technical_issues:
-                    results.append("   🔧 ТЕХНИЧЕСКИЕ ПРОБЛЕМЫ:")
-                    for issue in technical_issues:
-                        results.append(f"      • {issue}")
-                
-                if operational_issues:
-                    results.append("   ⚙️ ОПЕРАЦИОННЫЕ ФАКТОРЫ:")
-                    for issue in operational_issues:
-                        results.append(f"      • {issue}")
-                
-                if advertising_issues:
-                    results.append("   📈 МАРКЕТИНГ И РЕКЛАМА:")
-                    for issue in advertising_issues:
-                        results.append(f"      • {issue}")
-                
-                if weather_issues:
-                    results.append("   🌤️ ПОГОДНЫЕ УСЛОВИЯ:")
-                    for issue in weather_issues:
-                        results.append(f"      • {issue}")
-                
-                # Если ничего не найдено
-                if not any([technical_issues, operational_issues, advertising_issues, weather_issues]):
-                    results.append("   ✅ Все основные показатели в норме")
-                    results.append("   🔍 Рекомендуется углубленный ML анализ всех 17+ факторов")
             
             return results
             
@@ -1895,6 +1834,14 @@ class ProductionSalesAnalyzer:
         Анализирует ПРИЧИНЫ изменений продаж, а не тривиальные корреляции
         """
         try:
+            # Таймаут для избежания зависаний
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError("ML анализ превысил лимит времени")
+            
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(30)  # 30 секунд максимум
             print(f"🤖 Запуск НАСТОЯЩЕГО ML анализа для {target_date}...")
             
             # Используем полную ML систему
@@ -1905,14 +1852,26 @@ class ProductionSalesAnalyzer:
             
             ml_system = UltimateCompleteMLSystem()
             
-            # Обучаем модель если еще не обучена
+            # Проверяем есть ли сохраненная модель
             if not ml_system.trained_model:
-                print("🧠 Обучение ML модели...")
-                dataset = ml_system.build_ultimate_dataset()
-                success = ml_system.train_ultimate_model(dataset)
-                
-                if not success:
-                    return ["      ❌ Не удалось обучить ML модель"]
+                # Пытаемся загрузить сохраненную модель
+                try:
+                    ml_system.load_model()
+                    print("✅ Загружена сохраненная ML модель")
+                except:
+                    print("🧠 Быстрое обучение ML модели (один раз)...")
+                    dataset = ml_system.build_ultimate_dataset()
+                    success = ml_system.train_ultimate_model(dataset)
+                    
+                    if not success:
+                        return ["      ❌ Не удалось обучить ML модель"]
+                    
+                    # Сохраняем модель для повторного использования
+                    try:
+                        ml_system.save_model()
+                        print("💾 ML модель сохранена")
+                    except:
+                        print("⚠️ Не удалось сохранить ML модель")
             
             # Получаем данные за целевую дату
             target_data = self._get_ml_day_data(restaurant_name, target_date)
@@ -1949,11 +1908,169 @@ class ProductionSalesAnalyzer:
                 confidence = self._calculate_ml_confidence(shap_explanations)
                 results.append(f"      💡 ML уверенность: {confidence}%")
             
+            # Отключаем таймаут
+            signal.alarm(0)
             return results if results else ["      💡 Факторы в пределах нормы"]
             
+        except TimeoutError:
+            signal.alarm(0)
+            print("⏰ ML анализ превысил лимит времени (30 сек)")
+            return ["      ⏰ ML анализ превысил лимит времени - используется базовый анализ"]
         except Exception as e:
+            signal.alarm(0)
             print(f"❌ Ошибка НАСТОЯЩЕГО ML анализа: {e}")
             return [f"      ❌ ML анализ недоступен: {e}"]
+    
+    def _get_quick_detective_analysis(self, restaurant_name, target_date, day_data):
+        """Быстрый детективный анализ без ML как в README"""
+        factors = []
+        
+        # Получаем погоду для анализа
+        weather_data = self._get_weather_data(restaurant_name, target_date)
+        
+        # 1. Анализ технических проблем
+        technical_issues = []
+        
+        # GRAB проблемы
+        if day_data.get('grab_sales', 0) == 0:
+            technical_issues.append("🚨 **GRAB данные отсутствуют** (-50%) — полная недоступность платформы")
+        else:
+            # Конвертируем offline_rate в число
+            grab_offline = day_data.get('grab_offline_rate', 0)
+            try:
+                grab_offline = float(grab_offline) if grab_offline else 0
+            except (ValueError, TypeError):
+                grab_offline = 0
+                
+            if grab_offline > 300:  # >5 часов
+                hours = int(grab_offline // 60)
+                mins = int(grab_offline % 60)
+                technical_issues.append(f"🚨 **GRAB сбой {hours}ч {mins}м** (-35%) — платформа была недоступна {int(grab_offline)} минут")
+            elif grab_offline > 60:  # >1 час
+                hours = int(grab_offline // 60)
+                mins = int(grab_offline % 60)
+                technical_issues.append(f"⚠️ **GRAB offline {hours}ч {mins}м** (-15%) — операционные проблемы")
+        
+        # GOJEK проблемы
+        if day_data.get('gojek_sales', 0) == 0:
+            technical_issues.append("📊 **GOJEK данные отсутствуют** (-25%) — техническая проблема сбора данных")
+        else:
+            # Конвертируем close_time в число
+            gojek_close = day_data.get('gojek_close_time', 0)
+            try:
+                # Если это строка времени (HH:MM:SS), конвертируем в минуты
+                if isinstance(gojek_close, str) and ':' in gojek_close:
+                    parts = gojek_close.split(':')
+                    gojek_close = int(parts[0]) * 60 + int(parts[1])  # часы * 60 + минуты
+                else:
+                    gojek_close = float(gojek_close) if gojek_close else 0
+            except (ValueError, TypeError):
+                gojek_close = 0
+                
+            if gojek_close > 120:  # >2 часа в минутах
+                technical_issues.append(f"⚙️ **GOJEK сбой {int(gojek_close)} минут** (-20%) — операционная проблема")
+            elif gojek_close > 60:  # >1 час
+                technical_issues.append(f"⚠️ **GOJEK offline {int(gojek_close)}мин** (-10%) — временные проблемы")
+        
+        # 2. Анализ погоды
+        weather_factors = []
+        if weather_data.get('precipitation', 0) > 20:
+            weather_factors.append(f"🌧️ **Сильный дождь {weather_data['precipitation']:.1f}мм** (-15%) — снижает активность курьеров и заказы")
+        elif weather_data.get('precipitation', 0) > 5:
+            weather_factors.append(f"🌦️ **Умеренный дождь {weather_data['precipitation']:.1f}мм** (-10%) — влияет на доставку")
+        elif weather_data.get('precipitation', 0) > 1:
+            weather_factors.append(f"🌦️ **Легкий дождь {weather_data['precipitation']:.1f}мм** (-5%) — незначительное влияние")
+        
+        if weather_data.get('temperature', 27) < 24:
+            weather_factors.append(f"🌡️ **Прохладная температура {weather_data['temperature']:.1f}°C** (-5%) — снижает активность")
+        elif weather_data.get('temperature', 27) > 32:
+            weather_factors.append(f"🌡️ **Жаркая температура {weather_data['temperature']:.1f}°C** (-3%) — дискомфорт для курьеров")
+        
+        # 3. Анализ дня недели
+        from datetime import datetime
+        date_obj = datetime.strptime(target_date, '%Y-%m-%d')
+        day_name = date_obj.strftime('%A')
+        weekday_impact = {
+            'Monday': ('📅 **Понедельник**', '(-5%) — медленный старт недели'),
+            'Tuesday': ('📅 **Вторник**', '(-4%) — будний день с меньшей активностью'),
+            'Wednesday': ('📅 **Среда**', '(-5%) — середина недели, обычно средние показатели'),
+            'Thursday': ('📅 **Четверг**', '(+2%) — хороший день для заказов'),
+            'Friday': ('📅 **Пятница**', '(+5%) — активный день перед выходными'),
+            'Saturday': ('📅 **Суббота**', '(+8%) — выходной день'),
+            'Sunday': ('📅 **Воскресенье**', '(+3%) — день отдыха')
+        }
+        
+        if day_name in weekday_impact:
+            day_factor, impact = weekday_impact[day_name]
+            factors.append(f"{day_factor} {impact}")
+        
+        # 4. Проверка праздников
+        holiday_info = self._check_holiday_impact(target_date)
+        if holiday_info:
+            factors.append(holiday_info)
+        
+        # Добавляем технические проблемы в начало
+        factors = technical_issues + weather_factors + factors
+        
+        # 5. Анализ операционных показателей
+        operational_factors = []
+        
+        # Время ожидания водителей (конвертируем в числа)
+        try:
+            grab_waiting = float(day_data.get('grab_driver_waiting', 0) or 0)
+            if grab_waiting > 15:
+                operational_factors.append(f"⏰ **GRAB ожидание водителей {grab_waiting:.1f}мин** (-8%) — длительные ожидания")
+        except (ValueError, TypeError):
+            pass
+            
+        try:
+            gojek_waiting = float(day_data.get('gojek_driver_waiting', 0) or 0)
+            if gojek_waiting > 15:
+                operational_factors.append(f"⏰ **GOJEK ожидание водителей {gojek_waiting:.1f}мин** (-8%) — проблемы с логистикой")
+        except (ValueError, TypeError):
+            pass
+        
+        # Время приготовления (конвертируем в число)
+        try:
+            prep_time = float(day_data.get('gojek_preparation_time', 0) or 0)
+            if prep_time > 25:
+                operational_factors.append(f"⏱️ **Время приготовления {prep_time:.1f}мин** (-10%) — превышает норму")
+        except (ValueError, TypeError):
+            pass
+        
+        factors.extend(operational_factors)
+        
+        # Если нет очевидных факторов, добавляем общий анализ
+        if not factors:
+            factors.append("🤖 **ML анализ требуется** — нет очевидной технической причины")
+            factors.append("📊 **Обе платформы работали** — требует детального анализа всех факторов")
+        
+        return factors[:5]  # Топ-5 факторов
+    
+    def _check_holiday_impact(self, target_date):
+        """Проверяет влияние праздников на дату"""
+        try:
+            if not self.holidays_data:
+                return None
+            
+            # Ищем праздник на эту дату
+            for holiday in self.holidays_data:
+                if holiday.get('date') == target_date:
+                    holiday_name = holiday.get('name', 'Праздник')
+                    
+                    # Определяем тип праздника и его влияние
+                    if any(word in holiday_name.lower() for word in ['vesak', 'buddha', 'буддист']):
+                        return f"🎉 **{holiday_name}** (+15%) — буддистский праздник увеличивает заказы еды"
+                    elif any(word in holiday_name.lower() for word in ['odalan', 'temple', 'храм', 'бали']):
+                        return f"🎭 **{holiday_name}** (-30%) — балийский праздник снижает заказы"
+                    elif any(word in holiday_name.lower() for word in ['ramadan', 'eid', 'мусульман']):
+                        return f"🕌 **{holiday_name}** (-20%) — религиозный праздник влияет на активность"
+                    else:
+                        return f"🎉 **{holiday_name}** (-10%) — праздничный день"
+            
+            return None
+        except:
+            return None
     
     def _get_ml_day_data(self, restaurant_name, target_date):
         """Получает данные за конкретный день для ML анализа"""

@@ -686,6 +686,51 @@ class UltimateCompleteMLSystem:
             json.dump(ultimate_insights, f, ensure_ascii=False, indent=2)
             
         print(f"\n💾 Максимально полные ML инсайты сохранены в ultimate_ml_insights.json")
+    
+    def save_model(self):
+        """Сохраняет обученную модель"""
+        if self.trained_model is None:
+            print("❌ Нет обученной модели для сохранения")
+            return False
+        
+        try:
+            import pickle
+            model_data = {
+                'model': self.trained_model,
+                'scaler': self.scaler,
+                'feature_importance': self.ultimate_feature_importance,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            with open('ultimate_ml_model.pkl', 'wb') as f:
+                pickle.dump(model_data, f)
+            
+            print("💾 ML модель сохранена в ultimate_ml_model.pkl")
+            return True
+        except Exception as e:
+            print(f"❌ Ошибка сохранения модели: {e}")
+            return False
+    
+    def load_model(self):
+        """Загружает сохраненную модель"""
+        try:
+            import pickle
+            
+            with open('ultimate_ml_model.pkl', 'rb') as f:
+                model_data = pickle.load(f)
+            
+            self.trained_model = model_data['model']
+            self.scaler = model_data['scaler']
+            self.ultimate_feature_importance = model_data.get('feature_importance', {})
+            
+            print(f"✅ ML модель загружена (сохранена: {model_data.get('timestamp', 'неизвестно')})")
+            return True
+        except FileNotFoundError:
+            print("📂 Сохраненная модель не найдена")
+            return False
+        except Exception as e:
+            print(f"❌ Ошибка загрузки модели: {e}")
+            return False
 
 def main():
     """Запуск максимально полной ML системы"""
