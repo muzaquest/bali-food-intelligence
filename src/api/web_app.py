@@ -128,6 +128,7 @@ page = st.sidebar.selectbox(
         "🏪 Анализ отдельного ресторана", 
         "🏢 Анализ всех ресторанов",
         "🤖 ML-модель и прогнозы",
+        "🧪 Качество модели и причинный анализ",
         "💬 Свободный запрос",
         "📍 Управление локациями",
         "🗓️ Балийский календарь",
@@ -717,6 +718,76 @@ elif page == "🌍 Туристическая аналитика":
     
     else:
         st.error("Не удалось загрузить туристические данные")
+
+# ===== КАЧЕСТВО МОДЕЛИ И ПРИЧИННЫЙ АНАЛИЗ =====
+elif page == "🧪 Качество модели и причинный анализ":
+    st.markdown("## 🧪 Качество модели и причинный анализ")
+    restaurants = load_restaurants()
+    selected_restaurant = st.selectbox("Ресторан:", restaurants, key="causal_restaurant")
+    period = st.date_input("Период:", value=(datetime.now() - timedelta(days=180), datetime.now()), max_value=datetime.now(), key="causal_period")
+
+    if st.button("🚀 Запустить проверку качества и причинный анализ", type="primary"):
+        try:
+            import sqlite3
+            import pandas as pd
+            from src.analyzers.backtest import time_series_backtest
+            from src.analyzers.causal_effects import estimate_causal_effects
+
+            start_date = period[0].strftime('%Y-%m-%d')
+            end_date = period[1].strftime('%Y-%m-%d')
+
+            # Загружаем агрегированные дневные данные
+            with sqlite3.connect('database.sqlite') as conn:
+                df = pd.read_sql_query(f"""
+                    SELECT COALESCE(g.stat_date, gj.stat_date) as date,
+                           COALESCE(g.sales,0)+COALESCE(gj.sales,0) as total_sales,
+                           COALESCE(g.orders,0)+COALESCE(gj.orders,0) as orders,
+                           COALESCE(g.rating, gj.rating) as rating,
+                           COALESCE(g.ads_spend,0)+COALESCE(gj.ads_spend,0) as marketing_spend,
+                           COALESCE(g.cancelled_orders,0)+COALESCE(gj.cancelled_orders,0) as cancelled_orders,
+                           COALESCE(g.store_is_closed,0)+COALESCE(gj.store_is_closed,0) as store_is_closed,
+                           COALESCE(g.store_is_busy,0)+COALESCE(gj.store_is_busy,0) as store_is_busy
+                    FROM restaurants r
+                    LEFT JOIN grab_stats g ON r.id = g.restaurant_id
+                    LEFT JOIN gojek_stats gj ON r.id = gj.restaurant_id AND gj.stat_date = g.stat_date
+                    WHERE r.name = ? AND COALESCE(g.stat_date, gj.stat_date) BETWEEN ? AND ?
+                    ORDER BY 1
+                """, conn, params=(selected_restaurant, start_date, end_date))
+
+            if df.empty:
+                st.error("Нет данных для выбранного периода")
+            else:
+                # Простейший прокси погоды (если есть кэш) — иначе нули
+                if 'rain' not in df.columns:
+                    df['rain'] = 0.0
+                if 'is_holiday' not in df.columns:
+                    df['is_holiday'] = 0
+                if 'is_weekend' not in df.columns:
+                    dts = pd.to_datetime(df['date'])
+                    df['is_weekend'] = (dts.dt.dayofweek >= 5).astype(int)
+
+                # Backtest
+                st.markdown("### 📏 Качество прогноза (Backtest)")
+                bt = time_series_backtest(df[['date','total_sales','rain','is_holiday','is_weekend','marketing_spend','store_is_closed','store_is_busy']].copy())
+                st.write({"MAPE": round(bt.mape*100,1), "MAE": round(bt.mae,0), "R2": round(bt.r2,3), "folds": bt.folds, "obs": bt.observations})
+                if bt.feature_importance is not None:
+                    st.markdown("#### Важность признаков")
+                    st.dataframe(bt.feature_importance.head(15))
+
+                # Causal effects
+                st.markdown("### 🎯 Причинные эффекты (оценка)")
+                effects = estimate_causal_effects(df[['date','total_sales','rain','is_holiday','store_is_closed','store_is_busy']].copy())
+                if not effects:
+                    st.info("Недостаточно данных для устойчивой оценки эффектов")
+                else:
+                    eff_df = pd.DataFrame([e.__dict__ for e in effects])
+                    eff_df['effect'] = eff_df['effect_pct'].map(lambda x: f"{x:+.1f}%")
+                    eff_df['ci'] = eff_df.apply(lambda r: f"[{r['ci_low']:+.1f}%; {r['ci_high']:+.1f}%]", axis=1)
+                    eff_df = eff_df[['factor','effect','ci','p_value','samples']]
+                    st.dataframe(eff_df)
+
+        except Exception as e:
+            st.error(f"Ошибка анализа: {e}")
 
 # Подвал приложения
 st.markdown("---")
