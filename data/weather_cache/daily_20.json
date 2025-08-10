@@ -1,0 +1,3618 @@
+{
+  "2023-01-01": {
+    "temperature": 27.420833333333334,
+    "precipitation": 2.2
+  },
+  "2023-01-02": {
+    "temperature": 27.245833333333337,
+    "precipitation": 11.399999999999999
+  },
+  "2023-01-03": {
+    "temperature": 27.36666666666667,
+    "precipitation": 8.5
+  },
+  "2023-01-04": {
+    "temperature": 27.78333333333333,
+    "precipitation": 1.4000000000000001
+  },
+  "2023-01-05": {
+    "temperature": 27.320833333333336,
+    "precipitation": 7.300000000000001
+  },
+  "2023-01-06": {
+    "temperature": 26.729166666666668,
+    "precipitation": 13.299999999999995
+  },
+  "2023-01-07": {
+    "temperature": 27.67916666666667,
+    "precipitation": 2.6
+  },
+  "2023-01-08": {
+    "temperature": 27.60416666666667,
+    "precipitation": 0.9999999999999999
+  },
+  "2023-01-09": {
+    "temperature": 27.079166666666666,
+    "precipitation": 3.5999999999999996
+  },
+  "2023-01-10": {
+    "temperature": 27.575,
+    "precipitation": 1.2000000000000002
+  },
+  "2023-01-11": {
+    "temperature": 28.100000000000005,
+    "precipitation": 1.0
+  },
+  "2023-01-12": {
+    "temperature": 28.220833333333335,
+    "precipitation": 1.3
+  },
+  "2023-01-13": {
+    "temperature": 27.641666666666666,
+    "precipitation": 0.9
+  },
+  "2023-01-14": {
+    "temperature": 27.870833333333337,
+    "precipitation": 3.1000000000000005
+  },
+  "2023-01-15": {
+    "temperature": 26.91666666666667,
+    "precipitation": 7.000000000000001
+  },
+  "2023-01-16": {
+    "temperature": 26.520833333333332,
+    "precipitation": 7.499999999999997
+  },
+  "2023-01-17": {
+    "temperature": 26.7375,
+    "precipitation": 4.5
+  },
+  "2023-01-18": {
+    "temperature": 26.637500000000006,
+    "precipitation": 9.799999999999997
+  },
+  "2023-01-19": {
+    "temperature": 27.587500000000002,
+    "precipitation": 2.7
+  },
+  "2023-01-20": {
+    "temperature": 27.10833333333333,
+    "precipitation": 2.9000000000000004
+  },
+  "2023-01-21": {
+    "temperature": 27.599999999999998,
+    "precipitation": 2.4000000000000004
+  },
+  "2023-01-22": {
+    "temperature": 27.487500000000008,
+    "precipitation": 0.7999999999999999
+  },
+  "2023-01-23": {
+    "temperature": 27.912499999999998,
+    "precipitation": 0.2
+  },
+  "2023-01-24": {
+    "temperature": 27.66666666666666,
+    "precipitation": 1.0999999999999999
+  },
+  "2023-01-25": {
+    "temperature": 26.941666666666666,
+    "precipitation": 7.0
+  },
+  "2023-01-26": {
+    "temperature": 26.254166666666666,
+    "precipitation": 11.299999999999994
+  },
+  "2023-01-27": {
+    "temperature": 25.870833333333323,
+    "precipitation": 40.699999999999996
+  },
+  "2023-01-28": {
+    "temperature": 25.666666666666668,
+    "precipitation": 63.8
+  },
+  "2023-01-29": {
+    "temperature": 27.2375,
+    "precipitation": 3.8000000000000007
+  },
+  "2023-01-30": {
+    "temperature": 27.225000000000005,
+    "precipitation": 6.6000000000000005
+  },
+  "2023-01-31": {
+    "temperature": 27.566666666666674,
+    "precipitation": 9.2
+  },
+  "2023-02-01": {
+    "temperature": 27.362500000000008,
+    "precipitation": 12.100000000000001
+  },
+  "2023-02-02": {
+    "temperature": 27.216666666666658,
+    "precipitation": 3.9000000000000004
+  },
+  "2023-02-03": {
+    "temperature": 26.458333333333332,
+    "precipitation": 10.9
+  },
+  "2023-02-04": {
+    "temperature": 26.5625,
+    "precipitation": 10.200000000000001
+  },
+  "2023-02-05": {
+    "temperature": 25.308333333333334,
+    "precipitation": 53.800000000000004
+  },
+  "2023-02-06": {
+    "temperature": 25.720833333333335,
+    "precipitation": 40.2
+  },
+  "2023-02-07": {
+    "temperature": 26.770833333333325,
+    "precipitation": 6.0
+  },
+  "2023-02-08": {
+    "temperature": 27.33333333333333,
+    "precipitation": 4.6000000000000005
+  },
+  "2023-02-09": {
+    "temperature": 26.95833333333333,
+    "precipitation": 8.899999999999999
+  },
+  "2023-02-10": {
+    "temperature": 27.112499999999997,
+    "precipitation": 5.0
+  },
+  "2023-02-11": {
+    "temperature": 26.849999999999998,
+    "precipitation": 37.5
+  },
+  "2023-02-12": {
+    "temperature": 26.57916666666667,
+    "precipitation": 41.0
+  },
+  "2023-02-13": {
+    "temperature": 26.416666666666668,
+    "precipitation": 7.6999999999999975
+  },
+  "2023-02-14": {
+    "temperature": 25.999999999999996,
+    "precipitation": 18.200000000000006
+  },
+  "2023-02-15": {
+    "temperature": 25.750000000000004,
+    "precipitation": 30.000000000000004
+  },
+  "2023-02-16": {
+    "temperature": 26.74583333333334,
+    "precipitation": 20.3
+  },
+  "2023-02-17": {
+    "temperature": 26.48333333333333,
+    "precipitation": 23.800000000000008
+  },
+  "2023-02-18": {
+    "temperature": 26.429166666666664,
+    "precipitation": 21.200000000000003
+  },
+  "2023-02-19": {
+    "temperature": 27.454166666666666,
+    "precipitation": 4.400000000000001
+  },
+  "2023-02-20": {
+    "temperature": 27.26666666666667,
+    "precipitation": 4.300000000000001
+  },
+  "2023-02-21": {
+    "temperature": 27.750000000000004,
+    "precipitation": 5.199999999999997
+  },
+  "2023-02-22": {
+    "temperature": 27.604166666666668,
+    "precipitation": 6.6
+  },
+  "2023-02-23": {
+    "temperature": 26.837500000000002,
+    "precipitation": 14.900000000000002
+  },
+  "2023-02-24": {
+    "temperature": 26.59166666666667,
+    "precipitation": 17.599999999999998
+  },
+  "2023-02-25": {
+    "temperature": 26.766666666666666,
+    "precipitation": 20.399999999999995
+  },
+  "2023-02-26": {
+    "temperature": 26.225000000000005,
+    "precipitation": 25.599999999999998
+  },
+  "2023-02-27": {
+    "temperature": 26.550000000000008,
+    "precipitation": 16.199999999999996
+  },
+  "2023-02-28": {
+    "temperature": 26.549999999999997,
+    "precipitation": 20.700000000000006
+  },
+  "2023-03-01": {
+    "temperature": 26.86666666666667,
+    "precipitation": 5.7
+  },
+  "2023-03-02": {
+    "temperature": 27.13333333333333,
+    "precipitation": 3.3
+  },
+  "2023-03-03": {
+    "temperature": 26.908333333333335,
+    "precipitation": 2.400000000000001
+  },
+  "2023-03-04": {
+    "temperature": 27.2,
+    "precipitation": 5.8
+  },
+  "2023-03-05": {
+    "temperature": 26.808333333333337,
+    "precipitation": 5.4
+  },
+  "2023-03-06": {
+    "temperature": 26.39166666666667,
+    "precipitation": 15.5
+  },
+  "2023-03-07": {
+    "temperature": 27.070833333333336,
+    "precipitation": 3.500000000000001
+  },
+  "2023-03-08": {
+    "temperature": 27.537499999999998,
+    "precipitation": 2.6
+  },
+  "2023-03-09": {
+    "temperature": 27.57916666666667,
+    "precipitation": 2.2
+  },
+  "2023-03-10": {
+    "temperature": 27.933333333333334,
+    "precipitation": 0.6
+  },
+  "2023-03-11": {
+    "temperature": 27.875000000000004,
+    "precipitation": 0.7
+  },
+  "2023-03-12": {
+    "temperature": 27.22083333333333,
+    "precipitation": 3.6
+  },
+  "2023-03-13": {
+    "temperature": 26.737499999999997,
+    "precipitation": 0.4
+  },
+  "2023-03-14": {
+    "temperature": 26.99166666666666,
+    "precipitation": 1.7000000000000004
+  },
+  "2023-03-15": {
+    "temperature": 27.587499999999995,
+    "precipitation": 0.0
+  },
+  "2023-03-16": {
+    "temperature": 28.38333333333333,
+    "precipitation": 1.2000000000000002
+  },
+  "2023-03-17": {
+    "temperature": 27.349999999999994,
+    "precipitation": 1.5
+  },
+  "2023-03-18": {
+    "temperature": 27.395833333333332,
+    "precipitation": 2.3000000000000003
+  },
+  "2023-03-19": {
+    "temperature": 27.900000000000002,
+    "precipitation": 2.9
+  },
+  "2023-03-20": {
+    "temperature": 26.962500000000006,
+    "precipitation": 6.5
+  },
+  "2023-03-21": {
+    "temperature": 27.929166666666664,
+    "precipitation": 0.6
+  },
+  "2023-03-22": {
+    "temperature": 28.44583333333334,
+    "precipitation": 0.9999999999999999
+  },
+  "2023-03-23": {
+    "temperature": 28.162499999999998,
+    "precipitation": 1.6
+  },
+  "2023-03-24": {
+    "temperature": 27.804166666666664,
+    "precipitation": 2.4000000000000004
+  },
+  "2023-03-25": {
+    "temperature": 27.950000000000003,
+    "precipitation": 4.4
+  },
+  "2023-03-26": {
+    "temperature": 27.125000000000004,
+    "precipitation": 2.200000000000001
+  },
+  "2023-03-27": {
+    "temperature": 27.224999999999998,
+    "precipitation": 2.6
+  },
+  "2023-03-28": {
+    "temperature": 27.224999999999998,
+    "precipitation": 1.6000000000000003
+  },
+  "2023-03-29": {
+    "temperature": 27.608333333333334,
+    "precipitation": 4.2
+  },
+  "2023-03-30": {
+    "temperature": 26.65416666666667,
+    "precipitation": 7.3999999999999995
+  },
+  "2023-03-31": {
+    "temperature": 26.083333333333343,
+    "precipitation": 19.8
+  },
+  "2023-04-01": {
+    "temperature": 26.654166666666665,
+    "precipitation": 7.5
+  },
+  "2023-04-02": {
+    "temperature": 26.17083333333333,
+    "precipitation": 8.7
+  },
+  "2023-04-03": {
+    "temperature": 26.58333333333334,
+    "precipitation": 7.2
+  },
+  "2023-04-04": {
+    "temperature": 26.266666666666666,
+    "precipitation": 11.899999999999995
+  },
+  "2023-04-05": {
+    "temperature": 26.875,
+    "precipitation": 2.6
+  },
+  "2023-04-06": {
+    "temperature": 26.5,
+    "precipitation": 12.399999999999999
+  },
+  "2023-04-07": {
+    "temperature": 26.541666666666668,
+    "precipitation": 6.099999999999999
+  },
+  "2023-04-08": {
+    "temperature": 27.475000000000005,
+    "precipitation": 2.5000000000000004
+  },
+  "2023-04-09": {
+    "temperature": 28.1375,
+    "precipitation": 2.1
+  },
+  "2023-04-10": {
+    "temperature": 26.65416666666667,
+    "precipitation": 13.199999999999998
+  },
+  "2023-04-11": {
+    "temperature": 27.2625,
+    "precipitation": 7.499999999999998
+  },
+  "2023-04-12": {
+    "temperature": 26.758333333333336,
+    "precipitation": 14.599999999999998
+  },
+  "2023-04-13": {
+    "temperature": 26.97083333333333,
+    "precipitation": 4.6999999999999975
+  },
+  "2023-04-14": {
+    "temperature": 27.33333333333333,
+    "precipitation": 2.0
+  },
+  "2023-04-15": {
+    "temperature": 27.72083333333333,
+    "precipitation": 0.9999999999999999
+  },
+  "2023-04-16": {
+    "temperature": 27.641666666666662,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-04-17": {
+    "temperature": 27.670833333333334,
+    "precipitation": 2.2
+  },
+  "2023-04-18": {
+    "temperature": 27.866666666666664,
+    "precipitation": 1.2
+  },
+  "2023-04-19": {
+    "temperature": 27.958333333333332,
+    "precipitation": 1.8
+  },
+  "2023-04-20": {
+    "temperature": 27.34166666666667,
+    "precipitation": 2.0
+  },
+  "2023-04-21": {
+    "temperature": 27.754166666666674,
+    "precipitation": 0.4
+  },
+  "2023-04-22": {
+    "temperature": 28.745833333333337,
+    "precipitation": 0.4
+  },
+  "2023-04-23": {
+    "temperature": 28.499999999999996,
+    "precipitation": 0.0
+  },
+  "2023-04-24": {
+    "temperature": 28.191666666666666,
+    "precipitation": 0.2
+  },
+  "2023-04-25": {
+    "temperature": 28.27916666666667,
+    "precipitation": 0.4
+  },
+  "2023-04-26": {
+    "temperature": 27.825000000000003,
+    "precipitation": 8.399999999999997
+  },
+  "2023-04-27": {
+    "temperature": 26.825,
+    "precipitation": 9.299999999999999
+  },
+  "2023-04-28": {
+    "temperature": 26.995833333333326,
+    "precipitation": 22.899999999999995
+  },
+  "2023-04-29": {
+    "temperature": 26.650000000000006,
+    "precipitation": 5.199999999999999
+  },
+  "2023-04-30": {
+    "temperature": 27.8,
+    "precipitation": 2.7000000000000006
+  },
+  "2023-05-01": {
+    "temperature": 27.97083333333333,
+    "precipitation": 0.4
+  },
+  "2023-05-02": {
+    "temperature": 28.50833333333333,
+    "precipitation": 0.6
+  },
+  "2023-05-03": {
+    "temperature": 28.45416666666667,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-05-04": {
+    "temperature": 28.208333333333332,
+    "precipitation": 0.9000000000000001
+  },
+  "2023-05-05": {
+    "temperature": 28.429166666666664,
+    "precipitation": 1.7000000000000002
+  },
+  "2023-05-06": {
+    "temperature": 28.283333333333342,
+    "precipitation": 1.5
+  },
+  "2023-05-07": {
+    "temperature": 28.429166666666674,
+    "precipitation": 0.0
+  },
+  "2023-05-08": {
+    "temperature": 27.84166666666667,
+    "precipitation": 4.3999999999999995
+  },
+  "2023-05-09": {
+    "temperature": 27.195833333333336,
+    "precipitation": 11.599999999999998
+  },
+  "2023-05-10": {
+    "temperature": 27.704166666666666,
+    "precipitation": 3.3000000000000007
+  },
+  "2023-05-11": {
+    "temperature": 28.05,
+    "precipitation": 4.1
+  },
+  "2023-05-12": {
+    "temperature": 27.9375,
+    "precipitation": 0.6
+  },
+  "2023-05-13": {
+    "temperature": 27.862499999999994,
+    "precipitation": 0.0
+  },
+  "2023-05-14": {
+    "temperature": 27.720833333333335,
+    "precipitation": 0.1
+  },
+  "2023-05-15": {
+    "temperature": 27.34166666666668,
+    "precipitation": 0.0
+  },
+  "2023-05-16": {
+    "temperature": 27.225000000000005,
+    "precipitation": 0.0
+  },
+  "2023-05-17": {
+    "temperature": 27.016666666666666,
+    "precipitation": 0.0
+  },
+  "2023-05-18": {
+    "temperature": 26.89583333333333,
+    "precipitation": 0.0
+  },
+  "2023-05-19": {
+    "temperature": 27.62500000000001,
+    "precipitation": 0.1
+  },
+  "2023-05-20": {
+    "temperature": 27.575000000000014,
+    "precipitation": 1.4000000000000001
+  },
+  "2023-05-21": {
+    "temperature": 27.4375,
+    "precipitation": 0.6
+  },
+  "2023-05-22": {
+    "temperature": 26.854166666666668,
+    "precipitation": 1.7000000000000004
+  },
+  "2023-05-23": {
+    "temperature": 26.879166666666663,
+    "precipitation": 1.3
+  },
+  "2023-05-24": {
+    "temperature": 26.816666666666663,
+    "precipitation": 0.0
+  },
+  "2023-05-25": {
+    "temperature": 27.2625,
+    "precipitation": 1.3000000000000003
+  },
+  "2023-05-26": {
+    "temperature": 27.120833333333326,
+    "precipitation": 0.9
+  },
+  "2023-05-27": {
+    "temperature": 27.200000000000003,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-05-28": {
+    "temperature": 27.304166666666674,
+    "precipitation": 0.0
+  },
+  "2023-05-29": {
+    "temperature": 26.883333333333326,
+    "precipitation": 0.5
+  },
+  "2023-05-30": {
+    "temperature": 26.92916666666667,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-05-31": {
+    "temperature": 26.900000000000002,
+    "precipitation": 0.8999999999999999
+  },
+  "2023-06-01": {
+    "temperature": 27.379166666666666,
+    "precipitation": 2.5
+  },
+  "2023-06-02": {
+    "temperature": 27.349999999999998,
+    "precipitation": 3.4999999999999996
+  },
+  "2023-06-03": {
+    "temperature": 27.345833333333335,
+    "precipitation": 0.0
+  },
+  "2023-06-04": {
+    "temperature": 27.354166666666668,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-06-05": {
+    "temperature": 27.625,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-06-06": {
+    "temperature": 26.933333333333337,
+    "precipitation": 4.6000000000000005
+  },
+  "2023-06-07": {
+    "temperature": 26.566666666666663,
+    "precipitation": 3.9000000000000004
+  },
+  "2023-06-08": {
+    "temperature": 27.345833333333335,
+    "precipitation": 0.7
+  },
+  "2023-06-09": {
+    "temperature": 27.408333333333328,
+    "precipitation": 0.0
+  },
+  "2023-06-10": {
+    "temperature": 27.345833333333342,
+    "precipitation": 0.4
+  },
+  "2023-06-11": {
+    "temperature": 27.254166666666666,
+    "precipitation": 0.6
+  },
+  "2023-06-12": {
+    "temperature": 27.870833333333337,
+    "precipitation": 0.0
+  },
+  "2023-06-13": {
+    "temperature": 27.508333333333336,
+    "precipitation": 2.0
+  },
+  "2023-06-14": {
+    "temperature": 27.3875,
+    "precipitation": 0.8999999999999999
+  },
+  "2023-06-15": {
+    "temperature": 27.112500000000008,
+    "precipitation": 0.8
+  },
+  "2023-06-16": {
+    "temperature": 27.187499999999996,
+    "precipitation": 1.2
+  },
+  "2023-06-17": {
+    "temperature": 27.20416666666667,
+    "precipitation": 0.1
+  },
+  "2023-06-18": {
+    "temperature": 27.087500000000002,
+    "precipitation": 0.0
+  },
+  "2023-06-19": {
+    "temperature": 26.441666666666663,
+    "precipitation": 0.0
+  },
+  "2023-06-20": {
+    "temperature": 26.875,
+    "precipitation": 0.0
+  },
+  "2023-06-21": {
+    "temperature": 27.016666666666662,
+    "precipitation": 2.5
+  },
+  "2023-06-22": {
+    "temperature": 27.183333333333337,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-06-23": {
+    "temperature": 26.79166666666667,
+    "precipitation": 0.0
+  },
+  "2023-06-24": {
+    "temperature": 26.9875,
+    "precipitation": 0.0
+  },
+  "2023-06-25": {
+    "temperature": 26.820833333333336,
+    "precipitation": 0.4
+  },
+  "2023-06-26": {
+    "temperature": 26.362499999999997,
+    "precipitation": 0.1
+  },
+  "2023-06-27": {
+    "temperature": 26.720833333333335,
+    "precipitation": 2.1
+  },
+  "2023-06-28": {
+    "temperature": 26.483333333333334,
+    "precipitation": 6.200000000000001
+  },
+  "2023-06-29": {
+    "temperature": 26.67916666666667,
+    "precipitation": 3.6000000000000005
+  },
+  "2023-06-30": {
+    "temperature": 26.15833333333333,
+    "precipitation": 1.6000000000000003
+  },
+  "2023-07-01": {
+    "temperature": 25.920833333333334,
+    "precipitation": 4.800000000000001
+  },
+  "2023-07-02": {
+    "temperature": 26.11666666666667,
+    "precipitation": 3.100000000000001
+  },
+  "2023-07-03": {
+    "temperature": 26.19583333333333,
+    "precipitation": 2.5000000000000004
+  },
+  "2023-07-04": {
+    "temperature": 25.858333333333334,
+    "precipitation": 1.5
+  },
+  "2023-07-05": {
+    "temperature": 25.995833333333334,
+    "precipitation": 4.2
+  },
+  "2023-07-06": {
+    "temperature": 25.84583333333333,
+    "precipitation": 8.800000000000002
+  },
+  "2023-07-07": {
+    "temperature": 25.675,
+    "precipitation": 9.999999999999998
+  },
+  "2023-07-08": {
+    "temperature": 25.72083333333333,
+    "precipitation": 13.500000000000002
+  },
+  "2023-07-09": {
+    "temperature": 26.283333333333335,
+    "precipitation": 2.7
+  },
+  "2023-07-10": {
+    "temperature": 26.712500000000006,
+    "precipitation": 0.2
+  },
+  "2023-07-11": {
+    "temperature": 26.495833333333334,
+    "precipitation": 0.4
+  },
+  "2023-07-12": {
+    "temperature": 26.524999999999995,
+    "precipitation": 1.2999999999999998
+  },
+  "2023-07-13": {
+    "temperature": 26.558333333333337,
+    "precipitation": 2.2
+  },
+  "2023-07-14": {
+    "temperature": 26.350000000000005,
+    "precipitation": 1.6000000000000003
+  },
+  "2023-07-15": {
+    "temperature": 26.445833333333336,
+    "precipitation": 0.2
+  },
+  "2023-07-16": {
+    "temperature": 25.929166666666674,
+    "precipitation": 4.8
+  },
+  "2023-07-17": {
+    "temperature": 26.433333333333326,
+    "precipitation": 0.2
+  },
+  "2023-07-18": {
+    "temperature": 26.69583333333333,
+    "precipitation": 0.2
+  },
+  "2023-07-19": {
+    "temperature": 26.587499999999995,
+    "precipitation": 0.1
+  },
+  "2023-07-20": {
+    "temperature": 26.7625,
+    "precipitation": 0.0
+  },
+  "2023-07-21": {
+    "temperature": 27.158333333333335,
+    "precipitation": 0.5
+  },
+  "2023-07-22": {
+    "temperature": 26.191666666666674,
+    "precipitation": 3.0
+  },
+  "2023-07-23": {
+    "temperature": 27.05416666666666,
+    "precipitation": 0.0
+  },
+  "2023-07-24": {
+    "temperature": 26.58333333333333,
+    "precipitation": 2.0
+  },
+  "2023-07-25": {
+    "temperature": 26.15833333333333,
+    "precipitation": 1.1
+  },
+  "2023-07-26": {
+    "temperature": 26.0625,
+    "precipitation": 2.6
+  },
+  "2023-07-27": {
+    "temperature": 25.508333333333336,
+    "precipitation": 1.9000000000000004
+  },
+  "2023-07-28": {
+    "temperature": 25.91666666666667,
+    "precipitation": 2.4000000000000004
+  },
+  "2023-07-29": {
+    "temperature": 26.35416666666666,
+    "precipitation": 0.0
+  },
+  "2023-07-30": {
+    "temperature": 26.633333333333336,
+    "precipitation": 0.8
+  },
+  "2023-07-31": {
+    "temperature": 26.15416666666667,
+    "precipitation": 1.7
+  },
+  "2023-08-01": {
+    "temperature": 26.399999999999995,
+    "precipitation": 0.0
+  },
+  "2023-08-02": {
+    "temperature": 26.58333333333333,
+    "precipitation": 0.0
+  },
+  "2023-08-03": {
+    "temperature": 26.512500000000006,
+    "precipitation": 1.3
+  },
+  "2023-08-04": {
+    "temperature": 25.9875,
+    "precipitation": 10.1
+  },
+  "2023-08-05": {
+    "temperature": 25.74166666666667,
+    "precipitation": 1.8000000000000003
+  },
+  "2023-08-06": {
+    "temperature": 25.824999999999992,
+    "precipitation": 1.4
+  },
+  "2023-08-07": {
+    "temperature": 25.887500000000003,
+    "precipitation": 1.0
+  },
+  "2023-08-08": {
+    "temperature": 25.962499999999995,
+    "precipitation": 0.9999999999999999
+  },
+  "2023-08-09": {
+    "temperature": 25.662499999999998,
+    "precipitation": 0.4
+  },
+  "2023-08-10": {
+    "temperature": 25.129166666666666,
+    "precipitation": 2.3000000000000003
+  },
+  "2023-08-11": {
+    "temperature": 25.191666666666666,
+    "precipitation": 2.0
+  },
+  "2023-08-12": {
+    "temperature": 25.425000000000008,
+    "precipitation": 2.0
+  },
+  "2023-08-13": {
+    "temperature": 26.00833333333333,
+    "precipitation": 0.1
+  },
+  "2023-08-14": {
+    "temperature": 25.866666666666664,
+    "precipitation": 5.499999999999999
+  },
+  "2023-08-15": {
+    "temperature": 25.816666666666666,
+    "precipitation": 2.7000000000000006
+  },
+  "2023-08-16": {
+    "temperature": 25.53333333333333,
+    "precipitation": 7.800000000000001
+  },
+  "2023-08-17": {
+    "temperature": 24.79583333333333,
+    "precipitation": 1.4000000000000001
+  },
+  "2023-08-18": {
+    "temperature": 24.858333333333334,
+    "precipitation": 5.000000000000001
+  },
+  "2023-08-19": {
+    "temperature": 25.59166666666667,
+    "precipitation": 0.5
+  },
+  "2023-08-20": {
+    "temperature": 25.808333333333337,
+    "precipitation": 1.8000000000000005
+  },
+  "2023-08-21": {
+    "temperature": 25.76666666666667,
+    "precipitation": 3.4
+  },
+  "2023-08-22": {
+    "temperature": 25.808333333333337,
+    "precipitation": 0.7
+  },
+  "2023-08-23": {
+    "temperature": 25.720833333333335,
+    "precipitation": 0.6
+  },
+  "2023-08-24": {
+    "temperature": 25.316666666666666,
+    "precipitation": 3.6
+  },
+  "2023-08-25": {
+    "temperature": 26.05,
+    "precipitation": 0.5
+  },
+  "2023-08-26": {
+    "temperature": 25.995833333333334,
+    "precipitation": 0.6
+  },
+  "2023-08-27": {
+    "temperature": 25.85416666666667,
+    "precipitation": 1.9000000000000001
+  },
+  "2023-08-28": {
+    "temperature": 25.579166666666666,
+    "precipitation": 1.2000000000000002
+  },
+  "2023-08-29": {
+    "temperature": 25.791666666666668,
+    "precipitation": 1.2000000000000002
+  },
+  "2023-08-30": {
+    "temperature": 25.958333333333332,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-08-31": {
+    "temperature": 25.895833333333332,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-09-01": {
+    "temperature": 25.804166666666664,
+    "precipitation": 1.0
+  },
+  "2023-09-02": {
+    "temperature": 25.95,
+    "precipitation": 0.0
+  },
+  "2023-09-03": {
+    "temperature": 25.520833333333332,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-09-04": {
+    "temperature": 25.795833333333338,
+    "precipitation": 0.2
+  },
+  "2023-09-05": {
+    "temperature": 25.879166666666666,
+    "precipitation": 0.5
+  },
+  "2023-09-06": {
+    "temperature": 25.795833333333334,
+    "precipitation": 1.5000000000000002
+  },
+  "2023-09-07": {
+    "temperature": 25.54166666666666,
+    "precipitation": 2.9000000000000004
+  },
+  "2023-09-08": {
+    "temperature": 25.895833333333332,
+    "precipitation": 0.7999999999999999
+  },
+  "2023-09-09": {
+    "temperature": 25.920833333333334,
+    "precipitation": 0.0
+  },
+  "2023-09-10": {
+    "temperature": 25.625,
+    "precipitation": 2.5000000000000004
+  },
+  "2023-09-11": {
+    "temperature": 26.145833333333332,
+    "precipitation": 2.5000000000000004
+  },
+  "2023-09-12": {
+    "temperature": 25.837500000000006,
+    "precipitation": 9.5
+  },
+  "2023-09-13": {
+    "temperature": 25.829166666666666,
+    "precipitation": 1.2
+  },
+  "2023-09-14": {
+    "temperature": 26.058333333333334,
+    "precipitation": 2.2000000000000006
+  },
+  "2023-09-15": {
+    "temperature": 26.05,
+    "precipitation": 2.2
+  },
+  "2023-09-16": {
+    "temperature": 25.983333333333334,
+    "precipitation": 1.2000000000000002
+  },
+  "2023-09-17": {
+    "temperature": 25.841666666666672,
+    "precipitation": 1.7000000000000002
+  },
+  "2023-09-18": {
+    "temperature": 25.65833333333333,
+    "precipitation": 4.899999999999999
+  },
+  "2023-09-19": {
+    "temperature": 25.70833333333334,
+    "precipitation": 3.2000000000000006
+  },
+  "2023-09-20": {
+    "temperature": 25.579166666666662,
+    "precipitation": 3.6
+  },
+  "2023-09-21": {
+    "temperature": 25.837500000000002,
+    "precipitation": 1.9000000000000001
+  },
+  "2023-09-22": {
+    "temperature": 25.38333333333333,
+    "precipitation": 4.3
+  },
+  "2023-09-23": {
+    "temperature": 25.829166666666666,
+    "precipitation": 0.9
+  },
+  "2023-09-24": {
+    "temperature": 26.475000000000005,
+    "precipitation": 0.1
+  },
+  "2023-09-25": {
+    "temperature": 26.14166666666667,
+    "precipitation": 1.3
+  },
+  "2023-09-26": {
+    "temperature": 26.237499999999997,
+    "precipitation": 0.7
+  },
+  "2023-09-27": {
+    "temperature": 26.599999999999998,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-09-28": {
+    "temperature": 27.354166666666668,
+    "precipitation": 0.2
+  },
+  "2023-09-29": {
+    "temperature": 27.333333333333325,
+    "precipitation": 0.1
+  },
+  "2023-09-30": {
+    "temperature": 27.129166666666666,
+    "precipitation": 0.6
+  },
+  "2023-10-01": {
+    "temperature": 26.78333333333333,
+    "precipitation": 0.9999999999999999
+  },
+  "2023-10-02": {
+    "temperature": 26.412500000000005,
+    "precipitation": 3.9000000000000004
+  },
+  "2023-10-03": {
+    "temperature": 26.474999999999998,
+    "precipitation": 2.5000000000000004
+  },
+  "2023-10-04": {
+    "temperature": 27.220833333333342,
+    "precipitation": 1.0
+  },
+  "2023-10-05": {
+    "temperature": 27.70833333333334,
+    "precipitation": 0.1
+  },
+  "2023-10-06": {
+    "temperature": 27.920833333333334,
+    "precipitation": 0.7
+  },
+  "2023-10-07": {
+    "temperature": 27.654166666666658,
+    "precipitation": 2.7000000000000006
+  },
+  "2023-10-08": {
+    "temperature": 27.70833333333333,
+    "precipitation": 0.8999999999999999
+  },
+  "2023-10-09": {
+    "temperature": 27.50833333333333,
+    "precipitation": 1.7000000000000002
+  },
+  "2023-10-10": {
+    "temperature": 27.50833333333334,
+    "precipitation": 1.4000000000000001
+  },
+  "2023-10-11": {
+    "temperature": 27.708333333333332,
+    "precipitation": 0.7999999999999999
+  },
+  "2023-10-12": {
+    "temperature": 27.408333333333335,
+    "precipitation": 2.3000000000000003
+  },
+  "2023-10-13": {
+    "temperature": 27.670833333333334,
+    "precipitation": 2.4000000000000004
+  },
+  "2023-10-14": {
+    "temperature": 27.754166666666674,
+    "precipitation": 0.0
+  },
+  "2023-10-15": {
+    "temperature": 28.399999999999995,
+    "precipitation": 0.0
+  },
+  "2023-10-16": {
+    "temperature": 28.15416666666667,
+    "precipitation": 0.7
+  },
+  "2023-10-17": {
+    "temperature": 28.008333333333336,
+    "precipitation": 0.1
+  },
+  "2023-10-18": {
+    "temperature": 28.245833333333337,
+    "precipitation": 0.5
+  },
+  "2023-10-19": {
+    "temperature": 28.04166666666666,
+    "precipitation": 0.0
+  },
+  "2023-10-20": {
+    "temperature": 27.92916666666667,
+    "precipitation": 0.30000000000000004
+  },
+  "2023-10-21": {
+    "temperature": 27.45,
+    "precipitation": 0.0
+  },
+  "2023-10-22": {
+    "temperature": 27.962499999999995,
+    "precipitation": 0.0
+  },
+  "2023-10-23": {
+    "temperature": 28.004166666666666,
+    "precipitation": 0.2
+  },
+  "2023-10-24": {
+    "temperature": 27.82083333333333,
+    "precipitation": 1.9000000000000001
+  },
+  "2023-10-25": {
+    "temperature": 28.087500000000006,
+    "precipitation": 0.8
+  },
+  "2023-10-26": {
+    "temperature": 27.59583333333333,
+    "precipitation": 1.2
+  },
+  "2023-10-27": {
+    "temperature": 27.862499999999997,
+    "precipitation": 0.0
+  },
+  "2023-10-28": {
+    "temperature": 28.120833333333334,
+    "precipitation": 0.0
+  },
+  "2023-10-29": {
+    "temperature": 28.51666666666667,
+    "precipitation": 0.6
+  },
+  "2023-10-30": {
+    "temperature": 27.904166666666665,
+    "precipitation": 3.4000000000000004
+  },
+  "2023-10-31": {
+    "temperature": 28.137500000000003,
+    "precipitation": 1.0
+  },
+  "2023-11-01": {
+    "temperature": 28.412499999999998,
+    "precipitation": 2.8
+  },
+  "2023-11-02": {
+    "temperature": 28.545833333333334,
+    "precipitation": 1.8
+  },
+  "2023-11-03": {
+    "temperature": 28.391666666666666,
+    "precipitation": 2.1000000000000005
+  },
+  "2023-11-04": {
+    "temperature": 27.925,
+    "precipitation": 1.5000000000000002
+  },
+  "2023-11-05": {
+    "temperature": 28.15416666666667,
+    "precipitation": 1.3
+  },
+  "2023-11-06": {
+    "temperature": 28.404166666666658,
+    "precipitation": 0.0
+  },
+  "2023-11-07": {
+    "temperature": 28.3125,
+    "precipitation": 0.0
+  },
+  "2023-11-08": {
+    "temperature": 28.39583333333333,
+    "precipitation": 0.2
+  },
+  "2023-11-09": {
+    "temperature": 28.208333333333332,
+    "precipitation": 0.5
+  },
+  "2023-11-10": {
+    "temperature": 28.375000000000004,
+    "precipitation": 0.1
+  },
+  "2023-11-11": {
+    "temperature": 28.466666666666665,
+    "precipitation": 2.1000000000000005
+  },
+  "2023-11-12": {
+    "temperature": 28.616666666666656,
+    "precipitation": 1.7000000000000004
+  },
+  "2023-11-13": {
+    "temperature": 28.391666666666666,
+    "precipitation": 2.4
+  },
+  "2023-11-14": {
+    "temperature": 27.424999999999994,
+    "precipitation": 7.199999999999997
+  },
+  "2023-11-15": {
+    "temperature": 27.904166666666672,
+    "precipitation": 7.1
+  },
+  "2023-11-16": {
+    "temperature": 27.862499999999997,
+    "precipitation": 2.3000000000000007
+  },
+  "2023-11-17": {
+    "temperature": 27.516666666666666,
+    "precipitation": 6.499999999999998
+  },
+  "2023-11-18": {
+    "temperature": 27.837500000000006,
+    "precipitation": 4.300000000000001
+  },
+  "2023-11-19": {
+    "temperature": 27.779166666666665,
+    "precipitation": 1.9000000000000004
+  },
+  "2023-11-20": {
+    "temperature": 28.037499999999998,
+    "precipitation": 4.999999999999999
+  },
+  "2023-11-21": {
+    "temperature": 28.341666666666665,
+    "precipitation": 1.2
+  },
+  "2023-11-22": {
+    "temperature": 28.391666666666662,
+    "precipitation": 2.1
+  },
+  "2023-11-23": {
+    "temperature": 28.845833333333335,
+    "precipitation": 1.6
+  },
+  "2023-11-24": {
+    "temperature": 28.654166666666665,
+    "precipitation": 3.6
+  },
+  "2023-11-25": {
+    "temperature": 27.47916666666667,
+    "precipitation": 3.1000000000000005
+  },
+  "2023-11-26": {
+    "temperature": 27.712500000000002,
+    "precipitation": 2.5
+  },
+  "2023-11-27": {
+    "temperature": 28.104166666666668,
+    "precipitation": 1.2
+  },
+  "2023-11-28": {
+    "temperature": 28.312500000000004,
+    "precipitation": 1.6000000000000005
+  },
+  "2023-11-29": {
+    "temperature": 27.63749999999999,
+    "precipitation": 8.600000000000001
+  },
+  "2023-11-30": {
+    "temperature": 27.395833333333332,
+    "precipitation": 4.9
+  },
+  "2023-12-01": {
+    "temperature": 26.645833333333332,
+    "precipitation": 7.1
+  },
+  "2023-12-02": {
+    "temperature": 27.066666666666666,
+    "precipitation": 2.900000000000001
+  },
+  "2023-12-03": {
+    "temperature": 28.141666666666666,
+    "precipitation": 3.2000000000000006
+  },
+  "2023-12-04": {
+    "temperature": 26.56249999999999,
+    "precipitation": 11.999999999999998
+  },
+  "2023-12-05": {
+    "temperature": 27.704166666666666,
+    "precipitation": 1.0999999999999999
+  },
+  "2023-12-06": {
+    "temperature": 28.312500000000004,
+    "precipitation": 0.4
+  },
+  "2023-12-07": {
+    "temperature": 28.295833333333338,
+    "precipitation": 1.7000000000000004
+  },
+  "2023-12-08": {
+    "temperature": 28.358333333333334,
+    "precipitation": 1.4000000000000001
+  },
+  "2023-12-09": {
+    "temperature": 28.783333333333335,
+    "precipitation": 1.6000000000000003
+  },
+  "2023-12-10": {
+    "temperature": 29.10416666666666,
+    "precipitation": 1.6
+  },
+  "2023-12-11": {
+    "temperature": 29.175000000000008,
+    "precipitation": 0.6
+  },
+  "2023-12-12": {
+    "temperature": 29.287499999999998,
+    "precipitation": 0.6
+  },
+  "2023-12-13": {
+    "temperature": 28.0625,
+    "precipitation": 2.2
+  },
+  "2023-12-14": {
+    "temperature": 27.487499999999997,
+    "precipitation": 9.7
+  },
+  "2023-12-15": {
+    "temperature": 27.425,
+    "precipitation": 4.300000000000001
+  },
+  "2023-12-16": {
+    "temperature": 28.216666666666665,
+    "precipitation": 0.9999999999999999
+  },
+  "2023-12-17": {
+    "temperature": 28.483333333333334,
+    "precipitation": 0.1
+  },
+  "2023-12-18": {
+    "temperature": 28.245833333333334,
+    "precipitation": 0.0
+  },
+  "2023-12-19": {
+    "temperature": 28.90416666666667,
+    "precipitation": 0.0
+  },
+  "2023-12-20": {
+    "temperature": 29.191666666666674,
+    "precipitation": 0.5
+  },
+  "2023-12-21": {
+    "temperature": 28.858333333333324,
+    "precipitation": 0.0
+  },
+  "2023-12-22": {
+    "temperature": 29.158333333333342,
+    "precipitation": 0.0
+  },
+  "2023-12-23": {
+    "temperature": 29.33333333333333,
+    "precipitation": 0.0
+  },
+  "2023-12-24": {
+    "temperature": 29.099999999999994,
+    "precipitation": 0.9999999999999999
+  },
+  "2023-12-25": {
+    "temperature": 28.541666666666668,
+    "precipitation": 1.3
+  },
+  "2023-12-26": {
+    "temperature": 28.725000000000005,
+    "precipitation": 1.4
+  },
+  "2023-12-27": {
+    "temperature": 27.912499999999994,
+    "precipitation": 5.399999999999999
+  },
+  "2023-12-28": {
+    "temperature": 28.195833333333336,
+    "precipitation": 1.9000000000000001
+  },
+  "2023-12-29": {
+    "temperature": 29.591666666666665,
+    "precipitation": 1.4000000000000001
+  },
+  "2023-12-30": {
+    "temperature": 30.275000000000002,
+    "precipitation": 0.6000000000000001
+  },
+  "2023-12-31": {
+    "temperature": 28.733333333333334,
+    "precipitation": 2.7
+  },
+  "2024-01-01": {
+    "temperature": 28.316666666666677,
+    "precipitation": 2.9000000000000004
+  },
+  "2024-01-02": {
+    "temperature": 28.520833333333332,
+    "precipitation": 3.4000000000000004
+  },
+  "2024-01-03": {
+    "temperature": 28.470833333333335,
+    "precipitation": 1.7000000000000006
+  },
+  "2024-01-04": {
+    "temperature": 28.608333333333334,
+    "precipitation": 0.8
+  },
+  "2024-01-05": {
+    "temperature": 27.39166666666667,
+    "precipitation": 3.6000000000000005
+  },
+  "2024-01-06": {
+    "temperature": 27.845833333333335,
+    "precipitation": 1.3000000000000003
+  },
+  "2024-01-07": {
+    "temperature": 29.224999999999998,
+    "precipitation": 0.1
+  },
+  "2024-01-08": {
+    "temperature": 28.65416666666667,
+    "precipitation": 4.9
+  },
+  "2024-01-09": {
+    "temperature": 28.600000000000005,
+    "precipitation": 10.399999999999997
+  },
+  "2024-01-10": {
+    "temperature": 29.42083333333333,
+    "precipitation": 1.0
+  },
+  "2024-01-11": {
+    "temperature": 29.199999999999992,
+    "precipitation": 3.7000000000000006
+  },
+  "2024-01-12": {
+    "temperature": 30.337500000000006,
+    "precipitation": 0.0
+  },
+  "2024-01-13": {
+    "temperature": 30.3875,
+    "precipitation": 0.2
+  },
+  "2024-01-14": {
+    "temperature": 29.866666666666674,
+    "precipitation": 0.30000000000000004
+  },
+  "2024-01-15": {
+    "temperature": 30.141666666666676,
+    "precipitation": 0.30000000000000004
+  },
+  "2024-01-16": {
+    "temperature": 30.049999999999997,
+    "precipitation": 1.4000000000000001
+  },
+  "2024-01-17": {
+    "temperature": 29.2375,
+    "precipitation": 1.8
+  },
+  "2024-01-18": {
+    "temperature": 27.495833333333337,
+    "precipitation": 4.499999999999999
+  },
+  "2024-01-19": {
+    "temperature": 26.587500000000006,
+    "precipitation": 36.10000000000001
+  },
+  "2024-01-20": {
+    "temperature": 28.19583333333333,
+    "precipitation": 2.6
+  },
+  "2024-01-21": {
+    "temperature": 28.412499999999998,
+    "precipitation": 5.6
+  },
+  "2024-01-22": {
+    "temperature": 28.42916666666666,
+    "precipitation": 4.1
+  },
+  "2024-01-23": {
+    "temperature": 28.183333333333337,
+    "precipitation": 4.6
+  },
+  "2024-01-24": {
+    "temperature": 27.97916666666666,
+    "precipitation": 3.1
+  },
+  "2024-01-25": {
+    "temperature": 28.42916666666667,
+    "precipitation": 5.4
+  },
+  "2024-01-26": {
+    "temperature": 27.687499999999996,
+    "precipitation": 3.9000000000000004
+  },
+  "2024-01-27": {
+    "temperature": 27.39583333333333,
+    "precipitation": 3.9000000000000004
+  },
+  "2024-01-28": {
+    "temperature": 26.895833333333332,
+    "precipitation": 11.099999999999998
+  },
+  "2024-01-29": {
+    "temperature": 27.329166666666666,
+    "precipitation": 3.4000000000000004
+  },
+  "2024-01-30": {
+    "temperature": 27.316666666666674,
+    "precipitation": 7.9999999999999964
+  },
+  "2024-01-31": {
+    "temperature": 26.75,
+    "precipitation": 13.1
+  },
+  "2024-02-01": {
+    "temperature": 27.54166666666667,
+    "precipitation": 1.3000000000000003
+  },
+  "2024-02-02": {
+    "temperature": 27.533333333333328,
+    "precipitation": 3.5000000000000004
+  },
+  "2024-02-03": {
+    "temperature": 27.03333333333333,
+    "precipitation": 8.899999999999999
+  },
+  "2024-02-04": {
+    "temperature": 26.75,
+    "precipitation": 25.599999999999998
+  },
+  "2024-02-05": {
+    "temperature": 27.570833333333336,
+    "precipitation": 17.8
+  },
+  "2024-02-06": {
+    "temperature": 27.925,
+    "precipitation": 3.3000000000000003
+  },
+  "2024-02-07": {
+    "temperature": 27.025000000000002,
+    "precipitation": 3.0000000000000004
+  },
+  "2024-02-08": {
+    "temperature": 27.129166666666666,
+    "precipitation": 11.6
+  },
+  "2024-02-09": {
+    "temperature": 27.191666666666663,
+    "precipitation": 8.099999999999998
+  },
+  "2024-02-10": {
+    "temperature": 27.354166666666657,
+    "precipitation": 6.000000000000001
+  },
+  "2024-02-11": {
+    "temperature": 27.10416666666667,
+    "precipitation": 12.599999999999996
+  },
+  "2024-02-12": {
+    "temperature": 27.624999999999996,
+    "precipitation": 5.2
+  },
+  "2024-02-13": {
+    "temperature": 28.27916666666668,
+    "precipitation": 4.799999999999999
+  },
+  "2024-02-14": {
+    "temperature": 28.29166666666667,
+    "precipitation": 1.6000000000000003
+  },
+  "2024-02-15": {
+    "temperature": 28.341666666666672,
+    "precipitation": 1.4000000000000001
+  },
+  "2024-02-16": {
+    "temperature": 28.537500000000005,
+    "precipitation": 1.4999999999999998
+  },
+  "2024-02-17": {
+    "temperature": 27.195833333333336,
+    "precipitation": 10.6
+  },
+  "2024-02-18": {
+    "temperature": 27.59166666666667,
+    "precipitation": 5.800000000000001
+  },
+  "2024-02-19": {
+    "temperature": 28.60416666666667,
+    "precipitation": 1.8
+  },
+  "2024-02-20": {
+    "temperature": 28.858333333333338,
+    "precipitation": 1.7
+  },
+  "2024-02-21": {
+    "temperature": 28.725000000000005,
+    "precipitation": 2.9000000000000004
+  },
+  "2024-02-22": {
+    "temperature": 28.670833333333334,
+    "precipitation": 2.8000000000000003
+  },
+  "2024-02-23": {
+    "temperature": 27.845833333333335,
+    "precipitation": 10.6
+  },
+  "2024-02-24": {
+    "temperature": 27.849999999999998,
+    "precipitation": 11.9
+  },
+  "2024-02-25": {
+    "temperature": 27.458333333333332,
+    "precipitation": 8.499999999999998
+  },
+  "2024-02-26": {
+    "temperature": 27.145833333333332,
+    "precipitation": 21.1
+  },
+  "2024-02-27": {
+    "temperature": 27.808333333333337,
+    "precipitation": 2.3000000000000003
+  },
+  "2024-02-28": {
+    "temperature": 28.070833333333336,
+    "precipitation": 6.600000000000001
+  },
+  "2024-02-29": {
+    "temperature": 28.70416666666667,
+    "precipitation": 1.5999999999999999
+  },
+  "2024-03-01": {
+    "temperature": 28.15416666666667,
+    "precipitation": 4.5
+  },
+  "2024-03-02": {
+    "temperature": 28.174999999999997,
+    "precipitation": 11.399999999999999
+  },
+  "2024-03-03": {
+    "temperature": 27.829166666666666,
+    "precipitation": 17.2
+  },
+  "2024-03-04": {
+    "temperature": 28.125,
+    "precipitation": 6.699999999999998
+  },
+  "2024-03-05": {
+    "temperature": 28.262499999999992,
+    "precipitation": 10.299999999999999
+  },
+  "2024-03-06": {
+    "temperature": 28.429166666666664,
+    "precipitation": 3.900000000000001
+  },
+  "2024-03-07": {
+    "temperature": 28.116666666666664,
+    "precipitation": 11.700000000000001
+  },
+  "2024-03-08": {
+    "temperature": 27.999999999999996,
+    "precipitation": 14.399999999999999
+  },
+  "2024-03-09": {
+    "temperature": 27.545833333333334,
+    "precipitation": 28.2
+  },
+  "2024-03-10": {
+    "temperature": 27.333333333333332,
+    "precipitation": 19.1
+  },
+  "2024-03-11": {
+    "temperature": 27.237500000000008,
+    "precipitation": 11.700000000000001
+  },
+  "2024-03-12": {
+    "temperature": 28.433333333333337,
+    "precipitation": 2.3000000000000003
+  },
+  "2024-03-13": {
+    "temperature": 29.558333333333334,
+    "precipitation": 0.0
+  },
+  "2024-03-14": {
+    "temperature": 28.400000000000006,
+    "precipitation": 17.0
+  },
+  "2024-03-15": {
+    "temperature": 28.095833333333335,
+    "precipitation": 4.0
+  },
+  "2024-03-16": {
+    "temperature": 28.854166666666675,
+    "precipitation": 0.4
+  },
+  "2024-03-17": {
+    "temperature": 27.858333333333338,
+    "precipitation": 3.9000000000000004
+  },
+  "2024-03-18": {
+    "temperature": 28.56250000000001,
+    "precipitation": 1.7999999999999998
+  },
+  "2024-03-19": {
+    "temperature": 28.533333333333335,
+    "precipitation": 1.7
+  },
+  "2024-03-20": {
+    "temperature": 28.883333333333336,
+    "precipitation": 0.2
+  },
+  "2024-03-21": {
+    "temperature": 28.216666666666658,
+    "precipitation": 2.4000000000000004
+  },
+  "2024-03-22": {
+    "temperature": 28.3625,
+    "precipitation": 2.1
+  },
+  "2024-03-23": {
+    "temperature": 28.245833333333334,
+    "precipitation": 2.6000000000000005
+  },
+  "2024-03-24": {
+    "temperature": 28.33333333333334,
+    "precipitation": 3.1000000000000005
+  },
+  "2024-03-25": {
+    "temperature": 28.895833333333332,
+    "precipitation": 1.9000000000000004
+  },
+  "2024-03-26": {
+    "temperature": 29.245833333333334,
+    "precipitation": 0.7
+  },
+  "2024-03-27": {
+    "temperature": 29.795833333333334,
+    "precipitation": 0.5
+  },
+  "2024-03-28": {
+    "temperature": 28.575,
+    "precipitation": 3.1
+  },
+  "2024-03-29": {
+    "temperature": 28.2375,
+    "precipitation": 5.4
+  },
+  "2024-03-30": {
+    "temperature": 29.34583333333333,
+    "precipitation": 0.0
+  },
+  "2024-03-31": {
+    "temperature": 29.79166666666667,
+    "precipitation": 1.0
+  },
+  "2024-04-01": {
+    "temperature": 27.608333333333338,
+    "precipitation": 11.399999999999995
+  },
+  "2024-04-02": {
+    "temperature": 27.812499999999996,
+    "precipitation": 5.299999999999999
+  },
+  "2024-04-03": {
+    "temperature": 28.766666666666666,
+    "precipitation": 0.5
+  },
+  "2024-04-04": {
+    "temperature": 27.1875,
+    "precipitation": 5.5
+  },
+  "2024-04-05": {
+    "temperature": 28.075000000000003,
+    "precipitation": 2.500000000000001
+  },
+  "2024-04-06": {
+    "temperature": 28.645833333333332,
+    "precipitation": 1.8000000000000003
+  },
+  "2024-04-07": {
+    "temperature": 28.383333333333336,
+    "precipitation": 2.6000000000000005
+  },
+  "2024-04-08": {
+    "temperature": 27.783333333333335,
+    "precipitation": 2.900000000000001
+  },
+  "2024-04-09": {
+    "temperature": 27.208333333333332,
+    "precipitation": 5.9
+  },
+  "2024-04-10": {
+    "temperature": 27.308333333333337,
+    "precipitation": 11.399999999999997
+  },
+  "2024-04-11": {
+    "temperature": 27.624999999999996,
+    "precipitation": 2.2
+  },
+  "2024-04-12": {
+    "temperature": 27.912499999999994,
+    "precipitation": 0.7
+  },
+  "2024-04-13": {
+    "temperature": 28.78333333333333,
+    "precipitation": 2.0
+  },
+  "2024-04-14": {
+    "temperature": 28.599999999999998,
+    "precipitation": 3.5999999999999996
+  },
+  "2024-04-15": {
+    "temperature": 28.799999999999997,
+    "precipitation": 0.8999999999999999
+  },
+  "2024-04-16": {
+    "temperature": 27.29166666666667,
+    "precipitation": 16.8
+  },
+  "2024-04-17": {
+    "temperature": 27.11666666666667,
+    "precipitation": 17.4
+  },
+  "2024-04-18": {
+    "temperature": 27.487500000000008,
+    "precipitation": 2.900000000000001
+  },
+  "2024-04-19": {
+    "temperature": 27.316666666666663,
+    "precipitation": 12.499999999999996
+  },
+  "2024-04-20": {
+    "temperature": 27.979166666666668,
+    "precipitation": 3.6000000000000005
+  },
+  "2024-04-21": {
+    "temperature": 27.341666666666658,
+    "precipitation": 6.1999999999999975
+  },
+  "2024-04-22": {
+    "temperature": 27.125,
+    "precipitation": 8.899999999999999
+  },
+  "2024-04-23": {
+    "temperature": 27.54166666666667,
+    "precipitation": 2.6000000000000005
+  },
+  "2024-04-24": {
+    "temperature": 27.408333333333335,
+    "precipitation": 13.799999999999999
+  },
+  "2024-04-25": {
+    "temperature": 27.804166666666664,
+    "precipitation": 3.300000000000001
+  },
+  "2024-04-26": {
+    "temperature": 28.133333333333336,
+    "precipitation": 1.2000000000000002
+  },
+  "2024-04-27": {
+    "temperature": 28.549999999999997,
+    "precipitation": 0.4
+  },
+  "2024-04-28": {
+    "temperature": 28.208333333333332,
+    "precipitation": 2.900000000000001
+  },
+  "2024-04-29": {
+    "temperature": 28.120833333333334,
+    "precipitation": 1.8000000000000003
+  },
+  "2024-04-30": {
+    "temperature": 27.829166666666655,
+    "precipitation": 3.2
+  },
+  "2024-05-01": {
+    "temperature": 28.216666666666665,
+    "precipitation": 1.0999999999999999
+  },
+  "2024-05-02": {
+    "temperature": 27.81250000000001,
+    "precipitation": 0.8
+  },
+  "2024-05-03": {
+    "temperature": 27.954166666666666,
+    "precipitation": 2.5000000000000004
+  },
+  "2024-05-04": {
+    "temperature": 27.658333333333335,
+    "precipitation": 1.7000000000000004
+  },
+  "2024-05-05": {
+    "temperature": 27.74166666666667,
+    "precipitation": 0.5
+  },
+  "2024-05-06": {
+    "temperature": 27.208333333333332,
+    "precipitation": 5.999999999999999
+  },
+  "2024-05-07": {
+    "temperature": 27.008333333333336,
+    "precipitation": 3.0
+  },
+  "2024-05-08": {
+    "temperature": 27.474999999999998,
+    "precipitation": 4.799999999999999
+  },
+  "2024-05-09": {
+    "temperature": 27.79583333333333,
+    "precipitation": 2.7000000000000006
+  },
+  "2024-05-10": {
+    "temperature": 27.79583333333333,
+    "precipitation": 1.8000000000000003
+  },
+  "2024-05-11": {
+    "temperature": 27.60416666666666,
+    "precipitation": 0.9
+  },
+  "2024-05-12": {
+    "temperature": 27.65833333333333,
+    "precipitation": 0.1
+  },
+  "2024-05-13": {
+    "temperature": 27.700000000000003,
+    "precipitation": 1.6
+  },
+  "2024-05-14": {
+    "temperature": 27.645833333333332,
+    "precipitation": 0.6
+  },
+  "2024-05-15": {
+    "temperature": 27.695833333333336,
+    "precipitation": 2.9
+  },
+  "2024-05-16": {
+    "temperature": 27.495833333333337,
+    "precipitation": 4.1
+  },
+  "2024-05-17": {
+    "temperature": 27.474999999999998,
+    "precipitation": 0.2
+  },
+  "2024-05-18": {
+    "temperature": 27.466666666666665,
+    "precipitation": 1.8000000000000003
+  },
+  "2024-05-19": {
+    "temperature": 27.4875,
+    "precipitation": 2.400000000000001
+  },
+  "2024-05-20": {
+    "temperature": 27.624999999999996,
+    "precipitation": 0.7
+  },
+  "2024-05-21": {
+    "temperature": 27.558333333333326,
+    "precipitation": 2.0
+  },
+  "2024-05-22": {
+    "temperature": 27.433333333333326,
+    "precipitation": 1.3
+  },
+  "2024-05-23": {
+    "temperature": 27.46666666666667,
+    "precipitation": 1.4000000000000004
+  },
+  "2024-05-24": {
+    "temperature": 28.070833333333336,
+    "precipitation": 0.7
+  },
+  "2024-05-25": {
+    "temperature": 27.891666666666666,
+    "precipitation": 2.900000000000001
+  },
+  "2024-05-26": {
+    "temperature": 27.441666666666674,
+    "precipitation": 1.6
+  },
+  "2024-05-27": {
+    "temperature": 27.40833333333333,
+    "precipitation": 0.7
+  },
+  "2024-05-28": {
+    "temperature": 27.55,
+    "precipitation": 0.2
+  },
+  "2024-05-29": {
+    "temperature": 27.229166666666668,
+    "precipitation": 1.5000000000000002
+  },
+  "2024-05-30": {
+    "temperature": 27.4375,
+    "precipitation": 1.9000000000000001
+  },
+  "2024-05-31": {
+    "temperature": 27.675,
+    "precipitation": 2.400000000000001
+  },
+  "2024-06-01": {
+    "temperature": 27.67083333333333,
+    "precipitation": 5.899999999999998
+  },
+  "2024-06-02": {
+    "temperature": 27.670833333333334,
+    "precipitation": 1.8000000000000003
+  },
+  "2024-06-03": {
+    "temperature": 27.174999999999997,
+    "precipitation": 3.2000000000000006
+  },
+  "2024-06-04": {
+    "temperature": 26.970833333333328,
+    "precipitation": 3.2
+  },
+  "2024-06-05": {
+    "temperature": 26.995833333333337,
+    "precipitation": 6.1
+  },
+  "2024-06-06": {
+    "temperature": 26.7625,
+    "precipitation": 4.500000000000001
+  },
+  "2024-06-07": {
+    "temperature": 25.970833333333335,
+    "precipitation": 3.0000000000000004
+  },
+  "2024-06-08": {
+    "temperature": 26.71666666666667,
+    "precipitation": 2.5999999999999996
+  },
+  "2024-06-09": {
+    "temperature": 26.658333333333335,
+    "precipitation": 5.800000000000001
+  },
+  "2024-06-10": {
+    "temperature": 27.183333333333337,
+    "precipitation": 1.0
+  },
+  "2024-06-11": {
+    "temperature": 26.841666666666665,
+    "precipitation": 1.6000000000000003
+  },
+  "2024-06-12": {
+    "temperature": 27.0,
+    "precipitation": 0.2
+  },
+  "2024-06-13": {
+    "temperature": 27.22916666666666,
+    "precipitation": 0.1
+  },
+  "2024-06-14": {
+    "temperature": 27.525000000000002,
+    "precipitation": 0.0
+  },
+  "2024-06-15": {
+    "temperature": 27.49166666666667,
+    "precipitation": 0.0
+  },
+  "2024-06-16": {
+    "temperature": 27.429166666666664,
+    "precipitation": 0.1
+  },
+  "2024-06-17": {
+    "temperature": 27.57083333333333,
+    "precipitation": 0.6
+  },
+  "2024-06-18": {
+    "temperature": 27.316666666666666,
+    "precipitation": 0.8999999999999999
+  },
+  "2024-06-19": {
+    "temperature": 27.262500000000003,
+    "precipitation": 0.7
+  },
+  "2024-06-20": {
+    "temperature": 27.479166666666668,
+    "precipitation": 0.0
+  },
+  "2024-06-21": {
+    "temperature": 27.2375,
+    "precipitation": 2.1
+  },
+  "2024-06-22": {
+    "temperature": 27.175,
+    "precipitation": 5.1
+  },
+  "2024-06-23": {
+    "temperature": 27.141666666666666,
+    "precipitation": 1.7000000000000002
+  },
+  "2024-06-24": {
+    "temperature": 26.76666666666667,
+    "precipitation": 2.3000000000000003
+  },
+  "2024-06-25": {
+    "temperature": 27.012500000000003,
+    "precipitation": 0.4
+  },
+  "2024-06-26": {
+    "temperature": 27.274999999999995,
+    "precipitation": 0.0
+  },
+  "2024-06-27": {
+    "temperature": 27.645833333333332,
+    "precipitation": 0.0
+  },
+  "2024-06-28": {
+    "temperature": 27.61666666666667,
+    "precipitation": 0.2
+  },
+  "2024-06-29": {
+    "temperature": 27.395833333333332,
+    "precipitation": 1.9
+  },
+  "2024-06-30": {
+    "temperature": 27.287499999999998,
+    "precipitation": 2.6999999999999997
+  },
+  "2024-07-01": {
+    "temperature": 26.412499999999998,
+    "precipitation": 2.1000000000000005
+  },
+  "2024-07-02": {
+    "temperature": 26.779166666666665,
+    "precipitation": 4.299999999999999
+  },
+  "2024-07-03": {
+    "temperature": 26.283333333333335,
+    "precipitation": 6.000000000000001
+  },
+  "2024-07-04": {
+    "temperature": 26.845833333333328,
+    "precipitation": 3.2000000000000006
+  },
+  "2024-07-05": {
+    "temperature": 26.7,
+    "precipitation": 1.9
+  },
+  "2024-07-06": {
+    "temperature": 26.899999999999995,
+    "precipitation": 0.7999999999999999
+  },
+  "2024-07-07": {
+    "temperature": 26.941666666666666,
+    "precipitation": 0.0
+  },
+  "2024-07-08": {
+    "temperature": 26.904166666666672,
+    "precipitation": 1.7000000000000002
+  },
+  "2024-07-09": {
+    "temperature": 26.841666666666672,
+    "precipitation": 0.7000000000000001
+  },
+  "2024-07-10": {
+    "temperature": 26.720833333333335,
+    "precipitation": 3.7000000000000006
+  },
+  "2024-07-11": {
+    "temperature": 26.3125,
+    "precipitation": 2.5000000000000004
+  },
+  "2024-07-12": {
+    "temperature": 26.34166666666667,
+    "precipitation": 0.7
+  },
+  "2024-07-13": {
+    "temperature": 26.037500000000005,
+    "precipitation": 2.1
+  },
+  "2024-07-14": {
+    "temperature": 26.545833333333334,
+    "precipitation": 0.0
+  },
+  "2024-07-15": {
+    "temperature": 26.39166666666667,
+    "precipitation": 1.3000000000000003
+  },
+  "2024-07-16": {
+    "temperature": 26.85416666666667,
+    "precipitation": 0.2
+  },
+  "2024-07-17": {
+    "temperature": 26.8,
+    "precipitation": 0.1
+  },
+  "2024-07-18": {
+    "temperature": 26.59166666666667,
+    "precipitation": 0.9999999999999999
+  },
+  "2024-07-19": {
+    "temperature": 26.004166666666666,
+    "precipitation": 3.3000000000000007
+  },
+  "2024-07-20": {
+    "temperature": 26.087500000000006,
+    "precipitation": 0.0
+  },
+  "2024-07-21": {
+    "temperature": 26.516666666666666,
+    "precipitation": 0.0
+  },
+  "2024-07-22": {
+    "temperature": 26.27083333333333,
+    "precipitation": 0.7
+  },
+  "2024-07-23": {
+    "temperature": 26.5625,
+    "precipitation": 0.4
+  },
+  "2024-07-24": {
+    "temperature": 26.508333333333336,
+    "precipitation": 0.0
+  },
+  "2024-07-25": {
+    "temperature": 26.71666666666667,
+    "precipitation": 0.5
+  },
+  "2024-07-26": {
+    "temperature": 26.495833333333334,
+    "precipitation": 2.0999999999999996
+  },
+  "2024-07-27": {
+    "temperature": 26.354166666666668,
+    "precipitation": 4.2
+  },
+  "2024-07-28": {
+    "temperature": 26.21666666666667,
+    "precipitation": 4.3999999999999995
+  },
+  "2024-07-29": {
+    "temperature": 26.0,
+    "precipitation": 3.3999999999999995
+  },
+  "2024-07-30": {
+    "temperature": 25.862499999999997,
+    "precipitation": 2.9000000000000004
+  },
+  "2024-07-31": {
+    "temperature": 26.291666666666657,
+    "precipitation": 0.30000000000000004
+  },
+  "2024-08-01": {
+    "temperature": 26.670833333333334,
+    "precipitation": 1.0999999999999999
+  },
+  "2024-08-02": {
+    "temperature": 26.82083333333334,
+    "precipitation": 1.3000000000000003
+  },
+  "2024-08-03": {
+    "temperature": 26.683333333333334,
+    "precipitation": 0.0
+  },
+  "2024-08-04": {
+    "temperature": 26.333333333333332,
+    "precipitation": 4.299999999999999
+  },
+  "2024-08-05": {
+    "temperature": 26.425,
+    "precipitation": 0.2
+  },
+  "2024-08-06": {
+    "temperature": 26.674999999999997,
+    "precipitation": 2.8
+  },
+  "2024-08-07": {
+    "temperature": 26.354166666666668,
+    "precipitation": 5.1000000000000005
+  },
+  "2024-08-08": {
+    "temperature": 26.283333333333335,
+    "precipitation": 3.6
+  },
+  "2024-08-09": {
+    "temperature": 26.15833333333333,
+    "precipitation": 1.5
+  },
+  "2024-08-10": {
+    "temperature": 25.908333333333335,
+    "precipitation": 0.6
+  },
+  "2024-08-11": {
+    "temperature": 25.86666666666667,
+    "precipitation": 0.2
+  },
+  "2024-08-12": {
+    "temperature": 25.754166666666666,
+    "precipitation": 0.0
+  },
+  "2024-08-13": {
+    "temperature": 25.92916666666667,
+    "precipitation": 4.1000000000000005
+  },
+  "2024-08-14": {
+    "temperature": 26.575,
+    "precipitation": 0.0
+  },
+  "2024-08-15": {
+    "temperature": 26.466666666666665,
+    "precipitation": 0.0
+  },
+  "2024-08-16": {
+    "temperature": 25.554166666666664,
+    "precipitation": 1.5000000000000002
+  },
+  "2024-08-17": {
+    "temperature": 26.629166666666666,
+    "precipitation": 0.0
+  },
+  "2024-08-18": {
+    "temperature": 26.45,
+    "precipitation": 0.0
+  },
+  "2024-08-19": {
+    "temperature": 26.329166666666666,
+    "precipitation": 0.1
+  },
+  "2024-08-20": {
+    "temperature": 26.775000000000002,
+    "precipitation": 0.2
+  },
+  "2024-08-21": {
+    "temperature": 26.69583333333333,
+    "precipitation": 0.30000000000000004
+  },
+  "2024-08-22": {
+    "temperature": 26.520833333333332,
+    "precipitation": 0.4
+  },
+  "2024-08-23": {
+    "temperature": 26.204166666666666,
+    "precipitation": 4.8999999999999995
+  },
+  "2024-08-24": {
+    "temperature": 25.85416666666666,
+    "precipitation": 6.400000000000001
+  },
+  "2024-08-25": {
+    "temperature": 26.004166666666663,
+    "precipitation": 3.0
+  },
+  "2024-08-26": {
+    "temperature": 26.358333333333334,
+    "precipitation": 0.4
+  },
+  "2024-08-27": {
+    "temperature": 25.8125,
+    "precipitation": 0.7
+  },
+  "2024-08-28": {
+    "temperature": 25.970833333333335,
+    "precipitation": 0.1
+  },
+  "2024-08-29": {
+    "temperature": 26.23333333333333,
+    "precipitation": 2.1
+  },
+  "2024-08-30": {
+    "temperature": 26.204166666666666,
+    "precipitation": 0.2
+  },
+  "2024-08-31": {
+    "temperature": 26.358333333333334,
+    "precipitation": 1.7000000000000002
+  },
+  "2024-09-01": {
+    "temperature": 26.7375,
+    "precipitation": 1.9000000000000004
+  },
+  "2024-09-02": {
+    "temperature": 26.891666666666662,
+    "precipitation": 1.6
+  },
+  "2024-09-03": {
+    "temperature": 26.650000000000002,
+    "precipitation": 5.999999999999998
+  },
+  "2024-09-04": {
+    "temperature": 26.833333333333332,
+    "precipitation": 1.1
+  },
+  "2024-09-05": {
+    "temperature": 27.033333333333335,
+    "precipitation": 0.6
+  },
+  "2024-09-06": {
+    "temperature": 26.458333333333332,
+    "precipitation": 8.399999999999999
+  },
+  "2024-09-07": {
+    "temperature": 26.587499999999995,
+    "precipitation": 7.699999999999999
+  },
+  "2024-09-08": {
+    "temperature": 26.729166666666668,
+    "precipitation": 2.5
+  },
+  "2024-09-09": {
+    "temperature": 26.97083333333333,
+    "precipitation": 0.2
+  },
+  "2024-09-10": {
+    "temperature": 27.066666666666666,
+    "precipitation": 0.2
+  },
+  "2024-09-11": {
+    "temperature": 26.87916666666666,
+    "precipitation": 4.5
+  },
+  "2024-09-12": {
+    "temperature": 26.499999999999996,
+    "precipitation": 5.999999999999999
+  },
+  "2024-09-13": {
+    "temperature": 25.683333333333334,
+    "precipitation": 3.2
+  },
+  "2024-09-14": {
+    "temperature": 26.20833333333333,
+    "precipitation": 1.3
+  },
+  "2024-09-15": {
+    "temperature": 25.983333333333334,
+    "precipitation": 2.1
+  },
+  "2024-09-16": {
+    "temperature": 26.33333333333333,
+    "precipitation": 1.4000000000000004
+  },
+  "2024-09-17": {
+    "temperature": 26.58333333333333,
+    "precipitation": 0.5
+  },
+  "2024-09-18": {
+    "temperature": 26.174999999999997,
+    "precipitation": 1.9
+  },
+  "2024-09-19": {
+    "temperature": 26.400000000000002,
+    "precipitation": 0.1
+  },
+  "2024-09-20": {
+    "temperature": 27.204166666666666,
+    "precipitation": 0.0
+  },
+  "2024-09-21": {
+    "temperature": 27.858333333333334,
+    "precipitation": 2.2
+  },
+  "2024-09-22": {
+    "temperature": 28.104166666666668,
+    "precipitation": 0.0
+  },
+  "2024-09-23": {
+    "temperature": 28.125000000000004,
+    "precipitation": 1.2000000000000002
+  },
+  "2024-09-24": {
+    "temperature": 27.754166666666666,
+    "precipitation": 3.3000000000000003
+  },
+  "2024-09-25": {
+    "temperature": 27.625000000000004,
+    "precipitation": 1.7000000000000002
+  },
+  "2024-09-26": {
+    "temperature": 28.26666666666667,
+    "precipitation": 0.1
+  },
+  "2024-09-27": {
+    "temperature": 28.462500000000002,
+    "precipitation": 0.2
+  },
+  "2024-09-28": {
+    "temperature": 28.604166666666668,
+    "precipitation": 0.6
+  },
+  "2024-09-29": {
+    "temperature": 28.037499999999998,
+    "precipitation": 7.799999999999999
+  },
+  "2024-09-30": {
+    "temperature": 27.416666666666668,
+    "precipitation": 9.4
+  },
+  "2024-10-01": {
+    "temperature": 26.93333333333334,
+    "precipitation": 1.2
+  },
+  "2024-10-02": {
+    "temperature": 27.645833333333332,
+    "precipitation": 0.0
+  },
+  "2024-10-03": {
+    "temperature": 28.000000000000004,
+    "precipitation": 3.0999999999999996
+  },
+  "2024-10-04": {
+    "temperature": 27.995833333333326,
+    "precipitation": 1.7000000000000002
+  },
+  "2024-10-05": {
+    "temperature": 27.85416666666666,
+    "precipitation": 2.2000000000000006
+  },
+  "2024-10-06": {
+    "temperature": 27.675,
+    "precipitation": 3.8000000000000003
+  },
+  "2024-10-07": {
+    "temperature": 27.604166666666668,
+    "precipitation": 8.899999999999999
+  },
+  "2024-10-08": {
+    "temperature": 27.6375,
+    "precipitation": 5.8
+  },
+  "2024-10-09": {
+    "temperature": 27.604166666666668,
+    "precipitation": 3.4
+  },
+  "2024-10-10": {
+    "temperature": 27.97083333333333,
+    "precipitation": 0.4
+  },
+  "2024-10-11": {
+    "temperature": 28.01666666666667,
+    "precipitation": 1.0
+  },
+  "2024-10-12": {
+    "temperature": 28.570833333333336,
+    "precipitation": 2.0
+  },
+  "2024-10-13": {
+    "temperature": 28.26666666666667,
+    "precipitation": 3.400000000000001
+  },
+  "2024-10-14": {
+    "temperature": 28.2625,
+    "precipitation": 1.1
+  },
+  "2024-10-15": {
+    "temperature": 27.529166666666665,
+    "precipitation": 2.2000000000000006
+  },
+  "2024-10-16": {
+    "temperature": 28.016666666666666,
+    "precipitation": 0.0
+  },
+  "2024-10-17": {
+    "temperature": 28.55,
+    "precipitation": 0.0
+  },
+  "2024-10-18": {
+    "temperature": 28.2,
+    "precipitation": 1.9
+  },
+  "2024-10-19": {
+    "temperature": 28.854166666666668,
+    "precipitation": 0.7999999999999999
+  },
+  "2024-10-20": {
+    "temperature": 28.450000000000003,
+    "precipitation": 2.0000000000000004
+  },
+  "2024-10-21": {
+    "temperature": 27.291666666666657,
+    "precipitation": 5.1
+  },
+  "2024-10-22": {
+    "temperature": 27.3125,
+    "precipitation": 3.400000000000001
+  },
+  "2024-10-23": {
+    "temperature": 27.120833333333337,
+    "precipitation": 3.0
+  },
+  "2024-10-24": {
+    "temperature": 27.90416666666667,
+    "precipitation": 0.5
+  },
+  "2024-10-25": {
+    "temperature": 28.375,
+    "precipitation": 0.5
+  },
+  "2024-10-26": {
+    "temperature": 28.425,
+    "precipitation": 0.1
+  },
+  "2024-10-27": {
+    "temperature": 28.866666666666664,
+    "precipitation": 0.0
+  },
+  "2024-10-28": {
+    "temperature": 28.97916666666667,
+    "precipitation": 0.0
+  },
+  "2024-10-29": {
+    "temperature": 28.325000000000003,
+    "precipitation": 4.6
+  },
+  "2024-10-30": {
+    "temperature": 27.479166666666668,
+    "precipitation": 16.6
+  },
+  "2024-10-31": {
+    "temperature": 27.170833333333334,
+    "precipitation": 6.1
+  },
+  "2024-11-01": {
+    "temperature": 27.11666666666667,
+    "precipitation": 6.999999999999998
+  },
+  "2024-11-02": {
+    "temperature": 27.55416666666667,
+    "precipitation": 1.7000000000000004
+  },
+  "2024-11-03": {
+    "temperature": 27.41666666666667,
+    "precipitation": 8.3
+  },
+  "2024-11-04": {
+    "temperature": 27.22916666666666,
+    "precipitation": 3.8
+  },
+  "2024-11-05": {
+    "temperature": 27.604166666666668,
+    "precipitation": 0.30000000000000004
+  },
+  "2024-11-06": {
+    "temperature": 28.904166666666665,
+    "precipitation": 0.0
+  },
+  "2024-11-07": {
+    "temperature": 28.92083333333333,
+    "precipitation": 0.6
+  },
+  "2024-11-08": {
+    "temperature": 28.145833333333332,
+    "precipitation": 1.4000000000000004
+  },
+  "2024-11-09": {
+    "temperature": 28.270833333333332,
+    "precipitation": 0.7999999999999999
+  },
+  "2024-11-10": {
+    "temperature": 28.091666666666665,
+    "precipitation": 1.5
+  },
+  "2024-11-11": {
+    "temperature": 28.770833333333332,
+    "precipitation": 2.0
+  },
+  "2024-11-12": {
+    "temperature": 29.108333333333334,
+    "precipitation": 0.0
+  },
+  "2024-11-13": {
+    "temperature": 29.7375,
+    "precipitation": 0.4
+  },
+  "2024-11-14": {
+    "temperature": 29.354166666666668,
+    "precipitation": 2.9000000000000004
+  },
+  "2024-11-15": {
+    "temperature": 29.66250000000001,
+    "precipitation": 1.4000000000000004
+  },
+  "2024-11-16": {
+    "temperature": 29.508333333333326,
+    "precipitation": 1.6
+  },
+  "2024-11-17": {
+    "temperature": 29.241666666666674,
+    "precipitation": 3.2
+  },
+  "2024-11-18": {
+    "temperature": 28.91666666666666,
+    "precipitation": 4.3999999999999995
+  },
+  "2024-11-19": {
+    "temperature": 28.47916666666667,
+    "precipitation": 4.800000000000001
+  },
+  "2024-11-20": {
+    "temperature": 28.98333333333333,
+    "precipitation": 1.0
+  },
+  "2024-11-21": {
+    "temperature": 29.27916666666667,
+    "precipitation": 1.3
+  },
+  "2024-11-22": {
+    "temperature": 30.42083333333333,
+    "precipitation": 0.30000000000000004
+  },
+  "2024-11-23": {
+    "temperature": 29.670833333333324,
+    "precipitation": 2.0
+  },
+  "2024-11-24": {
+    "temperature": 29.466666666666658,
+    "precipitation": 0.7999999999999999
+  },
+  "2024-11-25": {
+    "temperature": 29.1125,
+    "precipitation": 1.1
+  },
+  "2024-11-26": {
+    "temperature": 28.854166666666675,
+    "precipitation": 2.3
+  },
+  "2024-11-27": {
+    "temperature": 28.891666666666666,
+    "precipitation": 4.3
+  },
+  "2024-11-28": {
+    "temperature": 28.087499999999995,
+    "precipitation": 6.1000000000000005
+  },
+  "2024-11-29": {
+    "temperature": 27.529166666666658,
+    "precipitation": 5.899999999999999
+  },
+  "2024-11-30": {
+    "temperature": 26.950000000000003,
+    "precipitation": 24.799999999999997
+  },
+  "2024-12-01": {
+    "temperature": 27.366666666666664,
+    "precipitation": 13.2
+  },
+  "2024-12-02": {
+    "temperature": 28.116666666666664,
+    "precipitation": 8.5
+  },
+  "2024-12-03": {
+    "temperature": 28.479166666666668,
+    "precipitation": 2.6
+  },
+  "2024-12-04": {
+    "temperature": 27.954166666666666,
+    "precipitation": 5.699999999999999
+  },
+  "2024-12-05": {
+    "temperature": 27.270833333333332,
+    "precipitation": 5.8999999999999995
+  },
+  "2024-12-06": {
+    "temperature": 26.19583333333333,
+    "precipitation": 21.100000000000005
+  },
+  "2024-12-07": {
+    "temperature": 27.079166666666666,
+    "precipitation": 4.800000000000001
+  },
+  "2024-12-08": {
+    "temperature": 26.89583333333334,
+    "precipitation": 25.9
+  },
+  "2024-12-09": {
+    "temperature": 26.49166666666667,
+    "precipitation": 26.9
+  },
+  "2024-12-10": {
+    "temperature": 26.549999999999997,
+    "precipitation": 19.8
+  },
+  "2024-12-11": {
+    "temperature": 27.325,
+    "precipitation": 9.899999999999999
+  },
+  "2024-12-12": {
+    "temperature": 26.537499999999994,
+    "precipitation": 12.4
+  },
+  "2024-12-13": {
+    "temperature": 27.675,
+    "precipitation": 0.9
+  },
+  "2024-12-14": {
+    "temperature": 27.712500000000002,
+    "precipitation": 6.8
+  },
+  "2024-12-15": {
+    "temperature": 27.34583333333333,
+    "precipitation": 11.799999999999995
+  },
+  "2024-12-16": {
+    "temperature": 26.912500000000005,
+    "precipitation": 11.2
+  },
+  "2024-12-17": {
+    "temperature": 27.270833333333332,
+    "precipitation": 11.999999999999996
+  },
+  "2024-12-18": {
+    "temperature": 27.3875,
+    "precipitation": 22.9
+  },
+  "2024-12-19": {
+    "temperature": 28.44583333333334,
+    "precipitation": 4.8
+  },
+  "2024-12-20": {
+    "temperature": 27.40833333333333,
+    "precipitation": 15.6
+  },
+  "2024-12-21": {
+    "temperature": 26.933333333333337,
+    "precipitation": 16.900000000000002
+  },
+  "2024-12-22": {
+    "temperature": 26.39166666666667,
+    "precipitation": 43.50000000000001
+  },
+  "2024-12-23": {
+    "temperature": 27.758333333333336,
+    "precipitation": 4.3999999999999995
+  },
+  "2024-12-24": {
+    "temperature": 27.60416666666667,
+    "precipitation": 3.8000000000000003
+  },
+  "2024-12-25": {
+    "temperature": 26.916666666666668,
+    "precipitation": 12.600000000000001
+  },
+  "2024-12-26": {
+    "temperature": 26.50833333333334,
+    "precipitation": 16.2
+  },
+  "2024-12-27": {
+    "temperature": 26.633333333333336,
+    "precipitation": 22.400000000000002
+  },
+  "2024-12-28": {
+    "temperature": 26.275000000000002,
+    "precipitation": 32.0
+  },
+  "2024-12-29": {
+    "temperature": 26.65833333333333,
+    "precipitation": 20.8
+  },
+  "2024-12-30": {
+    "temperature": 27.466666666666665,
+    "precipitation": 6.1
+  },
+  "2024-12-31": {
+    "temperature": 27.400000000000002,
+    "precipitation": 14.299999999999999
+  },
+  "2025-01-01": {
+    "temperature": 26.58333333333333,
+    "precipitation": 29.000000000000004
+  },
+  "2025-01-02": {
+    "temperature": 25.745833333333337,
+    "precipitation": 33.5
+  },
+  "2025-01-03": {
+    "temperature": 25.858333333333334,
+    "precipitation": 19.0
+  },
+  "2025-01-04": {
+    "temperature": 25.533333333333335,
+    "precipitation": 18.800000000000004
+  },
+  "2025-01-05": {
+    "temperature": 25.712499999999995,
+    "precipitation": 38.099999999999994
+  },
+  "2025-01-06": {
+    "temperature": 26.104166666666668,
+    "precipitation": 10.300000000000002
+  },
+  "2025-01-07": {
+    "temperature": 27.058333333333326,
+    "precipitation": 5.699999999999999
+  },
+  "2025-01-08": {
+    "temperature": 27.058333333333323,
+    "precipitation": 6.199999999999999
+  },
+  "2025-01-09": {
+    "temperature": 26.791666666666668,
+    "precipitation": 18.6
+  },
+  "2025-01-10": {
+    "temperature": 26.3625,
+    "precipitation": 19.699999999999996
+  },
+  "2025-01-11": {
+    "temperature": 26.541666666666668,
+    "precipitation": 18.500000000000004
+  },
+  "2025-01-12": {
+    "temperature": 26.079166666666666,
+    "precipitation": 42.3
+  },
+  "2025-01-13": {
+    "temperature": 26.824999999999992,
+    "precipitation": 16.299999999999997
+  },
+  "2025-01-14": {
+    "temperature": 27.191666666666666,
+    "precipitation": 12.0
+  },
+  "2025-01-15": {
+    "temperature": 27.650000000000006,
+    "precipitation": 4.0
+  },
+  "2025-01-16": {
+    "temperature": 27.3625,
+    "precipitation": 10.9
+  },
+  "2025-01-17": {
+    "temperature": 28.333333333333332,
+    "precipitation": 2.6
+  },
+  "2025-01-18": {
+    "temperature": 27.879166666666666,
+    "precipitation": 14.899999999999999
+  },
+  "2025-01-19": {
+    "temperature": 27.216666666666672,
+    "precipitation": 19.999999999999996
+  },
+  "2025-01-20": {
+    "temperature": 26.174999999999997,
+    "precipitation": 30.1
+  },
+  "2025-01-21": {
+    "temperature": 26.59166666666667,
+    "precipitation": 27.000000000000004
+  },
+  "2025-01-22": {
+    "temperature": 26.604166666666657,
+    "precipitation": 16.599999999999998
+  },
+  "2025-01-23": {
+    "temperature": 26.34166666666667,
+    "precipitation": 28.300000000000008
+  },
+  "2025-01-24": {
+    "temperature": 27.24166666666667,
+    "precipitation": 4.299999999999999
+  },
+  "2025-01-25": {
+    "temperature": 27.9375,
+    "precipitation": 1.8000000000000005
+  },
+  "2025-01-26": {
+    "temperature": 27.595833333333335,
+    "precipitation": 3.900000000000001
+  },
+  "2025-01-27": {
+    "temperature": 26.491666666666664,
+    "precipitation": 19.900000000000002
+  },
+  "2025-01-28": {
+    "temperature": 27.154166666666665,
+    "precipitation": 6.999999999999999
+  },
+  "2025-01-29": {
+    "temperature": 27.554166666666664,
+    "precipitation": 2.8000000000000003
+  },
+  "2025-01-30": {
+    "temperature": 26.929166666666664,
+    "precipitation": 6.800000000000001
+  },
+  "2025-01-31": {
+    "temperature": 27.479166666666668,
+    "precipitation": 0.2
+  },
+  "2025-02-01": {
+    "temperature": 27.429166666666664,
+    "precipitation": 1.1
+  },
+  "2025-02-02": {
+    "temperature": 28.545833333333334,
+    "precipitation": 0.0
+  },
+  "2025-02-03": {
+    "temperature": 29.000000000000004,
+    "precipitation": 0.5
+  },
+  "2025-02-04": {
+    "temperature": 29.14166666666667,
+    "precipitation": 0.5
+  },
+  "2025-02-05": {
+    "temperature": 28.895833333333332,
+    "precipitation": 1.4000000000000001
+  },
+  "2025-02-06": {
+    "temperature": 27.84583333333333,
+    "precipitation": 24.4
+  },
+  "2025-02-07": {
+    "temperature": 28.53333333333333,
+    "precipitation": 1.9000000000000001
+  },
+  "2025-02-08": {
+    "temperature": 26.13333333333333,
+    "precipitation": 39.00000000000001
+  },
+  "2025-02-09": {
+    "temperature": 26.379166666666674,
+    "precipitation": 15.299999999999997
+  },
+  "2025-02-10": {
+    "temperature": 26.00833333333333,
+    "precipitation": 34.5
+  },
+  "2025-02-11": {
+    "temperature": 26.629166666666666,
+    "precipitation": 24.5
+  },
+  "2025-02-12": {
+    "temperature": 26.08333333333333,
+    "precipitation": 42.90000000000001
+  },
+  "2025-02-13": {
+    "temperature": 26.716666666666672,
+    "precipitation": 14.100000000000001
+  },
+  "2025-02-14": {
+    "temperature": 27.424999999999997,
+    "precipitation": 1.9000000000000001
+  },
+  "2025-02-15": {
+    "temperature": 27.387499999999992,
+    "precipitation": 8.2
+  },
+  "2025-02-16": {
+    "temperature": 27.19583333333333,
+    "precipitation": 3.4999999999999996
+  },
+  "2025-02-17": {
+    "temperature": 26.41666666666666,
+    "precipitation": 13.600000000000001
+  },
+  "2025-02-18": {
+    "temperature": 26.650000000000002,
+    "precipitation": 4.200000000000002
+  },
+  "2025-02-19": {
+    "temperature": 26.941666666666666,
+    "precipitation": 7.799999999999997
+  },
+  "2025-02-20": {
+    "temperature": 26.370833333333334,
+    "precipitation": 10.1
+  },
+  "2025-02-21": {
+    "temperature": 26.729166666666668,
+    "precipitation": 5.7
+  },
+  "2025-02-22": {
+    "temperature": 26.833333333333332,
+    "precipitation": 9.5
+  },
+  "2025-02-23": {
+    "temperature": 27.029166666666658,
+    "precipitation": 7.800000000000001
+  },
+  "2025-02-24": {
+    "temperature": 26.37500000000001,
+    "precipitation": 16.7
+  },
+  "2025-02-25": {
+    "temperature": 26.549999999999994,
+    "precipitation": 2.8000000000000007
+  },
+  "2025-02-26": {
+    "temperature": 26.641666666666662,
+    "precipitation": 3.4000000000000004
+  },
+  "2025-02-27": {
+    "temperature": 27.11666666666667,
+    "precipitation": 3.5000000000000013
+  },
+  "2025-02-28": {
+    "temperature": 27.320833333333336,
+    "precipitation": 0.8999999999999999
+  },
+  "2025-03-01": {
+    "temperature": 27.954166666666666,
+    "precipitation": 1.4000000000000004
+  },
+  "2025-03-02": {
+    "temperature": 28.38333333333334,
+    "precipitation": 1.1
+  },
+  "2025-03-03": {
+    "temperature": 28.20833333333334,
+    "precipitation": 5.899999999999999
+  },
+  "2025-03-04": {
+    "temperature": 27.97083333333333,
+    "precipitation": 2.6
+  },
+  "2025-03-05": {
+    "temperature": 28.754166666666663,
+    "precipitation": 0.4
+  },
+  "2025-03-06": {
+    "temperature": 28.762500000000003,
+    "precipitation": 0.9999999999999999
+  },
+  "2025-03-07": {
+    "temperature": 28.191666666666663,
+    "precipitation": 0.5
+  },
+  "2025-03-08": {
+    "temperature": 27.974999999999998,
+    "precipitation": 2.5999999999999996
+  },
+  "2025-03-09": {
+    "temperature": 27.52083333333333,
+    "precipitation": 1.8000000000000005
+  },
+  "2025-03-10": {
+    "temperature": 28.433333333333334,
+    "precipitation": 2.3
+  },
+  "2025-03-11": {
+    "temperature": 28.462500000000002,
+    "precipitation": 4.1
+  },
+  "2025-03-12": {
+    "temperature": 28.366666666666664,
+    "precipitation": 4.4
+  },
+  "2025-03-13": {
+    "temperature": 28.20833333333334,
+    "precipitation": 6.1000000000000005
+  },
+  "2025-03-14": {
+    "temperature": 28.149999999999995,
+    "precipitation": 1.3
+  },
+  "2025-03-15": {
+    "temperature": 26.995833333333326,
+    "precipitation": 9.499999999999996
+  },
+  "2025-03-16": {
+    "temperature": 27.224999999999998,
+    "precipitation": 3.2000000000000006
+  },
+  "2025-03-17": {
+    "temperature": 27.654166666666665,
+    "precipitation": 5.6000000000000005
+  },
+  "2025-03-18": {
+    "temperature": 26.649999999999995,
+    "precipitation": 20.9
+  },
+  "2025-03-19": {
+    "temperature": 25.770833333333332,
+    "precipitation": 27.100000000000005
+  },
+  "2025-03-20": {
+    "temperature": 27.837500000000002,
+    "precipitation": 21.7
+  },
+  "2025-03-21": {
+    "temperature": 27.345833333333335,
+    "precipitation": 17.500000000000004
+  },
+  "2025-03-22": {
+    "temperature": 27.570833333333336,
+    "precipitation": 26.400000000000002
+  },
+  "2025-03-23": {
+    "temperature": 28.270833333333332,
+    "precipitation": 2.1000000000000005
+  },
+  "2025-03-24": {
+    "temperature": 28.379166666666674,
+    "precipitation": 0.7
+  },
+  "2025-03-25": {
+    "temperature": 28.549999999999997,
+    "precipitation": 0.1
+  },
+  "2025-03-26": {
+    "temperature": 28.40416666666667,
+    "precipitation": 1.8
+  },
+  "2025-03-27": {
+    "temperature": 27.554166666666664,
+    "precipitation": 12.700000000000001
+  },
+  "2025-03-28": {
+    "temperature": 27.645833333333332,
+    "precipitation": 8.5
+  },
+  "2025-03-29": {
+    "temperature": 27.095833333333328,
+    "precipitation": 7.8999999999999995
+  },
+  "2025-03-30": {
+    "temperature": 26.737499999999997,
+    "precipitation": 13.999999999999998
+  },
+  "2025-03-31": {
+    "temperature": 27.224999999999998,
+    "precipitation": 3.500000000000001
+  },
+  "2025-04-01": {
+    "temperature": 27.58333333333333,
+    "precipitation": 2.4000000000000004
+  },
+  "2025-04-02": {
+    "temperature": 27.612500000000008,
+    "precipitation": 0.8999999999999999
+  },
+  "2025-04-03": {
+    "temperature": 27.820833333333336,
+    "precipitation": 0.4
+  },
+  "2025-04-04": {
+    "temperature": 27.349999999999998,
+    "precipitation": 0.5
+  },
+  "2025-04-05": {
+    "temperature": 27.46666666666667,
+    "precipitation": 0.0
+  },
+  "2025-04-06": {
+    "temperature": 27.929166666666664,
+    "precipitation": 0.4
+  },
+  "2025-04-07": {
+    "temperature": 28.183333333333334,
+    "precipitation": 0.30000000000000004
+  },
+  "2025-04-08": {
+    "temperature": 27.77499999999999,
+    "precipitation": 4.199999999999999
+  },
+  "2025-04-09": {
+    "temperature": 27.137500000000003,
+    "precipitation": 11.899999999999997
+  },
+  "2025-04-10": {
+    "temperature": 27.32083333333334,
+    "precipitation": 18.0
+  },
+  "2025-04-11": {
+    "temperature": 27.47083333333333,
+    "precipitation": 5.099999999999998
+  },
+  "2025-04-12": {
+    "temperature": 28.104166666666668,
+    "precipitation": 0.1
+  },
+  "2025-04-13": {
+    "temperature": 27.95,
+    "precipitation": 1.1
+  },
+  "2025-04-14": {
+    "temperature": 28.212500000000002,
+    "precipitation": 0.7999999999999999
+  },
+  "2025-04-15": {
+    "temperature": 28.47916666666667,
+    "precipitation": 0.0
+  },
+  "2025-04-16": {
+    "temperature": 28.52083333333334,
+    "precipitation": 1.2
+  },
+  "2025-04-17": {
+    "temperature": 28.179166666666664,
+    "precipitation": 2.9000000000000004
+  },
+  "2025-04-18": {
+    "temperature": 27.1375,
+    "precipitation": 18.7
+  },
+  "2025-04-19": {
+    "temperature": 27.362499999999994,
+    "precipitation": 9.600000000000001
+  },
+  "2025-04-20": {
+    "temperature": 27.308333333333334,
+    "precipitation": 3.4000000000000004
+  },
+  "2025-04-21": {
+    "temperature": 27.858333333333334,
+    "precipitation": 1.8
+  },
+  "2025-04-22": {
+    "temperature": 27.07083333333333,
+    "precipitation": 1.9
+  },
+  "2025-04-23": {
+    "temperature": 27.97083333333333,
+    "precipitation": 0.0
+  },
+  "2025-04-24": {
+    "temperature": 27.979166666666668,
+    "precipitation": 0.0
+  },
+  "2025-04-25": {
+    "temperature": 28.058333333333334,
+    "precipitation": 0.9999999999999999
+  },
+  "2025-04-26": {
+    "temperature": 28.24166666666667,
+    "precipitation": 0.5
+  },
+  "2025-04-27": {
+    "temperature": 28.341666666666665,
+    "precipitation": 0.1
+  },
+  "2025-04-28": {
+    "temperature": 28.120833333333334,
+    "precipitation": 0.30000000000000004
+  },
+  "2025-04-29": {
+    "temperature": 28.700000000000003,
+    "precipitation": 0.5
+  },
+  "2025-04-30": {
+    "temperature": 28.47083333333333,
+    "precipitation": 1.0
+  },
+  "2025-05-01": {
+    "temperature": 28.50833333333334,
+    "precipitation": 1.7000000000000002
+  },
+  "2025-05-02": {
+    "temperature": 28.424999999999997,
+    "precipitation": 0.2
+  },
+  "2025-05-03": {
+    "temperature": 28.375,
+    "precipitation": 0.6000000000000001
+  },
+  "2025-05-04": {
+    "temperature": 28.8625,
+    "precipitation": 1.5000000000000002
+  },
+  "2025-05-05": {
+    "temperature": 27.53333333333333,
+    "precipitation": 11.299999999999995
+  },
+  "2025-05-06": {
+    "temperature": 27.0,
+    "precipitation": 11.799999999999995
+  },
+  "2025-05-07": {
+    "temperature": 26.779166666666665,
+    "precipitation": 14.5
+  },
+  "2025-05-08": {
+    "temperature": 27.48333333333333,
+    "precipitation": 3.600000000000001
+  },
+  "2025-05-09": {
+    "temperature": 26.654166666666665,
+    "precipitation": 7.3999999999999995
+  },
+  "2025-05-10": {
+    "temperature": 26.65833333333333,
+    "precipitation": 11.9
+  },
+  "2025-05-11": {
+    "temperature": 27.07083333333333,
+    "precipitation": 16.3
+  },
+  "2025-05-12": {
+    "temperature": 26.795833333333334,
+    "precipitation": 12.699999999999998
+  },
+  "2025-05-13": {
+    "temperature": 27.070833333333322,
+    "precipitation": 7.5
+  },
+  "2025-05-14": {
+    "temperature": 26.941666666666666,
+    "precipitation": 8.999999999999996
+  },
+  "2025-05-15": {
+    "temperature": 27.42916666666667,
+    "precipitation": 10.799999999999997
+  },
+  "2025-05-16": {
+    "temperature": 28.05,
+    "precipitation": 0.7999999999999999
+  },
+  "2025-05-17": {
+    "temperature": 28.024999999999995,
+    "precipitation": 4.2
+  },
+  "2025-05-18": {
+    "temperature": 28.095833333333335,
+    "precipitation": 0.9
+  },
+  "2025-05-19": {
+    "temperature": 28.308333333333337,
+    "precipitation": 1.9000000000000004
+  },
+  "2025-05-20": {
+    "temperature": 27.758333333333336,
+    "precipitation": 2.000000000000001
+  },
+  "2025-05-21": {
+    "temperature": 27.62499999999999,
+    "precipitation": 1.6
+  },
+  "2025-05-22": {
+    "temperature": 27.525000000000002,
+    "precipitation": 8.799999999999997
+  },
+  "2025-05-23": {
+    "temperature": 26.679166666666664,
+    "precipitation": 2.2
+  },
+  "2025-05-24": {
+    "temperature": 27.004166666666666,
+    "precipitation": 7.999999999999999
+  },
+  "2025-05-25": {
+    "temperature": 27.7625,
+    "precipitation": 1.1
+  },
+  "2025-05-26": {
+    "temperature": 27.829166666666666,
+    "precipitation": 1.1
+  },
+  "2025-05-27": {
+    "temperature": 26.92916666666667,
+    "precipitation": 7.6
+  },
+  "2025-05-28": {
+    "temperature": 27.82083333333334,
+    "precipitation": 0.0
+  },
+  "2025-05-29": {
+    "temperature": 28.175000000000008,
+    "precipitation": 1.2
+  },
+  "2025-05-30": {
+    "temperature": 27.724999999999994,
+    "precipitation": 6.399999999999999
+  },
+  "2025-05-31": {
+    "temperature": 27.583333333333332,
+    "precipitation": 5.6
+  },
+  "2025-06-01": {
+    "temperature": 28.329166666666666,
+    "precipitation": 1.3
+  },
+  "2025-06-02": {
+    "temperature": 28.020833333333332,
+    "precipitation": 0.0
+  },
+  "2025-06-03": {
+    "temperature": 27.89166666666667,
+    "precipitation": 0.7999999999999999
+  },
+  "2025-06-04": {
+    "temperature": 28.175000000000008,
+    "precipitation": 0.6
+  },
+  "2025-06-05": {
+    "temperature": 28.64583333333334,
+    "precipitation": 0.0
+  },
+  "2025-06-06": {
+    "temperature": 28.983333333333334,
+    "precipitation": 0.4
+  },
+  "2025-06-07": {
+    "temperature": 26.29166666666666,
+    "precipitation": 21.90000000000001
+  },
+  "2025-06-08": {
+    "temperature": 27.537500000000005,
+    "precipitation": 1.6000000000000003
+  },
+  "2025-06-09": {
+    "temperature": 27.699999999999992,
+    "precipitation": 1.3000000000000003
+  },
+  "2025-06-10": {
+    "temperature": 27.65416666666667,
+    "precipitation": 3.300000000000001
+  },
+  "2025-06-11": {
+    "temperature": 28.150000000000006,
+    "precipitation": 0.7
+  },
+  "2025-06-12": {
+    "temperature": 28.254166666666674,
+    "precipitation": 1.7000000000000006
+  },
+  "2025-06-13": {
+    "temperature": 26.6125,
+    "precipitation": 10.7
+  },
+  "2025-06-14": {
+    "temperature": 26.700000000000006,
+    "precipitation": 4.3999999999999995
+  },
+  "2025-06-15": {
+    "temperature": 27.07083333333333,
+    "precipitation": 2.6
+  },
+  "2025-06-16": {
+    "temperature": 27.241666666666664,
+    "precipitation": 3.6000000000000005
+  },
+  "2025-06-17": {
+    "temperature": 27.295833333333334,
+    "precipitation": 0.4
+  },
+  "2025-06-18": {
+    "temperature": 27.17083333333333,
+    "precipitation": 0.0
+  },
+  "2025-06-19": {
+    "temperature": 27.379166666666674,
+    "precipitation": 0.9
+  },
+  "2025-06-20": {
+    "temperature": 27.099999999999994,
+    "precipitation": 0.5
+  },
+  "2025-06-21": {
+    "temperature": 27.50416666666666,
+    "precipitation": 2.5
+  },
+  "2025-06-22": {
+    "temperature": 27.575,
+    "precipitation": 1.0999999999999999
+  }
+}
