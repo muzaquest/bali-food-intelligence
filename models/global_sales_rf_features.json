@@ -1,0 +1,24 @@
+{
+  "features": [
+    "grab_offline_rate",
+    "gojek_close_minutes",
+    "grab_driver_waiting",
+    "gojek_driver_waiting",
+    "gojek_preparation_minutes",
+    "gojek_delivery_minutes",
+    "precipitation",
+    "temperature",
+    "is_holiday",
+    "day_of_week",
+    "is_weekend",
+    "roas_grab",
+    "roas_gojek",
+    "ads_spend_total",
+    "impressions_total",
+    "rating_grab",
+    "rating_gojek",
+    "sales_7day_avg",
+    "sales_30day_avg",
+    "sales_gradient_7"
+  ]
+}

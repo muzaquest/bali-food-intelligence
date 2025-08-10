@@ -103,7 +103,7 @@ def build_global_dataset(db_path: str = "database.sqlite") -> pd.DataFrame:
         "gojek_ads_spend","gojek_ads_sales","gojek_impressions"
     ]:
         if col in df.columns:
-            df[col] = df[col].fillna(0)
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
     # Ratings: prefer available
     df["rating_grab"] = df["rating_grab"].fillna(0)
@@ -115,8 +115,8 @@ def build_global_dataset(db_path: str = "database.sqlite") -> pd.DataFrame:
     df["gojek_delivery_minutes"] = df["gojek_delivery_time"].apply(_time_to_minutes)
 
     # Target and simple aggregations
-    df["total_sales"] = df["grab_sales"] + df["gojek_sales"]
-    df["total_orders"] = df["grab_orders"] + df["gojek_orders"]
+    df["total_sales"] = df["grab_sales"].astype(float) + df["gojek_sales"].astype(float)
+    df["total_orders"] = df["grab_orders"].astype(float) + df["gojek_orders"].astype(float)
 
     # Marketing features
     df["roas_grab"] = df["grab_ads_sales"] / df["grab_ads_spend"].replace(0, np.nan)
