@@ -1234,7 +1234,7 @@ def analyze_platform_downtime(restaurant_id, start_date, end_date):
     return results
 
 
-def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
+def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: bool=False):
     """ПОЛНЫЙ анализ ресторана с использованием ВСЕХ доступных параметров + ВСЕ API"""
     print(f"\n🔬 ПОЛНЫЙ АНАЛИЗ ВСЕХ ПАРАМЕТРОВ + API: {restaurant_name.upper()}")
     print("=" * 80)
@@ -3396,6 +3396,8 @@ def main():
     
     parser.add_argument('--end', 
                        help='Дата окончания периода (YYYY-MM-DD)')
+    parser.add_argument('--plain', action='store_true',
+                       help='Понятный язык в отчете (без тех.жаргона)')
     
     args = parser.parse_args()
     
@@ -3419,7 +3421,7 @@ def main():
                 print("   Используйте: python main.py analyze \"Название ресторана\"")
                 sys.exit(1)
             
-            analyze_restaurant(args.restaurant, args.start, args.end)
+            analyze_restaurant(args.restaurant, args.start, args.end, plain=args.plain)
             
         elif args.command == 'market':
             analyze_market(args.start, args.end)
