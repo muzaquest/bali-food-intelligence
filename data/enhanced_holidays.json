@@ -1,0 +1,822 @@
+{
+  "2023-01-01": {
+    "name": "New Year's Day",
+    "type": "international",
+    "category": "Международный"
+  },
+  "2023-12-25": {
+    "name": "Christmas Day",
+    "type": "international",
+    "category": "Христианский"
+  },
+  "2023-12-31": {
+    "name": "New Year's Eve",
+    "type": "international",
+    "category": "Международный"
+  },
+  "2023-01-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-01-23": {
+    "name": "Chinese New Year Holiday",
+    "type": "chinese",
+    "category": "Китайский"
+  },
+  "2023-04-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-04-23": {
+    "name": "Eid al-Fitr Holiday",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2023-06-29": {
+    "name": "Eid al-Adha",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2023-07-19": {
+    "name": "Islamic New Year",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2023-09-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-02-18": {
+    "name": "Isra and Miraj",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2023-08-17": {
+    "name": "Independence Day",
+    "type": "national",
+    "category": "Национальный"
+  },
+  "2023-05-01": {
+    "name": "Labor Day",
+    "type": "national",
+    "category": "Национальный"
+  },
+  "2023-06-01": {
+    "name": "Pancasila Day",
+    "type": "national",
+    "category": "Национальный"
+  },
+  "2023-03-22": {
+    "name": "Nyepi (Day of Silence)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-05-02": {
+    "name": "Kuningan",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-11-18": {
+    "name": "Galungan",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-11-28": {
+    "name": "Kuningan",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-06-04": {
+    "name": "Vesak Day",
+    "type": "buddhist",
+    "category": "Буддистский"
+  },
+  "2023-01-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-01-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-02-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-02-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-03-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-03-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-04-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-04-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-05-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-05-30": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-06-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-06-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-07-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-07-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-08-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-08-30": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-09-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-10-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-10-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-11-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-11-30": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-12-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-12-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-01-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-02-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-02-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-03-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-03-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-04-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-05-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-05-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-06-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-06-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-07-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-07-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-08-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-08-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-09-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-09-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-10-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-10-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-11-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-11-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-12-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2023-12-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-01-01": {
+    "name": "New Year's Day",
+    "type": "international",
+    "category": "Международный"
+  },
+  "2024-12-25": {
+    "name": "Christmas Day",
+    "type": "international",
+    "category": "Христианский"
+  },
+  "2024-12-31": {
+    "name": "Galungan",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-02-10": {
+    "name": "Chinese New Year",
+    "type": "chinese",
+    "category": "Китайский"
+  },
+  "2024-02-11": {
+    "name": "Chinese New Year Holiday",
+    "type": "chinese",
+    "category": "Китайский"
+  },
+  "2024-04-10": {
+    "name": "Eid al-Fitr",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2024-04-11": {
+    "name": "Eid al-Fitr Holiday",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2024-06-17": {
+    "name": "Eid al-Adha",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2024-07-07": {
+    "name": "Islamic New Year",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2024-09-16": {
+    "name": "Mawlid an-Nabi",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2024-02-08": {
+    "name": "Isra and Miraj",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2024-08-17": {
+    "name": "Independence Day",
+    "type": "national",
+    "category": "Национальный"
+  },
+  "2024-05-01": {
+    "name": "Labor Day",
+    "type": "national",
+    "category": "Национальный"
+  },
+  "2024-06-01": {
+    "name": "Pancasila Day",
+    "type": "national",
+    "category": "Национальный"
+  },
+  "2024-03-11": {
+    "name": "Nyepi (Day of Silence)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-06-05": {
+    "name": "Galungan",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-06-15": {
+    "name": "Kuningan",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-05-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-01-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-01-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-02-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-02-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-03-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-03-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-04-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-04-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-05-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-05-30": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-06-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-06-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-07-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-07-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-08-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-08-30": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-09-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-09-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-10-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-10-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-11-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-11-30": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-12-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-12-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-01-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-01-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-02-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-02-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-03-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-03-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-04-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-04-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-05-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-06-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-06-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-07-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-07-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-08-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-08-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-09-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-09-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-10-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-10-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-11-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-11-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-12-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2024-12-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-01-01": {
+    "name": "New Year's Day",
+    "type": "international",
+    "category": "Международный"
+  },
+  "2025-01-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-01-30": {
+    "name": "Chinese New Year Holiday",
+    "type": "chinese",
+    "category": "Китайский"
+  },
+  "2025-03-31": {
+    "name": "Eid al-Fitr",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2025-04-01": {
+    "name": "Eid al-Fitr Holiday",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2025-06-06": {
+    "name": "Eid al-Adha",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2025-01-27": {
+    "name": "Isra and Miraj",
+    "type": "islamic",
+    "category": "Мусульманский"
+  },
+  "2025-05-01": {
+    "name": "Labor Day",
+    "type": "national",
+    "category": "Национальный"
+  },
+  "2025-06-01": {
+    "name": "Pancasila Day",
+    "type": "national",
+    "category": "Национальный"
+  },
+  "2025-03-29": {
+    "name": "Nyepi (Day of Silence)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-04-16": {
+    "name": "Galungan",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-04-26": {
+    "name": "Kuningan",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-05-12": {
+    "name": "Vesak Day",
+    "type": "buddhist",
+    "category": "Буддистский"
+  },
+  "2025-01-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-02-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-02-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-03-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-03-28": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-04-14": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-04-29": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-05-15": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-05-30": {
+    "name": "Tilem (New Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-06-13": {
+    "name": "Purnama (Full Moon)",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-01-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-01-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-02-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-02-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-03-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-03-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-04-08": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-04-22": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-05-09": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-05-23": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-06-07": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  },
+  "2025-06-21": {
+    "name": "Odalan Temple Festival",
+    "type": "balinese",
+    "category": "Балийский"
+  }
+}
