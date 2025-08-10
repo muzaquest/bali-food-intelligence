@@ -156,6 +156,47 @@ class ProductionSalesAnalyzer:
                 # Добавляем детальный анализ
                 for line in day_analysis:
                     results.append(f"   {line}")
+                
+                # Понятное резюме причин и действий
+                results.append("   ──")
+                results.append("   🧾 ПОНЯТНОЕ ОБЪЯСНЕНИЕ:")
+                # Сформируем краткое объяснение на основании найденных факторов
+                summary_lines = []
+                for line in day_analysis:
+                    if any(key in line for key in ["offline", "закрыт", "дефицит", "занят"]):
+                        summary_lines.append("   • Были сбои/операционные ограничения → часть заказов потеряна")
+                    if "дожд" in line.lower():
+                        summary_lines.append("   • Сильный дождь ограничил доставку и спрос")
+                    if "ROAS" in line or "реклама" in line or "ads" in line.lower():
+                        summary_lines.append("   • Реклама в этот день работала слабее обычного")
+                    if "рейтинг" in line.lower():
+                        summary_lines.append("   • Рейтинг был ниже обычного, это снизило конверсию")
+                # Уникализируем
+                seen = set()
+                summary_unique = []
+                for s in summary_lines:
+                    if s not in seen:
+                        seen.add(s)
+                        summary_unique.append(s)
+                if summary_unique:
+                    results.extend(summary_unique)
+                else:
+                    results.append("   • Существенных явных причин в данных не найдено — проверьте локальные факторы")
+                
+                # Что сделать
+                results.append("   💡 ЧТО СДЕЛАТЬ:")
+                action_suggestions = []
+                if any("offline" in l or "закрыт" in l or "close_time" in l for l in day_analysis):
+                    action_suggestions.append("   • Настроить оповещения: если сбой >30 минут — переключение/поддержка")
+                if any("дожд" in l.lower() for l in day_analysis):
+                    action_suggestions.append("   • В дождь — промокод на доставку и увеличение слотов курьеров")
+                if any("реклама" in l.lower() or "ROAS" in l for l in day_analysis):
+                    action_suggestions.append("   • Перераспределить бюджет на 'сухие' часы/дни и сильные креативы")
+                if any("рейтинг" in l.lower() for l in day_analysis):
+                    action_suggestions.append("   • Ответы на негатив и контроль качества — цель ≥4.7★")
+                if not action_suggestions:
+                    action_suggestions.append("   • Провести чек-лист дня (наличие персонала, меню, логистики)")
+                results.extend(action_suggestions)
                 results.append("")
             
             # Общие рекомендации
