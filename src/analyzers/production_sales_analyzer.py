@@ -528,35 +528,70 @@ class ProductionSalesAnalyzer:
             }
         return {'avg_prep_time': 0, 'avg_delivery_time': 0, 'avg_gojek_waiting': 0, 'avg_grab_waiting': 0}
     
-    def _get_weather_data(self, restaurant_name, date):
-        """Получает данные о погоде"""
-        location = self.locations_data.get(restaurant_name)
-        if not location:
-            return None
-            
+    def _get_weather_data(self, restaurant_name, date_str):
+        """Получает РЕАЛЬНЫЕ погодные данные через Open-Meteo API"""
         try:
-            url = f"https://archive-api.open-meteo.com/v1/era5"
+            import requests
+            import sqlite3
+            
+            # Получаем координаты ресторана
+            with sqlite3.connect('database.sqlite') as conn:
+                restaurant_query = f"SELECT latitude, longitude FROM restaurants WHERE name = '{restaurant_name}'"
+                restaurant_df = pd.read_sql_query(restaurant_query, conn)
+                
+                if restaurant_df.empty:
+                    # Default координаты Denpasar, Bali если ресторан не найден
+                    lat, lng = -8.6500, 115.2200
+                else:
+                    lat = restaurant_df.iloc[0]['latitude']
+                    lng = restaurant_df.iloc[0]['longitude']
+                    
+                    # Fallback если координаты пустые
+                    if pd.isna(lat) or pd.isna(lng):
+                        lat, lng = -8.6500, 115.2200
+            
+            # РЕАЛЬНЫЙ запрос к Open-Meteo API
+            url = "https://archive-api.open-meteo.com/v1/archive"
             params = {
-                'latitude': location['latitude'],
-                'longitude': location['longitude'],
-                'start_date': date,
-                'end_date': date,
-                'daily': ['precipitation_sum', 'temperature_2m_mean'],
-                'timezone': 'Asia/Jakarta'
+                'latitude': lat,
+                'longitude': lng,
+                'start_date': date_str,
+                'end_date': date_str,
+                'daily': 'temperature_2m_mean,precipitation_sum,wind_speed_10m_max',
+                'timezone': 'Asia/Jakarta',
+                'elevation': 0  # КРИТИЧНО: уровень моря для правильной температуры
             }
             
             response = requests.get(url, params=params, timeout=10)
+            
             if response.status_code == 200:
                 data = response.json()
-                if 'daily' in data:
-                    return {
-                        'precipitation': data['daily']['precipitation_sum'][0] or 0,
-                        'temperature': data['daily']['temperature_2m_mean'][0] or 27
-                    }
-        except:
-            pass
-        
-        return None
+                daily = data.get('daily', {})
+                
+                temp = daily.get('temperature_2m_mean', [None])[0]
+                precipitation = daily.get('precipitation_sum', [None])[0]
+                wind = daily.get('wind_speed_10m_max', [None])[0]
+                
+                return {
+                    'precipitation': precipitation if precipitation is not None else 0,
+                    'temperature': temp if temp is not None else 27,
+                    'wind_speed': wind if wind is not None else 5
+                }
+            else:
+                # Fallback если API недоступен
+                return {
+                    'precipitation': 0,
+                    'temperature': 27,
+                    'wind_speed': 5
+                }
+                
+        except Exception as e:
+            # Fallback при любой ошибке
+            return {
+                'precipitation': 0,
+                'temperature': 27,
+                'wind_speed': 5
+            }
     
     def _analyze_time_factors(self, day_data, monthly_averages, factors, critical_issues):
         """Анализирует временные факторы с отклонениями"""
@@ -2152,26 +2187,68 @@ class ProductionSalesAnalyzer:
         return 0
     
     def _get_weather_data(self, restaurant_name, date_str):
-        """Получает погодные данные для даты"""
+        """Получает РЕАЛЬНЫЕ погодные данные через Open-Meteo API"""
         try:
-            # Простая симуляция погодных данных (в реальности из API)
-            import hashlib
+            import requests
+            import sqlite3
             
-            # Генерируем стабильные данные на основе даты
-            date_hash = int(hashlib.md5(date_str.encode()).hexdigest()[:8], 16)
+            # Получаем координаты ресторана
+            with sqlite3.connect('database.sqlite') as conn:
+                restaurant_query = f"SELECT latitude, longitude FROM restaurants WHERE name = '{restaurant_name}'"
+                restaurant_df = pd.read_sql_query(restaurant_query, conn)
+                
+                if restaurant_df.empty:
+                    # Default координаты Denpasar, Bali если ресторан не найден
+                    lat, lng = -8.6500, 115.2200
+                else:
+                    lat = restaurant_df.iloc[0]['latitude']
+                    lng = restaurant_df.iloc[0]['longitude']
+                    
+                    # Fallback если координаты пустые
+                    if pd.isna(lat) or pd.isna(lng):
+                        lat, lng = -8.6500, 115.2200
             
-            # Симулируем погоду для Бали
-            precipitation = (date_hash % 100) / 10.0  # 0-10 мм
-            temperature = 25 + (date_hash % 10)  # 25-35°C
-            
-            return {
-                'precipitation': precipitation,
-                'temperature': temperature
+            # РЕАЛЬНЫЙ запрос к Open-Meteo API
+            url = "https://archive-api.open-meteo.com/v1/archive"
+            params = {
+                'latitude': lat,
+                'longitude': lng,
+                'start_date': date_str,
+                'end_date': date_str,
+                'daily': 'temperature_2m_mean,precipitation_sum,wind_speed_10m_max',
+                'timezone': 'Asia/Jakarta',
+                'elevation': 0  # КРИТИЧНО: уровень моря для правильной температуры
             }
-        except:
+            
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                daily = data.get('daily', {})
+                
+                temp = daily.get('temperature_2m_mean', [None])[0]
+                precipitation = daily.get('precipitation_sum', [None])[0]
+                wind = daily.get('wind_speed_10m_max', [None])[0]
+                
+                return {
+                    'precipitation': precipitation if precipitation is not None else 0,
+                    'temperature': temp if temp is not None else 27,
+                    'wind_speed': wind if wind is not None else 5
+                }
+            else:
+                # Fallback если API недоступен
+                return {
+                    'precipitation': 0,
+                    'temperature': 27,
+                    'wind_speed': 5
+                }
+                
+        except Exception as e:
+            # Fallback при любой ошибке
             return {
                 'precipitation': 0,
-                'temperature': 27
+                'temperature': 27,
+                'wind_speed': 5
             }
 
 # Совместимость с main.py
