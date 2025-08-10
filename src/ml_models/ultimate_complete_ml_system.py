@@ -418,32 +418,37 @@ class UltimateCompleteMLSystem:
         
         print(f"   🌤️ Загружаем погодные данные...")
         
-        # Группируем по дате для оптимизации
-        unique_dates = enriched_data['stat_date'].unique()
+        # Группируем по дате И ресторану для индивидуальной погоды
+        unique_combinations = enriched_data[['stat_date', 'restaurant_id']].drop_duplicates()
         
-        for i, date in enumerate(unique_dates):
-            if i % 100 == 0:
-                print(f"      Обработано {i}/{len(unique_dates)} дат...")
-                
-            # Погодные данные
-            weather_data = self._get_weather_for_date(date)
+        print(f"      🌤️ Получаем погоду для {len(unique_combinations)} комбинаций дата+ресторан...")
+        
+        for i, (_, row) in enumerate(unique_combinations.iterrows()):
+            if i % 50 == 0:
+                print(f"      Обработано {i}/{len(unique_combinations)} комбинаций...")
             
-            # Праздники
+            date = row['stat_date']
+            restaurant_id = row['restaurant_id']
+                
+            # Погодные данные ДЛЯ КОНКРЕТНОГО РЕСТОРАНА
+            weather_data = self._get_weather_for_date(date, restaurant_id)
+            
+            # Праздники (одинаковые для всех ресторанов)
             is_holiday = 1 if date in self.holidays_data else 0
             holiday_type = self.holidays_data.get(date, 'none')
             
-            # Туристический поток
+            # Туристический поток (одинаковый для всех ресторанов)
             date_month = date[:7]  # YYYY-MM
             tourist_flow = self.tourist_data.get(date_month, 0)
             
-            # Обновляем все записи для этой даты
-            date_mask = enriched_data['stat_date'] == date
-            enriched_data.loc[date_mask, 'weather_temp'] = weather_data['temp']
-            enriched_data.loc[date_mask, 'weather_rain'] = weather_data['rain']
-            enriched_data.loc[date_mask, 'weather_wind'] = weather_data['wind']
-            enriched_data.loc[date_mask, 'is_holiday'] = is_holiday
-            enriched_data.loc[date_mask, 'holiday_type'] = holiday_type
-            enriched_data.loc[date_mask, 'tourist_flow'] = tourist_flow
+            # Обновляем записи для этой КОНКРЕТНОЙ комбинации дата+ресторан
+            mask = (enriched_data['stat_date'] == date) & (enriched_data['restaurant_id'] == restaurant_id)
+            enriched_data.loc[mask, 'weather_temp'] = weather_data['temp']
+            enriched_data.loc[mask, 'weather_rain'] = weather_data['rain']
+            enriched_data.loc[mask, 'weather_wind'] = weather_data['wind']
+            enriched_data.loc[mask, 'is_holiday'] = is_holiday
+            enriched_data.loc[mask, 'holiday_type'] = holiday_type
+            enriched_data.loc[mask, 'tourist_flow'] = tourist_flow
             
         print(f"   🏪 Добавляем данные конкурентов...")
         
@@ -468,49 +473,82 @@ class UltimateCompleteMLSystem:
             
         return enriched_data
         
-    def _get_weather_for_date(self, date):
-        """Получает погодные данные для даты"""
+    def _get_weather_for_date(self, date, restaurant_id=None):
+        """Получает погодные данные для даты и конкретного ресторана"""
         
-        if date in self.weather_cache:
-            return self.weather_cache[date]
+        # Создаем ключ кэша с учетом ресторана
+        cache_key = f"{date}_{restaurant_id}" if restaurant_id else date
+        
+        if cache_key in self.weather_cache:
+            return self.weather_cache[cache_key]
             
-        default_weather = {'temp': 28.0, 'rain': 0.0, 'wind': 5.0}
+        default_weather = {'temp': 27.0, 'rain': 0.0, 'wind': 5.0}
+        
+        # Получаем координаты ресторана
+        lat, lng = self._get_restaurant_coordinates(restaurant_id)
         
         try:
             url = "https://archive-api.open-meteo.com/v1/archive"
             params = {
-                'latitude': -8.4095,
-                'longitude': 115.1889,
+                'latitude': lat,
+                'longitude': lng,
                 'start_date': date,
                 'end_date': date,
-                'hourly': 'temperature_2m,precipitation,wind_speed_10m',
-                'timezone': 'Asia/Jakarta'
+                'daily': 'temperature_2m_mean,precipitation_sum,wind_speed_10m_max',
+                'timezone': 'Asia/Jakarta',
+                'elevation': 0  # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: уровень моря!
             }
             
-            response = requests.get(url, params=params, timeout=3)
+            response = requests.get(url, params=params, timeout=10)
             if response.status_code == 200:
                 data = response.json()
-                hourly = data.get('hourly', {})
+                daily = data.get('daily', {})
                 
-                if hourly:
-                    temperatures = hourly.get('temperature_2m', [])
-                    precipitation = hourly.get('precipitation', [])
-                    wind_speed = hourly.get('wind_speed_10m', [])
+                if daily:
+                    temp_mean = daily.get('temperature_2m_mean', [None])[0]
+                    precipitation = daily.get('precipitation_sum', [None])[0]
+                    wind_speed = daily.get('wind_speed_10m_max', [None])[0]
                     
                     weather_data = {
-                        'temp': sum(temperatures) / len(temperatures) if temperatures else 28.0,
-                        'rain': sum(precipitation) if precipitation else 0.0,
-                        'wind': sum(wind_speed) / len(wind_speed) if wind_speed else 5.0
+                        'temp': temp_mean if temp_mean is not None else 27.0,
+                        'rain': precipitation if precipitation is not None else 0.0,
+                        'wind': wind_speed if wind_speed is not None else 5.0
                     }
                     
-                    self.weather_cache[date] = weather_data
+                    self.weather_cache[cache_key] = weather_data
                     return weather_data
                     
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"❌ Ошибка погоды для ресторана {restaurant_id}: {e}")
             
-        self.weather_cache[date] = default_weather
+        self.weather_cache[cache_key] = default_weather
         return default_weather
+    
+    def _get_restaurant_coordinates(self, restaurant_id):
+        """Получает координаты ресторана из базы данных"""
+        
+        if restaurant_id is None:
+            # По умолчанию - центр Денпасара
+            return -8.6500, 115.2200
+            
+        try:
+            conn = sqlite3.connect('database.sqlite')
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT latitude, longitude FROM restaurants WHERE id = ?', (restaurant_id,))
+            result = cursor.fetchone()
+            
+            conn.close()
+            
+            if result and result[0] is not None and result[1] is not None:
+                return result[0], result[1]
+            else:
+                # Если координаты не найдены - центр Денпасара
+                return -8.6500, 115.2200
+                
+        except Exception as e:
+            print(f"❌ Ошибка получения координат ресторана {restaurant_id}: {e}")
+            return -8.6500, 115.2200
         
     def train_ultimate_model(self, data):
         """Обучает максимально полную ML модель"""
