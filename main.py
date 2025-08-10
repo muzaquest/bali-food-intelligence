@@ -219,6 +219,35 @@ class WeatherAPI:
             'source': 'Симуляция (Open-Meteo недоступен)'
         }
 
+
+def get_restaurant_location(restaurant_name: str):
+    """Возвращает координаты ресторана из data/bali_restaurant_locations.json"""
+    import json, os
+    path = os.path.join('data', 'bali_restaurant_locations.json')
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        # поддержка двух форматов
+        if isinstance(data, dict) and 'restaurants' in data:
+            for r in data['restaurants']:
+                if r.get('name') == restaurant_name:
+                    return {
+                        'latitude': r.get('latitude', -8.3405),
+                        'longitude': r.get('longitude', 115.0920),
+                        'zone': r.get('zone', 'Unknown')
+                    }
+        elif isinstance(data, dict) and restaurant_name in data:
+            v = data[restaurant_name]
+            return {
+                'latitude': v.get('latitude', -8.3405),
+                'longitude': v.get('longitude', 115.0920),
+                'zone': v.get('zone', 'Unknown')
+            }
+    except Exception:
+        pass
+    return {'latitude': -8.3405, 'longitude': 115.0920, 'zone': 'Unknown'}
+
+
 class CalendarAPI:
     """Класс для работы с Calendarific API"""
     
