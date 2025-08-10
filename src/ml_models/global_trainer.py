@@ -147,10 +147,44 @@ def build_global_dataset(db_path: str = "database.sqlite") -> pd.DataFrame:
             df["temperature"] = df["date"].map(lambda d: float(weather_cache.get(str(d), {}).get("temperature", 27.0)))
     except Exception:
         pass
+    # Per-restaurant weather cache override
+    try:
+        cache_dir = os.path.join('data', 'weather_cache')
+        if os.path.isdir(cache_dir):
+            # Build map: rid -> {date_str: {precipitation, temperature}}
+            rid_to_weather = {}
+            for fn in os.listdir(cache_dir):
+                if not fn.startswith('daily_') or not fn.endswith('.json'):
+                    continue
+                rid = int(fn.replace('daily_', '').replace('.json', ''))
+                with open(os.path.join(cache_dir, fn), 'r', encoding='utf-8') as f:
+                    rid_to_weather[rid] = json.load(f)
+            if rid_to_weather:
+                # Apply per-row lookup overriding generic values
+                def wx_prec(row):
+                    wc = rid_to_weather.get(int(row['restaurant_id']))
+                    if not wc:
+                        return row['precipitation']
+                    v = wc.get(str(row['date']), {}).get('precipitation')
+                    return float(v) if v is not None else row['precipitation']
+                def wx_temp(row):
+                    wc = rid_to_weather.get(int(row['restaurant_id']))
+                    if not wc:
+                        return row['temperature']
+                    v = wc.get(str(row['date']), {}).get('temperature')
+                    return float(v) if v is not None else row['temperature']
+                df['precipitation'] = df.apply(wx_prec, axis=1)
+                df['temperature'] = df.apply(wx_temp, axis=1)
+    except Exception:
+        pass
     # Holidays (164 types): mark binary if date appears in comprehensive file
     df["is_holiday"] = 0
     try:
-        with open(os.path.join("data", "comprehensive_holiday_analysis.json"), "r", encoding="utf-8") as f:
+        # Prefer enhanced holidays if exists
+        path = os.path.join("data", "enhanced_holidays.json")
+        if not os.path.exists(path):
+            path = os.path.join("data", "comprehensive_holiday_analysis.json")
+        with open(path, "r", encoding="utf-8") as f:
             hol = json.load(f)
         # Try both direct date->info and nested under 'results'
         if isinstance(hol, dict):
