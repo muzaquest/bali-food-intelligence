@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
-from weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
+
 
 # ML Детективный анализ - ОБНОВЛЕННАЯ ВЕРСИЯ
 try:
@@ -815,6 +815,10 @@ def get_restaurant_data_full(restaurant_name, start_date, end_date, db_path="dat
     
     # Объединяем данные
     all_data = pd.concat([grab_data, gojek_data], ignore_index=True)
+    # Нормализуем типы для корректной агрегации
+    if 'close_time' in all_data.columns:
+        all_data['close_time'] = all_data['close_time'].fillna('00:00:00').astype(str)
+
     
     # Агрегируем по дням с учетом ВСЕХ полей
     if not all_data.empty:
