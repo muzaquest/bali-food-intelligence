@@ -59,6 +59,8 @@ def _build_dates_frame(conn: sqlite3.Connection) -> pd.DataFrame:
 def build_global_dataset(db_path: str = "database.sqlite") -> pd.DataFrame:
     with sqlite3.connect(db_path) as conn:
         dates = _build_dates_frame(conn)
+        # Map restaurant_id -> name (for potential future per-location weather)
+        rest_map = pd.read_sql_query("SELECT id as restaurant_id, name FROM restaurants", conn)
         # Grab
         gq = """
         SELECT restaurant_id,
@@ -96,6 +98,7 @@ def build_global_dataset(db_path: str = "database.sqlite") -> pd.DataFrame:
     # Merge to dates
     df = dates.merge(grab, on=["restaurant_id", "date"], how="left")
     df = df.merge(gojek, on=["restaurant_id", "date"], how="left")
+    df = df.merge(rest_map, on="restaurant_id", how="left")
     for col in [
         "grab_sales","grab_orders","grab_offline_rate","grab_driver_waiting",
         "grab_ads_spend","grab_ads_sales","grab_impressions",
@@ -132,10 +135,31 @@ def build_global_dataset(db_path: str = "database.sqlite") -> pd.DataFrame:
     df["is_weekend"] = (df["day_of_week"] >= 5).astype(int)
     df["month"] = dts.dt.month
 
-    # External placeholders (to be enriched by cached weather/holidays)
+    # External features: try cached weather and holidays
     df["precipitation"] = 0.0
     df["temperature"] = 27.0
+    # Weather cache (optional): expects {"YYYY-MM-DD": {"precipitation": float, "temperature": float}}
+    try:
+        with open(os.path.join("data", "mega_weather_analysis.json"), "r", encoding="utf-8") as f:
+            weather_cache = json.load(f)
+        if isinstance(weather_cache, dict):
+            df["precipitation"] = df["date"].map(lambda d: float(weather_cache.get(str(d), {}).get("precipitation", 0.0)))
+            df["temperature"] = df["date"].map(lambda d: float(weather_cache.get(str(d), {}).get("temperature", 27.0)))
+    except Exception:
+        pass
+    # Holidays (164 types): mark binary if date appears in comprehensive file
     df["is_holiday"] = 0
+    try:
+        with open(os.path.join("data", "comprehensive_holiday_analysis.json"), "r", encoding="utf-8") as f:
+            hol = json.load(f)
+        # Try both direct date->info and nested under 'results'
+        if isinstance(hol, dict):
+            holiday_map = hol.get("results", hol)
+            if isinstance(holiday_map, dict):
+                holiday_dates = set(map(str, holiday_map.keys()))
+                df["is_holiday"] = df["date"].astype(str).isin(holiday_dates).astype(int)
+    except Exception:
+        pass
 
     # Trends per restaurant
     df = df.sort_values(["restaurant_id", "date"]).reset_index(drop=True)
@@ -197,8 +221,19 @@ def train_global_model(db_path: str = "database.sqlite", models_dir: str = "mode
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
+    # Robust metrics: avoid division by zero, clip tails
+    import numpy as np
+    y_true = y_test.copy()
+    y_hat = y_pred.copy()
+    mask = y_true > 0
+    if mask.sum() > 0:
+        ape = np.abs((y_hat[mask] - y_true[mask]) / y_true[mask])
+        ape = np.clip(ape, 0, 10)  # cap extreme at 1000%
+        mape = float(ape.mean())
+    else:
+        mape = float('nan')
     metrics = {
-        "mape": float(mean_absolute_percentage_error(y_test, y_pred)),
+        "mape": mape,
         "mae": float(mean_absolute_error(y_test, y_pred)),
         "r2": float(r2_score(y_test, y_pred)),
         "n_train": int(len(y_train)),
