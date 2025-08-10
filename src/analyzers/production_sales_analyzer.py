@@ -137,8 +137,8 @@ class ProductionSalesAnalyzer:
             results.append(f"🚨 Найдено {len(bad_days)} проблемных дней")
             results.append("")
             
-            # Анализируем каждый проблемный день
-            for i, bad_day_info in enumerate(bad_days[:5], 1):  # Топ-5 худших дней
+            # Анализируем каждый проблемный день (все, что попали под критерии)
+            for i, bad_day_info in enumerate(bad_days, 1):
                 date = bad_day_info[0]
                 problem_percent = bad_day_info[1]
                 problem_type = bad_day_info[2] if len(bad_day_info) > 2 else 'relative_drop'
