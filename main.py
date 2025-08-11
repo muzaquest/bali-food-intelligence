@@ -2583,6 +2583,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
 
             if total_impressions > 0:
                 f.write(f"👁️ Показы рекламы: {total_impressions:,.0f}\n")
+                ctr = ctr if 'ctr' in locals() else 0.0
+                conversion_rate = conversion_rate if 'conversion_rate' in locals() else 0.0
                 f.write(f"🔗 CTR: {ctr:.2f}%\n")
                 f.write(f"✅ Конверсия: {conversion_rate:.2f}%\n")
                 f.write(f"💰 Стоимость заказа: {cost_per_order:,.0f} IDR\n")
