@@ -13,6 +13,26 @@ from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
 
+# Fallback weather impact analyzer (simple heuristic)
+def analyze_weather_impact_for_report(weather: dict, zone: str = 'Unknown', restaurant_name: str = ''):
+    rain = float(weather.get('rain', weather.get('precipitation', 0)))
+    temp = float(weather.get('temperature', 27))
+    impact = 0.0
+    primary = 'Neutral'
+    if rain >= 20:
+        impact = -25.0
+        primary = 'Heavy rain'
+    elif rain >= 10:
+        impact = -15.0
+        primary = 'Moderate rain'
+    elif rain > 0:
+        impact = -5.0
+        primary = 'Light rain'
+    if temp >= 32:
+        impact -= 2.0
+    return { 'total_impact': impact, 'primary_factor': primary }
+
+
 
 # ML Детективный анализ - ОБНОВЛЕННАЯ ВЕРСИЯ
 try:
@@ -2002,7 +2022,10 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
     
     # Получаем точные координаты ресторана
     restaurant_location = get_restaurant_location(restaurant_name)
-    print(f"📍 Локация: {restaurant_location['location']}, {restaurant_location['area']} ({restaurant_location['zone']} зона)")
+    loc = restaurant_location.get('location', 'Unknown')
+    area = restaurant_location.get('area', 'Unknown')
+    zone = restaurant_location.get('zone', 'Unknown')
+    print(f"📍 Локация: {loc}, {area} ({zone} зона)")
     print(f"🗺️ Координаты: {restaurant_location['latitude']:.4f}, {restaurant_location['longitude']:.4f}")
     
     # УПРОЩЕННЫЙ АНАЛИЗ ПОГОДЫ (без симуляций и псевдонауки)
@@ -2184,7 +2207,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
         zone=restaurant_location.get('zone', 'Unknown')
     )
     
-    for i, recommendation in enumerate(general_analysis['recommendations'][:3], 1):
+    for i, recommendation in enumerate(general_analysis.get('recommendations', [])[:3], 1):
         print(f"    {i}. {recommendation}")
     
     # Анализ погодных данных завершен
