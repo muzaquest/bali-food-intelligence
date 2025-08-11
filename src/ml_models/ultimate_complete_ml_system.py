@@ -118,6 +118,13 @@ class UltimateCompleteMLSystem:
             COALESCE(gj.ads_sales, 0) as gojek_ads_sales,
             COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0) as total_ads_sales,
             
+            -- ВОРОНКА GRAB
+            COALESCE(g.impressions, 0) as grab_impressions,
+            COALESCE(g.unique_menu_visits, 0) as grab_menu_visits,
+            COALESCE(g.unique_add_to_carts, 0) as grab_add_to_carts,
+            COALESCE(g.ads_orders, 0) as grab_ads_orders,
+            COALESCE(g.ads_ctr, 0) as grab_ctr,
+            
             -- ROAS
             CASE WHEN COALESCE(g.ads_spend, 0) > 0
                  THEN COALESCE(g.ads_sales, 0) / COALESCE(g.ads_spend, 0)
@@ -416,6 +423,17 @@ class UltimateCompleteMLSystem:
         enriched_data['competitor_count'] = 0
         enriched_data['location_district'] = 'unknown'
         
+        # Добавляем базовые метрики
+        enriched_data['total_orders'] = 0
+        enriched_data['total_aov'] = 0
+        enriched_data['competitor_count'] = 0
+        enriched_data['tourist_flow'] = 0
+        
+        # Новые маркетинговые метрики воронки
+        enriched_data['bounce_rate'] = 0
+        enriched_data['cart_abandon_rate'] = 0
+        enriched_data['funnel_efficiency'] = 0
+        
         print(f"   🌤️ Загружаем погодные данные...")
         
         # Группируем по дате И ресторану для индивидуальной погоды
@@ -470,6 +488,30 @@ class UltimateCompleteMLSystem:
             # Локация ресторана
             location = self.restaurant_locations.get(restaurant_name, {})
             enriched_data.loc[i, 'location_district'] = location.get('district', 'unknown')
+            
+        print(f"   📊 Рассчитываем метрики воронки...")
+        
+        # Рассчитываем bounce rate и cart abandon rate для GRAB
+        for i, row in enriched_data.iterrows():
+            menu_visits = row.get('grab_menu_visits', 0)
+            add_to_carts = row.get('grab_add_to_carts', 0)
+            ads_orders = row.get('grab_ads_orders', 0)
+            
+            # Bounce rate (ушли без добавления в корзину)
+            if menu_visits > 0:
+                bounce_rate = ((menu_visits - add_to_carts) / menu_visits * 100)
+                enriched_data.loc[i, 'bounce_rate'] = max(0, min(100, bounce_rate))
+            
+            # Cart abandon rate (добавили в корзину, но не заказали)
+            if add_to_carts > 0:
+                cart_abandon_rate = ((add_to_carts - ads_orders) / add_to_carts * 100)
+                enriched_data.loc[i, 'cart_abandon_rate'] = max(0, min(100, cart_abandon_rate))
+            
+            # Общая эффективность воронки (показ → заказ)
+            impressions = row.get('grab_impressions', 0)
+            if impressions > 0 and ads_orders > 0:
+                funnel_efficiency = (ads_orders / impressions * 100)
+                enriched_data.loc[i, 'funnel_efficiency'] = funnel_efficiency
             
         return enriched_data
         

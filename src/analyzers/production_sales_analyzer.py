@@ -1760,6 +1760,56 @@ class ProductionSalesAnalyzer:
                         results.append(f"  • 🎯 Показ → Заказ: {impression_to_order:.2f}% (основная метрика эффективности)")
                         results.append(f"  • 🔗 Клик → Заказ: {click_to_order:.1f}% (качество трафика)")
                         results.append(f"  • 🛒 Корзина → Заказ: {cart_to_order:.1f}% (качество UX)")
+                        
+                        # НОВЫЙ РАЗДЕЛ: Детальный анализ воронки с bounce rate
+                        results.append("")
+                        results.append("  📉 ДЕТАЛЬНЫЙ АНАЛИЗ ВОРОНКИ:")
+                        
+                        # Bounce rate (ушли без добавления в корзину)
+                        bounce_rate = ((menu_visits - add_to_carts) / menu_visits * 100) if menu_visits > 0 else 0
+                        lost_from_bounce = menu_visits - add_to_carts
+                        
+                        # Abandoned cart rate (добавили в корзину, но не заказали)
+                        cart_abandon_rate = ((add_to_carts - ads_orders) / add_to_carts * 100) if add_to_carts > 0 else 0
+                        lost_from_abandon = add_to_carts - ads_orders
+                        
+                        results.append(f"  • 💔 BOUNCE RATE: {bounce_rate:.1f}% ({lost_from_bounce:,} ушли без покупки)")
+                        results.append(f"  • 🛒 БРОШЕННЫЕ КОРЗИНЫ: {cart_abandon_rate:.1f}% ({lost_from_abandon:,} добавили, но не купили)")
+                        
+                        # Анализ потенциала улучшений
+                        if ads_orders > 0:
+                            # Получаем среднюю стоимость заказа для расчета потенциала
+                            cursor.execute('''
+                            SELECT SUM(ads_sales) / SUM(ads_orders) as avg_order_value
+                            FROM grab_stats 
+                            WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                            AND ads_orders > 0
+                            ''', (restaurant_id, start_date, end_date))
+                            
+                            avg_order_result = cursor.fetchone()
+                            avg_order_value = avg_order_result[0] if avg_order_result and avg_order_result[0] else 0
+                            
+                            if avg_order_value > 0:
+                                # Потенциал от снижения bounce на 10%
+                                potential_from_bounce = lost_from_bounce * 0.1 * avg_order_value
+                                # Потенциал от устранения брошенных корзин
+                                potential_from_abandon = lost_from_abandon * avg_order_value
+                                
+                                results.append("")
+                                results.append("  💰 ПОТЕНЦИАЛ ОПТИМИЗАЦИИ ВОРОНКИ:")
+                                results.append(f"  • 📈 Снижение bounce на 10%: +{potential_from_bounce:,.0f} IDR")
+                                results.append(f"  • 🛒 Устранение брошенных корзин: +{potential_from_abandon:,.0f} IDR")
+                                results.append(f"  • 🎯 Общий потенциал: +{potential_from_bounce + potential_from_abandon:,.0f} IDR")
+                                
+                                # Процент от текущих продаж
+                                current_sales = cursor.execute('''
+                                SELECT SUM(ads_sales) FROM grab_stats 
+                                WHERE restaurant_id = ? AND stat_date BETWEEN ? AND ?
+                                ''', (restaurant_id, start_date, end_date)).fetchone()[0] or 0
+                                
+                                if current_sales > 0:
+                                    improvement_percent = ((potential_from_bounce + potential_from_abandon) / current_sales * 100)
+                                    results.append(f"  • 📊 Потенциальный рост: +{improvement_percent:.1f}% к текущим рекламным продажам")
             
             results.append("")
             results.append("💸 Стоимость привлечения (только GRAB):")
