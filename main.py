@@ -2328,12 +2328,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
             print("🚀 Запуск профессионального детективного анализатора...")
             from src.analyzers import ProfessionalDetectiveAnalyzer
             detective_analyzer = ProfessionalDetectiveAnalyzer()
-            detective_results = detective_analyzer.analyze_sales_performance(
-                restaurant_name, start_date, end_date
+            detective_results = detective_analyzer.analyze_restaurant_performance(
+                restaurant_name, start_date, end_date, use_ml=True
             )
             print("📋 РЕЗУЛЬТАТЫ ДЕТЕКТИВНОГО АНАЛИЗА:")
             for result in detective_results:
                 print(result)
+            detective_analysis = "\n".join(detective_results)
         except Exception as e:
             print(f"⚠️ Ошибка обновленного анализатора: {e}")
             print("📊 Используем fallback анализ...")
@@ -2366,6 +2367,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
         # Дополнительный маркетинговый анализ
         marketing_analysis = analyze_marketing_performance_without_ml(data)
         print(marketing_analysis)
+        detective_analysis = simple_trend_analysis + "\n\n" + marketing_analysis
     
     # 8.6. ML-АНАЛИЗ И ПРОГНОЗИРОВАНИЕ (НОВИНКА!)
     if ML_MODULE_AVAILABLE:

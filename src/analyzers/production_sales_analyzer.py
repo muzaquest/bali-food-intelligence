@@ -138,7 +138,7 @@ class ProductionSalesAnalyzer:
             results.append("")
             
             # Анализируем каждый проблемный день
-            for i, bad_day_info in enumerate(bad_days[:5], 1):  # Топ-5 худших дней
+            for i, bad_day_info in enumerate(bad_days, 1):  # Все проблемные дни
                 date = bad_day_info[0]
                 problem_percent = bad_day_info[1]
                 problem_type = bad_day_info[2] if len(bad_day_info) > 2 else 'relative_drop'
@@ -243,7 +243,28 @@ class ProductionSalesAnalyzer:
                     ELSE CAST(gj.close_time AS INTEGER)
                 END as gojek_close_minutes
             FROM grab_stats g 
-            FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
+LEFT JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
+UNION ALL
+SELECT 
+    COALESCE(g.stat_date, gj.stat_date) as stat_date,
+    COALESCE(g.sales, 0) as grab_sales,
+    COALESCE(gj.sales, 0) as gojek_sales,
+    COALESCE(g.sales, 0) + COALESCE(gj.sales, 0) as total_sales,
+    COALESCE(g.orders, 0) + COALESCE(gj.orders, 0) as total_orders,
+    COALESCE(g.offline_rate, 0) as grab_offline_rate,
+    CASE 
+        WHEN gj.close_time IS NULL THEN 0
+        WHEN typeof(gj.close_time) = 'text' THEN 
+            CASE 
+                WHEN gj.close_time LIKE '%:%' THEN 
+                    CAST(substr(gj.close_time, 1, instr(gj.close_time, ':')-1) AS INTEGER) * 60 + 
+                    CAST(substr(gj.close_time, instr(gj.close_time, ':')+1, 2) AS INTEGER)
+                ELSE CAST(gj.close_time AS INTEGER)
+            END
+        ELSE CAST(gj.close_time AS INTEGER)
+    END as gojek_close_minutes
+FROM gojek_stats gj
+LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
             WHERE COALESCE(g.restaurant_id, gj.restaurant_id) = {restaurant_id}
                 AND COALESCE(g.stat_date, gj.stat_date) BETWEEN '{start_date}' AND '{end_date}'
                 AND (COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) > 0
