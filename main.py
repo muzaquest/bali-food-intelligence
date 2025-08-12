@@ -1725,20 +1725,24 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
         print(f"  📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)")
         print(f"    📱 GRAB: {grab_reactive:,.0f} | 🛵 GOJEK: {gojek_reactive:,.0f}")
         
-        # Доходность по типам клиентов (только GRAB)
-        print(f"\n💰 Доходность по типам клиентов (только GRAB):")
+        # Доходность по типам клиентов (только GRAB, только от рекламы)
+        print(f"\n💰 Доходность по типам клиентов (только GRAB, только с рекламы):")
         if new_customer_revenue > 0 and grab_new > 0:
             avg_new = new_customer_revenue / grab_new
             avg_repeat = repeated_customer_revenue / grab_repeat if grab_repeat > 0 else 0
             avg_reactive = reactivated_customer_revenue / grab_reactive if grab_reactive > 0 else 0
+            total_ads_rev_grab = new_customer_revenue + repeated_customer_revenue + reactivated_customer_revenue
+            share_new = (new_customer_revenue/total_ads_rev_grab*100) if total_ads_rev_grab>0 else 0
+            share_repeat = (repeated_customer_revenue/total_ads_rev_grab*100) if total_ads_rev_grab>0 else 0
+            share_reactive = (reactivated_customer_revenue/total_ads_rev_grab*100) if total_ads_rev_grab>0 else 0
             
-            print(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR (средний чек: {avg_new:,.0f} IDR) - только {grab_new} клиентов GRAB")
-            print(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR (средний чек: {avg_repeat:,.0f} IDR) - только {grab_repeat} клиентов GRAB")
+            print(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR ({share_new:.1f}% от ads‑выручки GRAB) | средний чек: {avg_new:,.0f} IDR | клиентов: {grab_new}")
+            print(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR ({share_repeat:.1f}% от ads‑выручки GRAB) | средний чек: {avg_repeat:,.0f} IDR | клиентов: {grab_repeat}")
             if reactivated_customer_revenue > 0:
-                print(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR (средний чек: {avg_reactive:,.0f} IDR) - только {grab_reactive} клиентов GRAB")
+                print(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR ({share_reactive:.1f}% от ads‑выручки GRAB) | средний чек: {avg_reactive:,.0f} IDR | клиентов: {grab_reactive}")
             
-            print(f"\n  ⚠️ КРИТИЧНО: Данные о доходах от {gojek_new + gojek_repeat + gojek_reactive} клиентов GOJEK ОТСУТСТВУЮТ в базе данных")
-            print(f"  📊 Это означает, что реальная доходность может быть выше указанной")
+            print(f"\n  ⚠️ КРИТИЧНО: Данные о доходах от {gojek_new + gojek_repeat + gojek_reactive} клиентов GOJEK ОТСУТСТВУЮТ")
+            print(f"  📊 Это значит, совокупная доходность может быть выше (вклад GOJEK не учтен)")
             
             # Анализ лояльности (только GRAB)
             if avg_repeat > avg_new:
@@ -2615,10 +2619,29 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
             f.write("-" * 50 + "\n")
             if 'new_rate' in locals():
                 f.write(f"🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)\n")
+                f.write(f"   📱 GRAB: {grab_new:,.0f} | 🛵 GOJEK: {gojek_new:,.0f}\n")
                 f.write(f"🔄 Повторные клиенты: {repeated_customers:,.0f} ({repeat_rate:.1f}%)\n")
+                f.write(f"   📱 GRAB: {grab_repeat:,.0f} | 🛵 GOJEK: {gojek_repeat:,.0f}\n")
                 f.write(f"📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)\n")
+                f.write(f"   📱 GRAB: {grab_reactive:,.0f} | 🛵 GOJEK: {gojek_reactive:,.0f}\n")
+                # Доходность по типам клиентов (только GRAB, только с рекламы)
+                if 'new_customer_revenue' in locals() and new_customer_revenue>0 and grab_new>0:
+                    total_ads_rev_grab = new_customer_revenue + repeated_customer_revenue + reactivated_customer_revenue
+                    share_new = (new_customer_revenue/total_ads_rev_grab*100) if total_ads_rev_grab>0 else 0
+                    share_repeat = (repeated_customer_revenue/total_ads_rev_grab*100) if total_ads_rev_grab>0 else 0
+                    share_reactive = (reactivated_customer_revenue/total_ads_rev_grab*100) if total_ads_rev_grab>0 else 0
+                    avg_new = new_customer_revenue / grab_new
+                    avg_repeat = (repeated_customer_revenue / grab_repeat) if grab_repeat>0 else 0
+                    avg_reactive = (reactivated_customer_revenue / grab_reactive) if grab_reactive>0 else 0
+                    f.write("\n💰 Доходность по типам клиентов (только GRAB, только с рекламы):\n")
+                    f.write(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR ({share_new:.1f}% от ads‑выручки GRAB) | средний чек: {avg_new:,.0f} IDR | клиентов: {grab_new}\n")
+                    f.write(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR ({share_repeat:.1f}% от ads‑выручки GRAB) | средний чек: {avg_repeat:,.0f} IDR | клиентов: {grab_repeat}\n")
+                    if reactivated_customer_revenue>0:
+                        f.write(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR ({share_reactive:.1f}% от ads‑выручки GRAB) | средний чек: {avg_reactive:,.0f} IDR | клиентов: {grab_reactive}\n")
+                    f.write(f"\n  ⚠️ КРИТИЧНО: Данные о доходах от {gojek_new + gojek_repeat + gojek_reactive} клиентов GOJEK ОТСУТСТВУЮТ\n")
+                    f.write("  📊 Это значит, совокупная доходность может быть выше (вклад GOJEK не учтен)\n")
                 if 'loyalty_premium' in locals():
-                    f.write(f"🏆 Премия лояльности: +{loyalty_premium:.1f}%\n")
+                    f.write(f"\n🏆 Премия лояльности (GRAB): +{loyalty_premium:.1f}% к среднему чеку\n")
             f.write("\n")
             
             # 4. Маркетинговая эффективность и воронка
