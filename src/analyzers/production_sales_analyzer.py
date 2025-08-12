@@ -336,6 +336,16 @@ LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = g
             results.append(f"🟢 Grab: {day_data['grab_sales']:,.0f} IDR ({day_data['grab_orders']} заказов)")
             results.append(f"🟠 Gojek: {day_data['gojek_sales']:,.0f} IDR ({day_data['gojek_orders']} заказов)")
             
+            # Операционные флаги (дефицит/отмены)
+            if day_data.get('grab_cancelled_orders', 0) or day_data.get('gojek_cancelled_orders', 0):
+                results.append("   🔧 Операционные события:")
+                if day_data.get('grab_cancelled_orders', 0):
+                    results.append(f"      • Grab отмен: {int(day_data['grab_cancelled_orders'])}")
+                if day_data.get('gojek_cancelled_orders', 0):
+                    results.append(f"      • Gojek отмен: {int(day_data['gojek_cancelled_orders'])}")
+            if day_data.get('grab_out_of_stock', 0) or day_data.get('gojek_out_of_stock', 0):
+                results.append("   📦 Дефицит товара: отмечен на платформе")
+            
             # КРИТИЧЕСКОЕ ОБНОВЛЕНИЕ: используем ML анализ для определения факторов
             ml_factors = self._get_ml_factors_analysis(restaurant_name, target_date, day_data['total_sales'])
             
@@ -375,10 +385,15 @@ LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = g
                 # 3. Операционные показатели
                 operational_issues = []
                 time_impact = self._analyze_time_factors(day_data, monthly_averages, operational_issues, [])
+                # Дефицит товара / отмены
+                if day_data.get('out_of_stock_flag'):
+                    operational_issues.append("Дефицит товара зафиксирован платформой")
+                if day_data.get('total_cancelled_orders', 0) > 0:
+                    operational_issues.append(f"Отменено заказов: {int(day_data['total_cancelled_orders'])}")
                 
                 # 4. Реклама и эффективность
                 advertising_issues = []
-                ads_impact = self._analyze_advertising(day_data, advertising_issues, [])
+                ads_impact = self._analyze_advertising(day_data, advertising_issues, [], restaurant_name, target_date)
                 
                 # 5. Погода
                 weather_issues = []
@@ -478,7 +493,9 @@ LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = g
                 COALESCE(driver_waiting_time, 0) / 60.0 as grab_driver_waiting_min,
                 COALESCE(ads_spend, 0) as grab_ads_spend,
                 COALESCE(ads_sales, 0) as grab_ads_sales,
-                COALESCE(rating, 0) as grab_rating
+                COALESCE(rating, 0) as grab_rating,
+                COALESCE(cancelled_orders, 0) as grab_cancelled_orders,
+                COALESCE(out_of_stock, 0) as grab_out_of_stock
             FROM grab_stats
             WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
             """
@@ -496,7 +513,9 @@ LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = g
                 COALESCE(driver_waiting, 0) as gojek_driver_waiting_min,
                 COALESCE(ads_spend, 0) as gojek_ads_spend,
                 COALESCE(ads_sales, 0) as gojek_ads_sales,
-                COALESCE(rating, 0) as gojek_rating
+                COALESCE(rating, 0) as gojek_rating,
+                COALESCE(cancelled_orders, 0) as gojek_cancelled_orders,
+                COALESCE(out_of_stock, 0) as gojek_out_of_stock
             FROM gojek_stats
             WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
             """
@@ -524,18 +543,17 @@ LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = g
                 'gojek_ads_spend': gojek_df.iloc[0]['gojek_ads_spend'] if not gojek_df.empty else 0,
                 'gojek_ads_sales': gojek_df.iloc[0]['gojek_ads_sales'] if not gojek_df.empty else 0,
                 'grab_rating': grab_df.iloc[0]['grab_rating'] if not grab_df.empty else 0,
-                'gojek_rating': gojek_df.iloc[0]['gojek_rating'] if not gojek_df.empty else 0
+                'gojek_rating': gojek_df.iloc[0]['gojek_rating'] if not gojek_df.empty else 0,
+                'grab_cancelled_orders': grab_df.iloc[0]['grab_cancelled_orders'] if not grab_df.empty else 0,
+                'gojek_cancelled_orders': gojek_df.iloc[0]['gojek_cancelled_orders'] if not gojek_df.empty else 0,
+                'grab_out_of_stock': grab_df.iloc[0]['grab_out_of_stock'] if not grab_df.empty else 0,
+                'gojek_out_of_stock': gojek_df.iloc[0]['gojek_out_of_stock'] if not gojek_df.empty else 0,
             }
             
             result['total_sales'] = result['grab_sales'] + result['gojek_sales']
             result['total_orders'] = result['grab_orders'] + result['gojek_orders']
-            
-            # Применяем фильтр fake orders
-            result, fake_info = self._apply_fake_orders_filter(restaurant_name, target_date, result)
-            
-            # Добавляем информацию о fake orders если есть
-            if fake_info:
-                result['fake_orders_detected'] = fake_info
+            result['total_cancelled_orders'] = result['grab_cancelled_orders'] + result['gojek_cancelled_orders']
+            result['out_of_stock_flag'] = (result['grab_out_of_stock'] or result['gojek_out_of_stock'])
             
             return result
     
@@ -580,7 +598,7 @@ LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = g
             """
             
             df = pd.read_sql_query(query, conn)
-            
+        
         if len(df) > 0:
             return {
                 'avg_prep_time': df['avg_prep_time'].iloc[0] or 0,
@@ -589,6 +607,57 @@ LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = g
                 'avg_grab_waiting': df['avg_grab_waiting'].iloc[0] or 0
             }
         return {'avg_prep_time': 0, 'avg_delivery_time': 0, 'avg_gojek_waiting': 0, 'avg_grab_waiting': 0}
+    
+    def _get_monthly_marketing_baselines(self, restaurant_name: str, target_date: str) -> dict:
+        """Возвращает среднесуточные нормативы по рекламе за месяц целевой даты.
+        Формат: {grab_avg_daily_spend, gojek_avg_daily_spend, total_avg_daily_spend}
+        """
+        target_month = target_date[:7]
+        with sqlite3.connect('database.sqlite') as conn:
+            restaurant_query = f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'"
+            restaurant_df = pd.read_sql_query(restaurant_query, conn)
+            if restaurant_df.empty:
+                return {
+                    'grab_avg_daily_spend': 0.0,
+                    'gojek_avg_daily_spend': 0.0,
+                    'total_avg_daily_spend': 0.0
+                }
+            restaurant_id = int(restaurant_df.iloc[0]['id'])
+            # Сумма затрат в месяц и число дней с данными по каждой платформе
+            q = f"""
+            WITH grab_month AS (
+              SELECT date(substr(stat_date,1,10)) AS d, COALESCE(ads_spend,0) AS spend
+              FROM grab_stats
+              WHERE restaurant_id = {restaurant_id} AND stat_date LIKE '{target_month}%'
+            ),
+            gojek_month AS (
+              SELECT date(substr(stat_date,1,10)) AS d, COALESCE(ads_spend,0) AS spend
+              FROM gojek_stats
+              WHERE restaurant_id = {restaurant_id} AND stat_date LIKE '{target_month}%'
+            )
+            SELECT 
+              (SELECT SUM(spend) FROM grab_month) AS grab_sum,
+              (SELECT COUNT(*) FROM grab_month) AS grab_days,
+              (SELECT SUM(spend) FROM gojek_month) AS gojek_sum,
+              (SELECT COUNT(*) FROM gojek_month) AS gojek_days
+            """
+            df = pd.read_sql_query(q, conn)
+        if df.empty:
+            return {
+                'grab_avg_daily_spend': 0.0,
+                'gojek_avg_daily_spend': 0.0,
+                'total_avg_daily_spend': 0.0
+            }
+        row = df.iloc[0]
+        grab_days = max(int(row['grab_days'] or 0), 1)
+        gojek_days = max(int(row['gojek_days'] or 0), 1)
+        grab_avg = float(row['grab_sum'] or 0.0) / grab_days
+        gojek_avg = float(row['gojek_sum'] or 0.0) / gojek_days
+        return {
+            'grab_avg_daily_spend': grab_avg,
+            'gojek_avg_daily_spend': gojek_avg,
+            'total_avg_daily_spend': grab_avg + gojek_avg
+        }
     
     def _get_weather_data(self, restaurant_name, date_str):
         """Получает РЕАЛЬНЫЕ погодные данные через Open-Meteo API"""
@@ -707,44 +776,53 @@ LEFT JOIN grab_stats g ON g.restaurant_id = gj.restaurant_id AND g.stat_date = g
                     
         return impact_score
     
-    def _analyze_advertising(self, day_data, factors, critical_issues):
-        """Анализирует рекламные показатели"""
-        grab_ads_spend = day_data.get('grab_ads_spend', 0)
-        grab_ads_sales = day_data.get('grab_ads_sales', 0)
-        gojek_ads_spend = day_data.get('gojek_ads_spend', 0)
-        gojek_ads_sales = day_data.get('gojek_ads_sales', 0)
+    def _analyze_advertising(self, day_data, factors, critical_issues, restaurant_name: str, target_date: str):
+        """Анализирует рекламные показатели с нормами по месяцу и числовыми сравнениями"""
+        grab_ads_spend = float(day_data.get('grab_ads_spend', 0) or 0)
+        grab_ads_sales = float(day_data.get('grab_ads_sales', 0) or 0)
+        gojek_ads_spend = float(day_data.get('gojek_ads_spend', 0) or 0)
+        gojek_ads_sales = float(day_data.get('gojek_ads_sales', 0) or 0)
+        
+        baselines = self._get_monthly_marketing_baselines(restaurant_name, target_date)
+        grab_norm = float(baselines.get('grab_avg_daily_spend', 0) or 0)
+        gojek_norm = float(baselines.get('gojek_avg_daily_spend', 0) or 0)
+        total_norm = float(baselines.get('total_avg_daily_spend', 0) or 0)
         
         ads_working = False
         impact_score = 0
         
-        if grab_ads_spend > 0:
-            grab_roas = grab_ads_sales / grab_ads_spend
-            ads_working = True
-            if grab_roas >= 10:
-                factors.append(f"✅ Grab ROAS отличный: {grab_roas:.1f}")
-            elif grab_roas >= 3:
-                factors.append(f"🟢 Grab ROAS хороший: {grab_roas:.1f}")
-            elif grab_roas < 1:
-                factors.append(f"🚨 Grab ROAS критичный: {grab_roas:.1f}")
+        # ГРАНУЛЯРНЫЕ цифры по платформам
+        if grab_ads_spend > 0 or grab_norm > 0:
+            grab_roas = (grab_ads_sales / grab_ads_spend) if grab_ads_spend > 0 else 0
+            diff_pct = ((grab_ads_spend - grab_norm) / grab_norm * 100) if grab_norm > 0 else 0
+            norm_txt = f"норма {grab_norm:,.0f} IDR"
+            factors.append(f"📱 GRAB реклама: {grab_ads_spend:,.0f} IDR (vs {norm_txt}, {diff_pct:+.1f}%), ROAS {grab_roas:.2f}x")
+            ads_working = ads_working or grab_ads_spend > 0
+            if grab_roas < 1 and grab_ads_spend > 0:
                 critical_issues.append("Критически низкий ROAS Grab")
-                impact_score += 40
-                
-        if gojek_ads_spend > 0:
-            gojek_roas = gojek_ads_sales / gojek_ads_spend
-            ads_working = True
-            if gojek_roas >= 10:
-                factors.append(f"✅ Gojek ROAS отличный: {gojek_roas:.1f}")
-            elif gojek_roas >= 3:
-                factors.append(f"🟢 Gojek ROAS хороший: {gojek_roas:.1f}")
-            elif gojek_roas < 1:
-                factors.append(f"🚨 Gojek ROAS критичный: {gojek_roas:.1f}")
+                impact_score += 30
+        
+        if gojek_ads_spend > 0 or gojek_norm > 0:
+            gojek_roas = (gojek_ads_sales / gojek_ads_spend) if gojek_ads_spend > 0 else 0
+            diff_pct = ((gojek_ads_spend - gojek_norm) / gojek_norm * 100) if gojek_norm > 0 else 0
+            norm_txt = f"норма {gojek_norm:,.0f} IDR"
+            factors.append(f"🛵 GOJEK реклама: {gojek_ads_spend:,.0f} IDR (vs {norm_txt}, {diff_pct:+.1f}%), ROAS {gojek_roas:.2f}x")
+            ads_working = ads_working or gojek_ads_spend > 0
+            if gojek_roas < 1 and gojek_ads_spend > 0:
                 critical_issues.append("Критически низкий ROAS Gojek")
-                impact_score += 40
+                impact_score += 30
+        
+        total_spend = grab_ads_spend + gojek_ads_spend
+        total_sales = grab_ads_sales + gojek_ads_sales
+        if total_spend > 0 or total_norm > 0:
+            total_roas = (total_sales / total_spend) if total_spend > 0 else 0
+            diff_pct = ((total_spend - total_norm) / total_norm * 100) if total_norm > 0 else 0
+            factors.append(f"🎯 ИТОГО реклама: {total_spend:,.0f} IDR (vs норма {total_norm:,.0f} IDR, {diff_pct:+.1f}%), ROAS {total_roas:.2f}x")
         
         if not ads_working:
             factors.append("❌ Реклама не работала")
-            impact_score += 20
-            
+            impact_score += 10
+        
         return impact_score
     
     def _generate_general_recommendations(self, bad_days):
