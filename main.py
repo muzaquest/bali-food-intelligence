@@ -1405,7 +1405,7 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
         print(f"   Разница: {abs(total_marketing - platform_total_marketing):,.0f} IDR")
         print()
     
-    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (GRAB + GOJEK)")
+    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR ({(total_marketing/total_sales*100) if total_sales>0 else 0:.1f}% от выручки)")
     print(f"   ├── 📱 GRAB: {grab_marketing_budget:,.0f} IDR ({grab_marketing_budget/total_marketing*100:.1f}%)")
     print(f"   └── 🛵 GOJEK: {gojek_marketing_budget:,.0f} IDR ({gojek_marketing_budget/total_marketing*100:.1f}%)")
     # Получаем данные по платформам отдельно для корректного ROAS анализа
