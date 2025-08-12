@@ -1822,8 +1822,15 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
         cpc = (grab_marketing_spend / total_menu_visits) if total_menu_visits > 0 else 0.0
         cpa = (grab_marketing_spend / grab_marketing_orders) if grab_marketing_orders > 0 else 0.0
         print("\n💸 Стоимость привлечения (только GRAB):")
-        print(f"  💰 Стоимость клика: {cpc:,.0f} IDR")
-        print(f"  💰 Стоимость заказа: {cpa:,.0f} IDR")
+    print(f"  💰 Стоимость клика: {cpc:,.0f} IDR")
+    print(f"  💰 Стоимость заказа: {cpa:,.0f} IDR")
+    # Дополнительные метрики
+    cpm = (grab_marketing_spend / (total_impressions/1000)) if total_impressions>0 else 0.0
+    freq = (total_impressions / total_unique_reach) if total_unique_reach>0 else 0.0
+    mer_total = (total_sales / (grab_marketing_spend + gojek_marketing_spend)) if (grab_marketing_spend + gojek_marketing_spend) > 0 else 0.0
+    print(f"  💰 CPM: {cpm:,.0f} IDR (стоимость 1000 показов)")
+    print(f"  👤 Частота показов: {freq:.2f} на пользователя")
+    print(f"  📈 MER (выручка/бюджет): {mer_total:.2f}x")
         print(f"  ")
         print(f"  📊 КЛЮЧЕВЫЕ КОНВЕРСИИ:")
         
