@@ -1616,6 +1616,24 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
         print(f"📊 АНАЛИЗ РАБОЧИХ ДНЕЙ ({len(working_days)} дней):")
         print(f"🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR")
         print(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR")
+        # ML объяснения для лучшего/худшего дня
+        try:
+            from src.analyzers import IntegratedMLDetective
+            ml_det = IntegratedMLDetective()
+            if not getattr(ml_det, 'model_trained', False):
+                ml_det._train_ml_model(restaurant_name)
+            best_ml = ml_det._get_ml_explanation_for_day(restaurant_name, str(best_day['date']))
+            worst_ml = ml_det._get_ml_explanation_for_day(restaurant_name, str(worst_day['date']))
+            if best_ml:
+                print("🤖 ML анализ лучшего дня:")
+                for line in best_ml:
+                    print(f"   {line}")
+            if worst_ml:
+                print("🤖 ML анализ худшего дня:")
+                for line in worst_ml:
+                    print(f"   {line}")
+        except Exception:
+            pass
         
         # Корректный расчет разброса для рабочих дней
         sales_variance = ((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100)
@@ -2570,6 +2588,24 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
                 f.write("-" * 50 + "\n")
                 f.write(f"🏆 Лучший день: {best_day['date']} - {best_day['total_sales']:,.0f} IDR\n")
                 f.write(f"📉 Худший день: {worst_day['date']} - {worst_day['total_sales']:,.0f} IDR\n")
+                # ML объяснения для лучшего/худшего дня (если доступно)
+                try:
+                    from src.analyzers import IntegratedMLDetective
+                    ml_det = IntegratedMLDetective()
+                    if not getattr(ml_det, 'model_trained', False):
+                        ml_det._train_ml_model(restaurant_name)
+                    best_ml = ml_det._get_ml_explanation_for_day(restaurant_name, str(best_day['date']))
+                    worst_ml = ml_det._get_ml_explanation_for_day(restaurant_name, str(worst_day['date']))
+                    if best_ml:
+                        f.write("🤖 ML анализ лучшего дня:\n")
+                        for line in best_ml:
+                            f.write(f"   {line}\n")
+                    if worst_ml:
+                        f.write("🤖 ML анализ худшего дня:\n")
+                        for line in worst_ml:
+                            f.write(f"   {line}\n")
+                except Exception:
+                    pass
                 sales_variance = ((best_day['total_sales'] - worst_day['total_sales']) / worst_day['total_sales'] * 100) if worst_day['total_sales']>0 else 0
                 f.write(f"📊 Разброс продаж: {sales_variance:.1f}% (только рабочие дни)\n")
             f.write("\n")
