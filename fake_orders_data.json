@@ -10190,5 +10190,325 @@
     "quantity": "0",
     "amount": "0",
     "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 16:12:40",
+    "restaurant": "Bread and Breakfast (Canggu)",
+    "date": "09/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 16:19:37",
+    "restaurant": "Immigrant (Seminyak)",
+    "date": "10/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 21:59:49",
+    "restaurant": "Immigrant (Seminyak)",
+    "date": "10/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 22:46:20",
+    "restaurant": "Prana",
+    "date": "09/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 22:56:27",
+    "restaurant": "My Place (Canngu)",
+    "date": "10/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 22:57:05",
+    "restaurant": "Immigrant (Canggu)",
+    "date": "10/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 23:03:51",
+    "restaurant": "Sexy Fish Sushi",
+    "date": "10/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 23:11:21",
+    "restaurant": "Crave Cookies (Canggu)",
+    "date": "10/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 23:19:13",
+    "restaurant": "Pinkman",
+    "date": "10/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 23:22:55",
+    "restaurant": "Pasta Box (Canggu)",
+    "date": "07/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 23:31:48",
+    "restaurant": "Healthy Tribes",
+    "date": "10/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "10/08/2025 23:38:03",
+    "restaurant": "Immigrant (Seminyak)",
+    "date": "08/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "11/08/2025 00:34:14",
+    "restaurant": "My Place (Seminyak)",
+    "date": "08/08/2025",
+    "quantity": "22",
+    "amount": "66000",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "11/08/2025 00:51:08",
+    "restaurant": "Ninja Sushi (Uluwatu)",
+    "date": "08/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 00:51:50",
+    "restaurant": "My Place (Seminyak)",
+    "date": "08/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 00:52:18",
+    "restaurant": "Immigrant (Canggu)",
+    "date": "08/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 00:52:46",
+    "restaurant": "Bread and Breakfast (Canggu)",
+    "date": "08/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 00:53:15",
+    "restaurant": "Bread and Breakfast (Seminyak)",
+    "date": "08/08/2025",
+    "quantity": "4",
+    "amount": "4000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 00:53:43",
+    "restaurant": "Unit Cafe (Canggu)",
+    "date": "08/08/2025",
+    "quantity": "4",
+    "amount": "4000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 00:54:10",
+    "restaurant": "Only Eggs",
+    "date": "08/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 00:54:40",
+    "restaurant": "Smoothie Shop (ULUWATU)",
+    "date": "08/08/2025",
+    "quantity": "3",
+    "amount": "3000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 00:55:09",
+    "restaurant": "Yes Shawarma (Uluwatu)",
+    "date": "08/08/2025",
+    "quantity": "4",
+    "amount": "4000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 01:50:44",
+    "restaurant": "My Place (Canngu)",
+    "date": "08/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 20:50:53",
+    "restaurant": "Ninja Sushi (Uluwatu)",
+    "date": "11/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 20:51:16",
+    "restaurant": "My Place (Seminyak)",
+    "date": "11/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 20:51:41",
+    "restaurant": "Immigrant (Canggu)",
+    "date": "11/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 20:52:05",
+    "restaurant": "Bread and Breakfast (Seminyak)",
+    "date": "11/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 20:52:29",
+    "restaurant": "My Place (Canngu)",
+    "date": "11/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 20:52:50",
+    "restaurant": "Only Eggs",
+    "date": "11/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 20:53:11",
+    "restaurant": "Yes Shawarma (Uluwatu)",
+    "date": "11/08/2025",
+    "quantity": "5",
+    "amount": "5000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 20:53:32",
+    "restaurant": "My Place (Canngu)",
+    "date": "11/08/2025",
+    "quantity": "4",
+    "amount": "4000",
+    "platform": "Gojek"
+  },
+  {
+    "timestamp": "11/08/2025 21:02:49",
+    "restaurant": "My Place (Canngu)",
+    "date": "11/08/2025",
+    "quantity": "10",
+    "amount": "30000",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "11/08/2025 21:03:17",
+    "restaurant": "Immigrant (Canggu)",
+    "date": "11/08/2025",
+    "quantity": "28",
+    "amount": "84000",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "11/08/2025 21:03:37",
+    "restaurant": "Pinkman",
+    "date": "11/08/2025",
+    "quantity": "10",
+    "amount": "30000",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "12/08/2025 01:56:03",
+    "restaurant": "Sexy Fish Sushi",
+    "date": "11/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "12/08/2025 03:14:38",
+    "restaurant": "Pinkman",
+    "date": "11/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "12/08/2025 03:20:26",
+    "restaurant": "Healthy Tribes",
+    "date": "11/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "12/08/2025 03:29:55",
+    "restaurant": "Only Kebab",
+    "date": "11/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "12/08/2025 03:38:07",
+    "restaurant": "Healthy Fit (Canggu)",
+    "date": "09/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
+  },
+  {
+    "timestamp": "12/08/2025 03:38:46",
+    "restaurant": "Healthy Fit (Canggu)",
+    "date": "11/08/2025",
+    "quantity": "0",
+    "amount": "0",
+    "platform": "Grab"
   }
 ]
