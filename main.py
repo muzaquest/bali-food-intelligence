@@ -1976,7 +1976,45 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
     print()
     
     # 6. КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ
-    print("⭐ 6. КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ")
+    # 💳 ФИНАНСОВЫЕ ПОКАЗАТЕЛИ
+    print("\n💳 ФИНАНСОВЫЕ ПОКАЗАТЕЛИ")
+    # Сводные значения
+    grab_sales_total = grab_platform_data['total_sales'].sum() if not grab_platform_data.empty else 0
+    gojek_sales_total = gojek_platform_data['total_sales'].sum() if not gojek_platform_data.empty else 0
+    ads_total_sales = (grab_marketing_sales + gojek_marketing_sales) if ('grab_marketing_sales' in locals() and 'gojek_marketing_sales' in locals()) else 0
+    ads_total_spend = (grab_marketing_spend + gojek_marketing_spend) if ('grab_marketing_spend' in locals() and 'gojek_marketing_spend' in locals()) else 0
+    total_roas_overall = (ads_total_sales/ads_total_spend) if ads_total_spend>0 else 0
+    # Доли выплат
+    grab_payout_share = (grab_payouts/total_payouts*100) if total_payouts>0 else 0
+    gojek_payout_share = (gojek_payouts/total_payouts*100) if total_payouts>0 else 0
+    # Ставки комиссий
+    grab_fee_rate = ((grab_sales_total - grab_payouts)/grab_sales_total*100) if grab_sales_total>0 else 0
+    gojek_fee_rate = ((gojek_sales_total - gojek_payouts)/gojek_sales_total*100) if gojek_sales_total>0 else 0
+    # Net после рекламы
+    grab_net_after_ads = grab_payouts - (grab_marketing_spend if 'grab_marketing_spend' in locals() else 0)
+    gojek_net_after_ads = gojek_payouts - (gojek_marketing_spend if 'gojek_marketing_spend' in locals() else 0)
+    total_net_after_ads = total_payouts - ads_total_spend
+    # Вывод
+    print("💰 Выплаты:")
+    print(f"   ├── 📱 GRAB: {grab_payouts:,.0f} IDR ({grab_payout_share:.1f}%)")
+    print(f"   ├── 🛵 GOJEK: {gojek_payouts:,.0f} IDR ({gojek_payout_share:.1f}%)")
+    print(f"   └── 💎 Общие выплаты: {total_payouts:,.0f} IDR")
+    print("📊 Рекламная эффективность:")
+    print(f"   ├── 💰 Общие рекламные продажи: {ads_total_sales:,.0f} IDR")
+    ads_share_total = (ads_total_sales/total_sales*100) if total_sales>0 else 0
+    print(f"   ├── 📈 Доля от общих продаж: {ads_share_total:.1f}%")
+    print(f"   ├── 🎯 GRAB ROAS: {(grab_marketing_sales/grab_marketing_spend) if (('grab_marketing_sales' in locals()) and grab_marketing_spend>0) else 0:.2f}x")
+    print(f"   └── 🎯 GOJEK ROAS: {(gojek_marketing_sales/gojek_marketing_spend) if (('gojek_marketing_sales' in locals()) and gojek_marketing_spend>0) else 0:.2f}x")
+    print("\n💵 Реальные поступления ресторану:")
+    print(f"💰 Общие поступления: {total_payouts:,.0f} IDR")
+    print(f"├── 📱 GRAB: {grab_payouts:,.0f} IDR (ставка комиссии: {grab_fee_rate:.1f}% от выручки GRAB)")
+    print(f"│   ├── 🏛️ Комиссия платформы: {grab_sales_total - grab_payouts:,.0f} IDR")
+    print(f"│   └── 📈 Рекламный бюджет: {grab_marketing_spend if 'grab_marketing_spend' in locals() else 0:,.0f} IDR → Net после рекламы: {grab_net_after_ads:,.0f} IDR")
+    print(f"└── 🛵 GOJEK: {gojek_payouts:,.0f} IDR (ставка комиссии: {gojek_fee_rate:.1f}% от выручки GOJEK)")
+    print(f"    ├── 🏛️ Комиссия платформы: {gojek_sales_total - gojek_payouts:,.0f} IDR")
+    print(f"    └── 📈 Рекламный бюджет: {gojek_marketing_spend if 'gojek_marketing_spend' in locals() else 0:,.0f} IDR → Net после рекламы: {gojek_net_after_ads:,.0f} IDR")
+    
+    print("\n⭐ 6. КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ")
     print("-" * 40)
     
     # Правильный анализ рейтингов - только GOJEK имеет детальные данные по звездам
