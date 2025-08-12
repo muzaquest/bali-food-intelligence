@@ -1804,15 +1804,26 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
     
     print("📊 Маркетинговая воронка (только GRAB - GOJEK не предоставляет данные воронки):")
     if total_impressions > 0:
-        ctr = (total_menu_visits / total_impressions) * 100
-        add_to_cart_rate = (total_add_to_carts / total_menu_visits) * 100 if total_menu_visits > 0 else 0
-        cart_to_order_rate = (grab_marketing_orders / total_add_to_carts) * 100 if total_add_to_carts > 0 else 0
-        overall_conversion = (grab_marketing_orders / total_menu_visits) * 100 if total_menu_visits > 0 else 0
+        total_unique_reach = data['unique_impressions_reach'].sum()
+        ctr = (total_menu_visits / total_unique_reach * 100) if total_unique_reach > 0 else 0.0
+        cart_rate = (total_add_to_carts / total_menu_visits * 100) if total_menu_visits > 0 else 0.0
+        cart_to_order = (grab_marketing_orders / total_add_to_carts * 100) if total_add_to_carts > 0 else 0.0
         
         print(f"  👁️ Показы рекламы: {total_impressions:,.0f} (только GRAB)")
         print(f"  🔗 Посещения меню: {total_menu_visits:,.0f} (CTR: {ctr:.2f}%) (только GRAB)")
-        print(f"  🛒 Добавления в корзину: {total_add_to_carts:,.0f} (конверсия: {add_to_cart_rate:.2f}% от кликов) (только GRAB)")
-        print(f"  📦 Заказы от рекламы: {grab_marketing_orders:,.0f} (конверсия: {cart_to_order_rate:.1f}% от корзины) (только GRAB)")
+        print(f"  🛒 Добавления в корзину: {total_add_to_carts:,.0f} (конверсия: {cart_rate:.2f}% от кликов) (только GRAB)")
+        print(f"  📦 Заказы от рекламы: {grab_marketing_orders:,.0f} (конверсия: {cart_to_order:.1f}% от корзины) (только GRAB)")
+        
+        print("  \n  📊 КЛЮЧЕВЫЕ КОНВЕРСИИ:")
+        print(f"  • 🎯 Показ → Заказ: {(grab_marketing_orders/total_unique_reach*100) if total_unique_reach>0 else 0.0:.2f}%")
+        print(f"  • 🔗 Клик → Заказ: {(grab_marketing_orders/total_menu_visits*100) if total_menu_visits>0 else 0.0:.1f}%")
+        print(f"  • 🛒 Корзина → Заказ: {cart_to_order:.1f}%")
+        
+        cpc = (grab_marketing_spend / total_menu_visits) if total_menu_visits > 0 else 0.0
+        cpa = (grab_marketing_spend / grab_marketing_orders) if grab_marketing_orders > 0 else 0.0
+        print("\n💸 Стоимость привлечения (только GRAB):")
+        print(f"  💰 Стоимость клика: {cpc:,.0f} IDR")
+        print(f"  💰 Стоимость заказа: {cpa:,.0f} IDR")
         print(f"  ")
         print(f"  📊 КЛЮЧЕВЫЕ КОНВЕРСИИ:")
         
