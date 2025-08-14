@@ -108,6 +108,13 @@ class IntegratedMLDetective:
                     )
                     ml_enhanced_results.append("")
                     ml_enhanced_results.extend(ml_explanation)
+                    
+                    # What-if сценарии
+                    what_if = self._simulate_what_if_for_day(restaurant_name, date_str)
+                    if what_if:
+                        ml_enhanced_results.append("")
+                        ml_enhanced_results.append("   🔮 WHAT‑IF (контрфакты):")
+                        ml_enhanced_results.extend([f"      • {line}" for line in what_if])
         
         # 4. Добавляем общую ML сводку
         ml_enhanced_results.append("")
@@ -115,6 +122,14 @@ class IntegratedMLDetective:
         ml_enhanced_results.append("=" * 50)
         ml_summary = self._generate_ml_summary(restaurant_name, start_date, end_date)
         ml_enhanced_results.extend(ml_summary)
+        
+        # 5. Недельный анализ наибольшей просадки (WoW) с SHAP факторами
+        weekly = self._summarize_biggest_week_drop(restaurant_name, start_date, end_date)
+        if weekly:
+            ml_enhanced_results.append("")
+            ml_enhanced_results.append("📉 НЕДЕЛЬНЫЙ ПРОСАДОЧНЫЙ ПЕРИОД (WoW):")
+            ml_enhanced_results.append("-" * 50)
+            ml_enhanced_results.extend(weekly)
         
         return ml_enhanced_results
     
@@ -271,7 +286,7 @@ class IntegratedMLDetective:
             explanation.append(f"   💰 Реальные продажи: {actual_sales:,.0f} IDR")
             explanation.append(f"   🤖 ML прогноз: {predicted_sales:,.0f} IDR")
             
-            deviation_pct = ((actual_sales - predicted_sales) / predicted_sales) * 100
+            deviation_pct = ((actual_sales - predicted_sales) / predicted_sales) * 100 if predicted_sales else 0
             explanation.append(f"   📊 Отклонение: {deviation_pct:+.1f}%")
             explanation.append("")
             
@@ -281,17 +296,19 @@ class IntegratedMLDetective:
             
             explanation.append("   🔍 ГЛАВНЫЕ ФАКТОРЫ ВЛИЯНИЯ:")
             
-            for i, (feature_name, feature_value, shap_value) in enumerate(feature_importance[:5]):
+            shown = 0
+            for i, (feature_name, feature_value, shap_value) in enumerate(feature_importance):
                 if abs(shap_value) < 50000:  # Игнорируем малозначимые
                     continue
-                    
-                impact_pct = (shap_value / predicted_sales) * 100
+                impact_pct = (shap_value / predicted_sales) * 100 if predicted_sales else 0
                 formatted_name = self._format_feature_name(feature_name)
-                
                 if shap_value > 0:
                     explanation.append(f"      {i+1}. ✅ {formatted_name}: +{impact_pct:.1f}% влияния (+{shap_value:,.0f} IDR)")
                 else:
                     explanation.append(f"      {i+1}. 🚨 {formatted_name}: {impact_pct:.1f}% влияния ({shap_value:,.0f} IDR)")
+                shown += 1
+                if shown >= 5:
+                    break
             
             # Добавляем ML рекомендации
             explanation.append("")
@@ -303,6 +320,35 @@ class IntegratedMLDetective:
             
         except Exception as e:
             return [f"❌ Ошибка ML анализа: {e}"]
+    
+    def _simulate_what_if_for_day(self, restaurant_name: str, target_date: str):
+        """Простые контрфакты: без дождя, +20% реклама, без простоев платформ."""
+        try:
+            if not self.model_trained:
+                return []
+            base_feats = self._prepare_features_for_date(restaurant_name, target_date)
+            if not base_feats:
+                return []
+            actual = self._get_actual_sales(restaurant_name, target_date)
+            base_pred = float(self.ml_model.predict(np.array([list(base_feats.values())]))[0])
+            scenarios = []
+            # 1) Без дождя
+            f1 = dict(base_feats); f1['precipitation'] = 0.0
+            pred1 = float(self.ml_model.predict(np.array([list(f1.values())]))[0])
+            scenarios.append(("Без дождя", pred1 - actual))
+            # 2) +20% рекламы
+            f2 = dict(base_feats); f2['total_ads_spend'] = base_feats.get('total_ads_spend', 0.0) * 1.2
+            pred2 = float(self.ml_model.predict(np.array([list(f2.values())]))[0])
+            scenarios.append(("+20% рекламного бюджета", pred2 - actual))
+            # 3) Без простоев (обе платформы стабильно)
+            f3 = dict(base_feats); f3['grab_offline_rate'] = 0.0; f3['gojek_closed'] = 0
+            pred3 = float(self.ml_model.predict(np.array([list(f3.values())]))[0])
+            scenarios.append(("Без простоев платформ", pred3 - actual))
+            # Форматируем
+            lines = [f"{name}: +{delta:,.0f} IDR" if delta>0 else f"{name}: {delta:,.0f} IDR" for name, delta in scenarios]
+            return lines
+        except Exception:
+            return []
     
     def _prepare_features_for_date(self, restaurant_name, target_date):
         """Подготавливает признаки для конкретной даты"""
@@ -489,6 +535,58 @@ class IntegratedMLDetective:
             summary.append("⚠️ ML модель не обучена - недостаточно данных")
         
         return summary
+    
+    def _summarize_biggest_week_drop(self, restaurant_name: str, start_date: str, end_date: str):
+        """Находит наибольшую недельную просадку (WoW) и суммирует ключевые SHAP‑факторы недели."""
+        try:
+            with sqlite3.connect('database.sqlite') as conn:
+                # Сумма продаж по дням в периоде
+                q = f"""
+                WITH all_dates AS (
+                    SELECT stat_date d, COALESCE(sales,0) s FROM grab_stats WHERE restaurant_id=(SELECT id FROM restaurants WHERE name='{restaurant_name}') AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+                    UNION ALL
+                    SELECT stat_date d, COALESCE(sales,0) s FROM gojek_stats WHERE restaurant_id=(SELECT id FROM restaurants WHERE name='{restaurant_name}') AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+                )
+                SELECT d as date, SUM(s) total FROM all_dates GROUP BY d ORDER BY d
+                """
+                df = pd.read_sql_query(q, conn)
+            if df.empty:
+                return []
+            df['date'] = pd.to_datetime(df['date'])
+            df['week'] = df['date'].dt.isocalendar().week
+            wk = df.groupby('week', as_index=False)['total'].sum().sort_values('week')
+            wk['prev'] = wk['total'].shift(1)
+            wk['wow'] = (wk['total'] - wk['prev'])/wk['prev']*100.0
+            wk = wk.dropna(subset=['wow'])
+            if wk.empty:
+                return []
+            worst_week = wk.loc[wk['wow'].idxmin()]
+            target_week = int(worst_week['week'])
+            change = float(worst_week['wow'])
+            # Даты выбранной недели
+            dates = df[df['week']==target_week]['date'].dt.strftime('%Y-%m-%d').tolist()
+            # SHAP суммы по неделе (абсолютные значения)
+            if not self.model_trained:
+                return [f"Неделя #{target_week}: {change:.1f}% vs пред. неделя (ML не обучен)"]
+            agg = {}
+            for d in dates:
+                feats = self._prepare_features_for_date(restaurant_name, d)
+                if not feats:
+                    continue
+                arr = np.array([list(feats.values())])
+                shap_vals = self.shap_explainer.shap_values(arr)[0]
+                for name, val in zip(self.feature_names, shap_vals):
+                    agg[name] = agg.get(name, 0.0) + abs(float(val))
+            if not agg:
+                return [f"Неделя #{target_week}: {change:.1f}% vs пред. неделя"]
+            top = sorted([(k,v) for k,v in agg.items()], key=lambda x: x[1], reverse=True)[:5]
+            lines = [f"Неделя #{target_week}: {change:.1f}% vs пред. неделя"]
+            lines.append("Топ‑факторы недели:")
+            for name, val in top:
+                lines.append(f"• {self._format_feature_name(name)}")
+            return lines
+        except Exception:
+            return []
     
     def _extract_date_from_result(self, result_line):
         """Извлекает дату из строки результата"""
