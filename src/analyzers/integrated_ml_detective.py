@@ -66,7 +66,12 @@ class IntegratedMLDetective:
                     self.ml_model = joblib.load(model_path)
                     with open(feats_path, 'r', encoding='utf-8') as f:
                         self.feature_names = json.load(f).get('features', [])
-                    self.model_trained = True
+                    # Initialize SHAP explainer for loaded model
+                    try:
+                        self.shap_explainer = shap.TreeExplainer(self.ml_model)
+                        self.model_trained = True
+                    except Exception:
+                        self.model_trained = True
             except Exception:
                 pass
     

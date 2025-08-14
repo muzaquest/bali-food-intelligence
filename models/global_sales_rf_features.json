@@ -19,6 +19,7 @@
     "rating_gojek",
     "sales_7day_avg",
     "sales_30day_avg",
-    "sales_gradient_7"
+    "sales_gradient_7",
+    "tourism_index"
   ]
 }
