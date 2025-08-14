@@ -2884,10 +2884,20 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
             f.write("-" * 50 + "\n")
             f.write(ai_insights + "\n\n")
             
-            # Детективный анализ причин
-            f.write("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН\n")
-            f.write("-" * 50 + "\n")
-            f.write(detective_analysis + "\n\n")
+            # Детективный ML-анализ причин
+            f.write("🔍 ДЕТЕКТИВНЫЙ ML-АНАЛИЗ\n")
+            f.write("=" * 50 + "\n")
+            try:
+                from src.analyzers.integrated_ml_detective import IntegratedMLDetective
+                ml_det_full = IntegratedMLDetective()
+                ml_lines = ml_det_full.analyze_with_ml_explanations(restaurant_name, start_date, end_date)
+                for line in ml_lines:
+                    f.write(line + "\n")
+            except Exception as e:
+                # Фоллбэк на стандартный анализ, если ML недоступен
+                f.write("⚠️ ML-анализ недоступен, используется стандартный анализ.\n")
+                f.write(detective_analysis + "\n")
+            f.write("\n")
             
             # Стратегические рекомендации
             f.write("💡 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ\n")
