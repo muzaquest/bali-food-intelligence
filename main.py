@@ -2786,51 +2786,88 @@ print(f"   💡 Успешных заказов: {grab_successful + gojek_succes
             f.write("\n")
             
             # Качество обслуживания
-            f.write("⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ\n")
-            f.write("-" * 50 + "\n")
+            f.write("⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ (GOJEK)\n")
+            f.write("────────────────────────────────────────────────────────────────────────────\n")
+            f.write("\n")
             
             # Используем те же переменные что и в консольном выводе
             gojek_ratings_data = gojek_platform_data if not gojek_platform_data.empty else pd.DataFrame()
             
             if not gojek_ratings_data.empty and 'five_star_ratings' in gojek_ratings_data.columns:
-                one_stars = gojek_ratings_data['one_star_ratings'].sum()
-                two_stars = gojek_ratings_data['two_star_ratings'].sum()
-                three_stars = gojek_ratings_data['three_star_ratings'].sum()
-                four_stars = gojek_ratings_data['four_star_ratings'].sum()
-                five_stars = gojek_ratings_data['five_star_ratings'].sum()
+                one_stars = int(gojek_ratings_data['one_star_ratings'].sum())
+                two_stars = int(gojek_ratings_data['two_star_ratings'].sum())
+                three_stars = int(gojek_ratings_data['three_star_ratings'].sum())
+                four_stars = int(gojek_ratings_data['four_star_ratings'].sum())
+                five_stars = int(gojek_ratings_data['five_star_ratings'].sum())
                 total_gojek_ratings = one_stars + two_stars + three_stars + four_stars + five_stars
                 
-                grab_avg_rating = grab_platform_data['rating'].mean() if not grab_platform_data.empty and 'rating' in grab_platform_data.columns else 0
-                
-                f.write(f"📊 Детальные оценки клиентов GOJEK (всего: {total_gojek_ratings:,.0f}):\n")
-                
-                ratings_data = [
-                    (5, five_stars, "⭐⭐⭐⭐⭐"),
-                    (4, four_stars, "⭐⭐⭐⭐"),
-                    (3, three_stars, "⭐⭐⭐"),
-                    (2, two_stars, "⭐⭐"),
-                    (1, one_stars, "⭐")
-                ]
-                
-                for stars, count, emoji in ratings_data:
-                    if count > 0:  # Показываем только непустые категории
-                        percentage = (count / total_gojek_ratings) * 100 if total_gojek_ratings > 0 else 0
-                        f.write(f"  {emoji} {stars} звезд: {count:,.0f} ({percentage:.1f}%)\n")
+                f.write(f"📊 Распределение оценок (всего: {total_gojek_ratings}):\n\n")
+                # Печатаем все категории, даже если 0
+                def pct(x):
+                    return (x / total_gojek_ratings * 100) if total_gojek_ratings > 0 else 0.0
+                f.write(f"⭐⭐⭐⭐⭐ 5 звезд: {five_stars} ({pct(five_stars):.1f}%)\n")
+                f.write(f"⭐⭐⭐⭐ 4 звезды: {four_stars} ({pct(four_stars):.1f}%)\n")
+                f.write(f"⭐⭐⭐ 3 звезды: {three_stars} ({pct(three_stars):.1f}%)\n")
+                f.write(f"⭐⭐ 2 звезды: {two_stars} ({pct(two_stars):.1f}%)\n")
+                f.write(f"⭐ 1 звезда: {one_stars} ({pct(one_stars):.1f}%)\n")
                 
                 if total_gojek_ratings > 0:
                     gojek_weighted_score = (five_stars * 5 + four_stars * 4 + three_stars * 3 + two_stars * 2 + one_stars * 1)
                     gojek_satisfaction = gojek_weighted_score / total_gojek_ratings
-                    f.write(f"📈 Индекс удовлетворенности GOJEK: {gojek_satisfaction:.2f}/5.0\n")
+                else:
+                    gojek_satisfaction = 0.0
+                f.write(f"📈 Индекс удовлетворенности: {gojek_satisfaction:.2f}/5.0\n\n")
                 
-                if grab_avg_rating > 0:
-                    f.write(f"📈 Средний рейтинг GRAB: {grab_avg_rating:.2f}/5.0 (детализация недоступна)\n")
-                
+                # Негатив 1-2★
                 negative_ratings = one_stars + two_stars
-                if negative_ratings > 0:
-                    negative_rate = (negative_ratings / total_gojek_ratings) * 100
-                    f.write(f"🚨 Негативные отзывы GOJEK (1-2★): {negative_ratings:,.0f} ({negative_rate:.1f}%)\n")
+                negative_rate = (negative_ratings / total_gojek_ratings * 100.0) if total_gojek_ratings > 0 else 0.0
+                f.write(f"🚨 Негативные отзывы (1–2★): {negative_ratings} ({negative_rate:.1f}%)\n\n")
                 
-                f.write(f"⚠️ ОГРАНИЧЕНИЯ: GOJEK {total_gojek_ratings} оценок, GRAB только средний рейтинг\n")
+                # Частота плохих оценок (не 5★)
+                bad_ratings = total_gojek_ratings - five_stars
+                # Успешные заказы GOJEK (orders - cancelled - lost - fake)
+                gojek_daily = data[data['platform'] == 'gojek'].copy()
+                for col in ['orders','cancelled_orders','lost_orders','fake_orders']:
+                    if col not in gojek_daily.columns:
+                        gojek_daily[col] = 0
+                gojek_daily[['orders','cancelled_orders','lost_orders','fake_orders']] = gojek_daily[['orders','cancelled_orders','lost_orders','fake_orders']].fillna(0)
+                successful_orders = int((gojek_daily['orders'] - gojek_daily['cancelled_orders'] - gojek_daily['lost_orders'] - gojek_daily['fake_orders']).clip(lower=0).sum())
+                orders_per_bad = (successful_orders / bad_ratings) if bad_ratings > 0 else 0
+                
+                f.write("📊 Частота плохих оценок (не 5★):\n\n")
+                f.write(f"📈 Плохих оценок всего: {bad_ratings} из {total_gojek_ratings} ({(bad_ratings/total_gojek_ratings*100 if total_gojek_ratings>0 else 0):.1f}%)\n")
+                f.write(f"📦 Успешных заказов GOJEK на 1 плохую оценку: {orders_per_bad:.1f}\n")
+                approx_every = int(round(orders_per_bad)) if orders_per_bad > 0 else 0
+                f.write(f"💡 Это означает: каждый {approx_every}-й успешный заказ GOJEK получает оценку не 5★\n")
+                f.write(f"🔧 Расчет: {successful_orders} успешных заказов (за вычетом {int(gojek_daily['cancelled_orders'].sum())} отмененных + {int(gojek_daily['lost_orders'].sum())} потерянных + {int(gojek_daily['fake_orders'].sum())} fake)\n")
+                
+                # Review rate
+                f.write("📬 Отзывчивость клиентов (review rate):\n\n")
+                overall_rr = (total_gojek_ratings / successful_orders * 100.0) if successful_orders > 0 else 0.0
+                f.write(f"Всего по периоду: {overall_rr:.2f}% ({total_gojek_ratings} оценок на {successful_orders} успешных заказов)\n")
+                # По дням недели
+                try:
+                    gojek_daily['date'] = pd.to_datetime(gojek_daily['date'])
+                    gojek_daily['weekday'] = gojek_daily['date'].dt.day_name()
+                    # дневные рейтинги
+                    rating_cols = ['one_star_ratings','two_star_ratings','three_star_ratings','four_star_ratings','five_star_ratings']
+                    for c in rating_cols:
+                        if c not in gojek_daily.columns:
+                            gojek_daily[c] = 0
+                    gojek_daily['ratings'] = gojek_daily[rating_cols].fillna(0).sum(axis=1)
+                    wd = gojek_daily.groupby('weekday').agg(ratings=('ratings','sum'), success=('orders', 'sum'))
+                    # success должен быть успешные заказы; пересчитаем
+                    wd_success = gojek_daily.groupby('weekday').apply(lambda x: int((x['orders'] - x['cancelled_orders'] - x['lost_orders'] - x['fake_orders']).clip(lower=0).sum()))
+                    wd['success'] = wd_success
+                    wd['review_rate'] = np.where(wd['success']>0, wd['ratings']/wd['success']*100.0, np.nan)
+                    for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']:
+                        val = wd.loc[day, 'review_rate'] if day in wd.index else np.nan
+                        if pd.notna(val):
+                            f.write(f"{day}: {val:.2f}%\n")
+                        else:
+                            f.write(f"{day}: 0.00%\n")
+                except Exception:
+                    pass
             else:
                 f.write("📊 Детальные данные по оценкам недоступны\n")
             f.write("\n")
