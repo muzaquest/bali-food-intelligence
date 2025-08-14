@@ -279,7 +279,8 @@ class IntegratedMLDetective:
             actual_sales = self._get_actual_sales(restaurant_name, target_date)
             
             # Делаем прогноз
-            feature_array = np.array([list(features.values())])
+            # Строго используем порядок признаков обученной модели
+            feature_array = np.array([[features.get(name, 0.0) for name in self.feature_names]])
             predicted_sales = self.ml_model.predict(feature_array)[0]
             
             # Получаем SHAP объяснение
@@ -296,7 +297,7 @@ class IntegratedMLDetective:
             explanation.append("")
             
             # Сортируем факторы по важности
-            feature_importance = list(zip(self.feature_names, features.values(), shap_values))
+            feature_importance = list(zip(self.feature_names, [features.get(n,0.0) for n in self.feature_names], shap_values))
             feature_importance.sort(key=lambda x: abs(x[2]), reverse=True)
             
             explanation.append("   🔍 ГЛАВНЫЕ ФАКТОРЫ ВЛИЯНИЯ:")
@@ -335,19 +336,19 @@ class IntegratedMLDetective:
             if not base_feats:
                 return []
             actual = self._get_actual_sales(restaurant_name, target_date)
-            base_pred = float(self.ml_model.predict(np.array([list(base_feats.values())]))[0])
+            base_pred = float(self.ml_model.predict(np.array([[base_feats.get(n,0.0) for n in self.feature_names]]))[0])
             scenarios = []
             # 1) Без дождя
             f1 = dict(base_feats); f1['precipitation'] = 0.0
-            pred1 = float(self.ml_model.predict(np.array([list(f1.values())]))[0])
+            pred1 = float(self.ml_model.predict(np.array([[f1.get(n,0.0) for n in self.feature_names]]))[0])
             scenarios.append(("Без дождя", pred1 - actual))
             # 2) +20% рекламы
-            f2 = dict(base_feats); f2['total_ads_spend'] = base_feats.get('total_ads_spend', 0.0) * 1.2
-            pred2 = float(self.ml_model.predict(np.array([list(f2.values())]))[0])
+            f2 = dict(base_feats); f2['ads_spend_total'] = base_feats.get('ads_spend_total', 0.0) * 1.2
+            pred2 = float(self.ml_model.predict(np.array([[f2.get(n,0.0) for n in self.feature_names]]))[0])
             scenarios.append(("+20% рекламного бюджета", pred2 - actual))
             # 3) Без простоев (обе платформы стабильно)
-            f3 = dict(base_feats); f3['grab_offline_rate'] = 0.0; f3['gojek_closed'] = 0
-            pred3 = float(self.ml_model.predict(np.array([list(f3.values())]))[0])
+            f3 = dict(base_feats); f3['grab_offline_rate'] = 0.0; f3['gojek_close_minutes'] = 0.0
+            pred3 = float(self.ml_model.predict(np.array([[f3.get(n,0.0) for n in self.feature_names]]))[0])
             scenarios.append(("Без простоев платформ", pred3 - actual))
             # Форматируем
             lines = [f"{name}: +{delta:,.0f} IDR" if delta>0 else f"{name}: {delta:,.0f} IDR" for name, delta in scenarios]
@@ -379,6 +380,8 @@ class IntegratedMLDetective:
             g.ads_spend as grab_ads_spend,
             gj.ads_spend as gojek_ads_spend,
             g.impressions as grab_impressions,
+            g.ads_sales as grab_ads_sales,
+            gj.ads_sales as gojek_ads_sales,
             COALESCE(g.rating, 0) as rating_grab,
             COALESCE(gj.rating, 0) as rating_gojek,
             (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders,
@@ -458,22 +461,34 @@ class IntegratedMLDetective:
             except Exception:
                 return 0.0
         
+        # ROAS
+        try:
+            roas_grab = float(row['grab_ads_sales'])/float(row['grab_ads_spend']) if float(row['grab_ads_spend'] or 0)>0 else 0.0
+        except Exception:
+            roas_grab = 0.0
+        try:
+            roas_gojek = float(row['gojek_ads_sales'])/float(row['gojek_ads_spend']) if float(row['gojek_ads_spend'] or 0)>0 else 0.0
+        except Exception:
+            roas_gojek = 0.0
+        
         features = {
             'grab_offline_rate': float(row['offline_rate'] or 0),
             'gojek_close_minutes': to_min(row['close_time']) if pd.notna(row['close_time']) else 0.0,
             'gojek_preparation_minutes': to_min(row['preparation_time']) if pd.notna(row['preparation_time']) else 0.0,
             'gojek_delivery_minutes': to_min(row['delivery_time']) if pd.notna(row['delivery_time']) else 0.0,
-            'grab_driver_waiting': 0.0,  # нет прямых данных в gojek/grab для дня
+            'grab_driver_waiting': 0.0,
             'gojek_driver_waiting': 0.0,
+            'precipitation': precipitation,
+            'temperature': temperature,
+            'is_holiday': is_holiday,
+            'day_of_week': date_obj.weekday(),
+            'is_weekend': 1 if date_obj.weekday() >= 5 else 0,
+            'roas_grab': roas_grab,
+            'roas_gojek': roas_gojek,
             'ads_spend_total': float(row['grab_ads_spend'] or 0) + float(row['gojek_ads_spend'] or 0),
             'impressions_total': float(row['grab_impressions'] or 0),
             'rating_grab': float(row['rating_grab'] or 0),
             'rating_gojek': float(row['rating_gojek'] or 0),
-            'is_weekend': 1 if date_obj.weekday() >= 5 else 0,
-            'day_of_week': date_obj.weekday(),
-            'is_holiday': is_holiday,
-            'precipitation': precipitation,
-            'temperature': temperature,
             'sales_7day_avg': float(sales_7day_avg or 0.0),
             'sales_30day_avg': float(sales_30day_avg or 0.0),
             'sales_gradient_7': float(sales_gradient_7 or 0.0),
@@ -632,7 +647,7 @@ class IntegratedMLDetective:
                 feats = self._prepare_features_for_date(restaurant_name, d)
                 if not feats:
                     continue
-                arr = np.array([list(feats.values())])
+                arr = np.array([[feats.get(n,0.0) for n in self.feature_names]])
                 shap_vals = self.shap_explainer.shap_values(arr)[0]
                 for name, val in zip(self.feature_names, shap_vals):
                     agg[name] = agg.get(name, 0.0) + abs(float(val))
