@@ -373,17 +373,29 @@ class IntegratedMLDetective:
             gj.delivery_time,
             g.ads_spend as grab_ads_spend,
             gj.ads_spend as gojek_ads_spend,
-            g.impressions,
-            COALESCE(g.rating, gj.rating, 4.5) as rating,
-            (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders
+            g.impressions as grab_impressions,
+            COALESCE(g.rating, 0) as rating_grab,
+            COALESCE(gj.rating, 0) as rating_gojek,
+            (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders,
+            (COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) as total_sales
         FROM grab_stats g
-        FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id 
-                                       AND g.stat_date = gj.stat_date
-        WHERE (g.restaurant_id = {restaurant_id} OR gj.restaurant_id = {restaurant_id})
-        AND (g.stat_date = '{target_date}' OR gj.stat_date = '{target_date}')
+        LEFT JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id 
+                                   AND g.stat_date = gj.stat_date
+        WHERE g.restaurant_id = {restaurant_id} AND g.stat_date = '{target_date}'
         """
         
         df = pd.read_sql_query(query, conn)
+        
+        # История для rolling признаков
+        hist_q = f"""
+        WITH all_dates AS (
+            SELECT stat_date d, COALESCE(sales,0) s FROM grab_stats WHERE restaurant_id={restaurant_id}
+            UNION ALL
+            SELECT stat_date d, COALESCE(sales,0) s FROM gojek_stats WHERE restaurant_id={restaurant_id}
+        )
+        SELECT d as date, SUM(s) total FROM all_dates GROUP BY d ORDER BY d
+        """
+        hist = pd.read_sql_query(hist_q, conn)
         conn.close()
         
         if df.empty:
@@ -391,35 +403,77 @@ class IntegratedMLDetective:
         
         row = df.iloc[0]
         
-        # Подготавливаем признаки
+        # Дата
         date_obj = datetime.strptime(target_date, '%Y-%m-%d')
         
+        # Rolling признаки по истории ресторана
+        sales_7day_avg = 0.0
+        sales_30day_avg = 0.0
+        sales_gradient_7 = 0.0
+        if not hist.empty:
+            hist['date'] = pd.to_datetime(hist['date'])
+            hist = hist.sort_values('date')
+            hist['total'] = pd.to_numeric(hist['total'], errors='coerce').fillna(0)
+            hist.set_index('date', inplace=True)
+            if date_obj in hist.index:
+                # сдвиг на 1 день, используем только прошлое
+                before = hist.loc[:date_obj - pd.Timedelta(days=1)]['total']
+            else:
+                before = hist.loc[:date_obj]['total']
+            if not before.empty:
+                sales_7day_avg = before.rolling(window=7, min_periods=1).mean().iloc[-1]
+                sales_30day_avg = before.rolling(window=30, min_periods=1).mean().iloc[-1]
+                if len(before) >= 7:
+                    sales_gradient_7 = before.iloc[-1] - before.iloc[-7]
+        
+        # Праздники
+        is_holiday = 1 if self._check_holiday(target_date) else 0
+        
+        # Погода (из существующего метода)
+        weather_data = self.detective._get_weather_data(restaurant_name, target_date)
+        precipitation = weather_data['precipitation'] if weather_data else 0.0
+        temperature = weather_data['temperature'] if weather_data else 27.0
+        
+        # Туризм
+        tourism_index = 0.0
+        try:
+            from src.utils.tourism_loader import load_tourism_index
+            tourism_map = load_tourism_index()
+            tourism_index = float(tourism_map.get(target_date, 0.0))
+        except Exception:
+            pass
+        
+        # Приведение времен к минутам
+        def to_min(x):
+            if not x or x in ['00:00:00','0:0:0','0:00:00','00:0:0']:
+                return 0.0
+            try:
+                h,m,s = map(int, str(x).split(':'))
+                return h*60 + m + s/60.0
+            except Exception:
+                return 0.0
+        
         features = {
+            'grab_offline_rate': float(row['offline_rate'] or 0),
+            'gojek_close_minutes': to_min(row['close_time']) if pd.notna(row['close_time']) else 0.0,
+            'gojek_preparation_minutes': to_min(row['preparation_time']) if pd.notna(row['preparation_time']) else 0.0,
+            'gojek_delivery_minutes': to_min(row['delivery_time']) if pd.notna(row['delivery_time']) else 0.0,
+            'grab_driver_waiting': 0.0,  # нет прямых данных в gojek/grab для дня
+            'gojek_driver_waiting': 0.0,
+            'ads_spend_total': float(row['grab_ads_spend'] or 0) + float(row['gojek_ads_spend'] or 0),
+            'impressions_total': float(row['grab_impressions'] or 0),
+            'rating_grab': float(row['rating_grab'] or 0),
+            'rating_gojek': float(row['rating_gojek'] or 0),
             'is_weekend': 1 if date_obj.weekday() >= 5 else 0,
             'day_of_week': date_obj.weekday(),
-            'grab_offline_rate': float(row['offline_rate']) if pd.notna(row['offline_rate']) else 0,
-            'gojek_closed': 1 if (pd.notna(row['close_time']) and row['close_time'] != '00:00:00') else 0,
-            'preparation_minutes': self._time_to_minutes(row['preparation_time']) if pd.notna(row['preparation_time']) else 15,
-            'delivery_minutes': self._time_to_minutes(row['delivery_time']) if pd.notna(row['delivery_time']) else 20,
-            'total_ads_spend': float(row['grab_ads_spend'] or 0) + float(row['gojek_ads_spend'] or 0),
-            'impressions': float(row['impressions']) if pd.notna(row['impressions']) else 0,
-            'rating': float(row['rating']) if pd.notna(row['rating']) else 4.5,
-            'total_orders': int(row['total_orders']) if pd.notna(row['total_orders']) else 0,
-            'is_holiday': 1 if self._check_holiday(target_date) else 0
+            'is_holiday': is_holiday,
+            'precipitation': precipitation,
+            'temperature': temperature,
+            'sales_7day_avg': float(sales_7day_avg or 0.0),
+            'sales_30day_avg': float(sales_30day_avg or 0.0),
+            'sales_gradient_7': float(sales_gradient_7 or 0.0),
+            'tourism_index': float(tourism_index or 0.0),
         }
-        
-        # Добавляем погодные данные
-        weather_data = self.detective._get_weather_data(restaurant_name, target_date)
-        if weather_data:
-            features['precipitation'] = weather_data['precipitation']
-            features['temperature'] = weather_data['temperature']
-        else:
-            features['precipitation'] = 0
-            features['temperature'] = 27  # средняя для Бали
-        
-        # Добавляем исторические признаки
-        historical_features = self._get_historical_features(restaurant_name, target_date)
-        features.update(historical_features)
         
         return features
     

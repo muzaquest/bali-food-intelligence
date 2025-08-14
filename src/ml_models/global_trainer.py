@@ -195,6 +195,14 @@ def build_global_dataset(db_path: str = "database.sqlite") -> pd.DataFrame:
     except Exception:
         pass
 
+    # Tourism index (0..1)
+    try:
+        from src.utils.tourism_loader import load_tourism_index
+        tourism_map = load_tourism_index()
+        df["tourism_index"] = df["date"].astype(str).map(lambda d: float(tourism_map.get(str(d), 0.0)))
+    except Exception:
+        df["tourism_index"] = 0.0
+
     # Trends per restaurant
     df = df.sort_values(["restaurant_id", "date"]).reset_index(drop=True)
     df["sales_7day_avg"] = (
@@ -231,8 +239,8 @@ def train_global_model(db_path: str = "database.sqlite", models_dir: str = "mode
         "roas_grab", "roas_gojek", "ads_spend_total", "impressions_total",
         # Качество
         "rating_grab", "rating_gojek",
-        # Тренды
-        "sales_7day_avg", "sales_30day_avg", "sales_gradient_7",
+        # Тренды/туризм
+        "sales_7day_avg", "sales_30day_avg", "sales_gradient_7", "tourism_index",
     ]
 
     # One-hot for day_of_week (already numeric; keep as numeric category)
