@@ -1393,8 +1393,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
         print()
     
     print(f"📦 Общие заказы: {total_orders:,.0f}")
-    print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})")
-    print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})")
+    # Защита от отсутствия переменных fake в консольном выводе
+    try:
+        print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})")
+        print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})")
+    except Exception:
+        print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled})")
+        print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost})")
     print(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}")
     
     # Рассчитываем средний чек по платформам
@@ -1848,36 +1853,21 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
         cpc = (grab_marketing_spend / total_menu_visits) if total_menu_visits > 0 else 0.0
         cpa = (grab_marketing_spend / grab_marketing_orders) if grab_marketing_orders > 0 else 0.0
         print("\n💸 Стоимость привлечения (только GRAB):")
-    print(f"  💰 Стоимость клика: {cpc:,.0f} IDR")
-    print(f"  💰 Стоимость заказа: {cpa:,.0f} IDR")
-    # Дополнительные метрики
-    cpm = (grab_marketing_spend / (total_impressions/1000)) if total_impressions>0 else 0.0
-    freq = (total_impressions / total_unique_reach) if total_unique_reach>0 else 0.0
-    mer_total = (total_sales / (grab_marketing_spend + gojek_marketing_spend)) if (grab_marketing_spend + gojek_marketing_spend) > 0 else 0.0
-    print(f"  💰 CPM: {cpm:,.0f} IDR (стоимость 1000 показов)")
-    print(f"  👤 Частота показов: {freq:.2f} на пользователя")
-    print(f"  📈 MER (выручка/бюджет): {mer_total:.2f}x")
-        print(f"  ")
-        print(f"  📊 КЛЮЧЕВЫЕ КОНВЕРСИИ:")
-        
-        # Основная конверсия: показ → заказ
-        impression_to_order = (grab_marketing_orders / total_impressions * 100) if total_impressions > 0 else 0
-        print(f"  • 🎯 Показ → Заказ: {impression_to_order:.2f}% (основная метрика эффективности)")
-        print(f"  • 🔗 Клик → Заказ: {overall_conversion:.1f}% (качество трафика)")
-        print(f"  • 🛒 Корзина → Заказ: {cart_to_order_rate:.1f}% (качество UX)")
-        
-        # Добавляем методическое примечание для воронки
-        funnel_note = generate_methodology_note('conversion')
-        print(f"\n⚠️ МЕТОДИКА: {funnel_note}")
-        
+        print(f"  💰 Стоимость клика: {cpc:,.0f} IDR")
+        print(f"  💰 Стоимость заказа: {cpa:,.0f} IDR")
+        # Дополнительные метрики
+        cpm = (grab_marketing_spend / (total_impressions/1000)) if total_impressions>0 else 0.0
+        freq = (total_impressions / total_unique_reach) if total_unique_reach>0 else 0.0
+        mer_total = (total_sales / (grab_marketing_spend + gojek_marketing_spend)) if (grab_marketing_spend + gojek_marketing_spend) > 0 else 0.0
+        print(f"  💰 CPM: {cpm:,.0f} IDR (стоимость 1000 показов)")
+        print(f"  👤 Частота показов: {freq:.2f} на пользователя")
+        print(f"  📈 MER (выручка/бюджет): {mer_total:.2f}x")
         # Стоимость привлечения (только GRAB - есть данные воронки)
         # ИСПРАВЛЕНО: Используем только GRAB бюджет для GRAB метрик
         grab_only_spend = grab_marketing_raw['grab_spend'] or 0
         cost_per_click = grab_only_spend / total_menu_visits if total_menu_visits > 0 else 0
         cost_per_conversion = grab_only_spend / total_conversions if total_conversions > 0 else 0
         cost_per_order = grab_only_spend / grab_marketing_orders if grab_marketing_orders > 0 else 0
-        
-        print(f"\n💸 Стоимость привлечения (только GRAB):")
         print(f"  💰 Стоимость клика: {cost_per_click:,.0f} IDR")
         print(f"  💰 Стоимость заказа: {cost_per_order:,.0f} IDR")
         
@@ -2627,8 +2617,12 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
             f.write("-" * 50 + "\n")
             f.write(f"💰 Общая выручка: {total_sales:,.0f} IDR\n")
             f.write(f"📦 Общие заказы: {total_orders:,.0f}\n")
-            f.write(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})\n")
-            f.write(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})\n")
+            try:
+                f.write(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})\n")
+                f.write(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})\n")
+            except Exception:
+                f.write(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled})\n")
+                f.write(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost})\n")
             f.write(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}\n")
             f.write(f"💵 Средний чек: {avg_order_value:,.0f} IDR\n")
             f.write(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR\n")
