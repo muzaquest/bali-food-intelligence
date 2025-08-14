@@ -484,24 +484,20 @@ class OpenAIAnalyzer:
         insights.append("=" * 80)
         
         # Базовые метрики
-            total_sales = data['total_sales'].sum()
-    # Корректируем заказы для среднего чека: успешные = orders - cancelled - fake
-    fake_filter = FakeOrdersFilter()
-    def _fake_for_row(row):
-        fo = fake_filter.get_fake_orders_for_restaurant_date(restaurant_name, row['date'])
-        if row['platform'] == 'grab':
-            return fo['Grab']['quantity']
+        total_sales = data['total_sales'].sum()
+        total_orders = data['orders'].sum() if 'orders' in data.columns else 0
+        # Если уже есть колонка successful_orders, используем ее; иначе fallback на orders
+        if 'successful_orders' in data.columns:
+            denom_orders = data['successful_orders'].sum()
         else:
-            return fo['Gojek']['quantity']
-    data['fake_orders'] = data.apply(_fake_for_row, axis=1)
-    data['successful_orders'] = (data['orders'] - data.get('cancelled_orders', 0) - data['fake_orders']).clip(lower=0)
-    total_successful_orders = data['successful_orders'].sum()
-    avg_daily_sales = total_sales / len(data) if len(data) > 0 else 0
-    avg_order_value = total_sales / total_successful_orders if total_successful_orders > 0 else 0
+            denom_orders = total_orders
+        avg_daily_sales = total_sales / len(data) if len(data) > 0 else 0
+        avg_order_value = (total_sales / denom_orders) if denom_orders > 0 else 0
+        
         # Правильный расчет клиентов в день (дневные, а не кумулятивные)
-        daily_new_customers = data['new_customers'].sum()
-        daily_repeat_customers = data['repeated_customers'].sum()
-        daily_reactive_customers = data['reactivated_customers'].sum()
+        daily_new_customers = data['new_customers'].sum() if 'new_customers' in data.columns else 0
+        daily_repeat_customers = data['repeated_customers'].sum() if 'repeated_customers' in data.columns else 0
+        daily_reactive_customers = data['reactivated_customers'].sum() if 'reactivated_customers' in data.columns else 0
         total_daily_customers = daily_new_customers + daily_repeat_customers + daily_reactive_customers
         avg_customers_per_day = total_daily_customers / len(data) if len(data) > 0 else 0
         
@@ -1397,9 +1393,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None, plain: b
         print()
     
     print(f"📦 Общие заказы: {total_orders:,.0f}")
-print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})")
-print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})")
-print(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}")
+    print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})")
+    print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})")
+    print(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}")
     
     # Рассчитываем средний чек по платформам
     grab_sales = platform_data[platform_data['platform'] == 'grab']['total_sales'].sum() if not platform_data.empty else 0
