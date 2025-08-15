@@ -2448,7 +2448,6 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             # Шапка отчета по образцу README
             separator = """════════════════════════════════════════════════════════════════════════════════════════════════════\n"""
             f.write(separator)
-            f.write(f"🏪 Полный отчет анализа ресторана \"{restaurant_name}\"\n")
             f.write(f"🏪 АНАЛИЗ РЕСТОРАНА: {restaurant_name}\n")
             # Кол-во дней периода
             try:
@@ -2460,12 +2459,10 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 _days = len(data)
             f.write(f"🗓️ ПЕРИОД: {start_date} — {end_date} ({_days} дней)\n\n")
             f.write(separator)
-            f.write(f"📊 Создан: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"🔬 Использованы все 63 параметра + 3 API интеграции\n\n")
             
             # Исполнительное резюме
-            f.write("📊 ИСПОЛНИТЕЛЬНОЕ РЕЗЮМЕ\n")
-            f.write("-" * 50 + "\n")
+            f.write("📊 1. ИСПОЛНИТЕЛЬНОЕ РЕЗЮМЕ\n")
+            f.write("-" * 40 + "\n")
             f.write(f"💰 Общая выручка: {total_sales:,.0f} IDR (GRAB: {grab_sales:,.0f} + GOJEK: {gojek_sales:,.0f})\n")
             f.write(f"📦 Общие заказы: {total_orders:,.0f}\n")
             f.write(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})\n")
@@ -2483,10 +2480,10 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write("📊 Детализация маркетинговых затрат:\n")
             f.write("   ┌─ 📱 GRAB:\n")
             f.write(f"   │  💰 Бюджет: {grab_marketing_budget:,.0f} IDR ({(grab_marketing_budget/total_marketing*100) if total_marketing>0 else 0:.1f}% общего бюджета)\n")
-            f.write(f"   │  📈 {((grab_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((grab_marketing_budget/max(grab_sales,1))*100):.1f}% от выручки GRAB\n")
+            f.write(f"   │  📈 {((grab_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((grab_marketing_budget/max(grab_sales,1))*100):.1f}% от выручки GRAB | {((grab_marketing_budget/max(grab_marketing_sales,1))*100):.1f}% от рекламных продаж\n")
             f.write("   └─ 🛵 GOJEK:\n")
             f.write(f"      💰 Бюджет: {gojek_marketing_budget:,.0f} IDR ({(gojek_marketing_budget/total_marketing*100) if total_marketing>0 else 0:.1f}% общего бюджета)\n")
-            f.write(f"      📈 {((gojek_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((gojek_marketing_budget/max(gojek_sales,1))*100):.1f}% от выручки GOJEK\n\n")
+            f.write(f"      📈 {((gojek_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((gojek_marketing_budget/max(gojek_sales,1))*100):.1f}% от выручки GOJEK | {((gojek_marketing_budget/max(gojek_marketing_sales,1))*100):.1f}% от рекламных продаж\n\n")
             
             # Динамика по месяцам
             f.write("📈 2. АНАЛИЗ ПРОДАЖ И ТРЕНДОВ\n")
@@ -2718,46 +2715,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 f.write("📊 Детальные данные по оценкам недоступны\n")
             f.write("\n")
             
-            # Внешние факторы
-            f.write("🌐 ВНЕШНИЕ ФАКТОРЫ\n")
-            f.write("-" * 50 + "\n")
-            f.write("Погодные условия и их влияние:\n")
-            if 'weather_groups' in locals() and weather_groups:
-                for condition, sales_list in weather_groups.items():
-                    avg_sales = sum(sales_list) / len(sales_list)
-                    emoji = {"Clear": "☀️", "Rain": "🌧️", "Clouds": "☁️", "Thunderstorm": "⛈️"}.get(condition, "🌤️")
-                    f.write(f"{emoji} {condition}: {avg_sales:,.0f} IDR ({len(sales_list)} дней)\n")
-            else:
-                f.write("  📊 Данные о погодных условиях недоступны\n")
-            if 'weather_impact' in locals():
-                f.write(f"💧 Влияние дождя: {weather_impact:+.1f}%\n")
-            if 'holiday_effect' in locals():
-                f.write(f"🎯 Влияние праздников: {holiday_effect:+.1f}%\n")
-            f.write("\n")
+
             
-            # AI инсайты
-            f.write("🤖 AI-АНАЛИЗ И ИНСАЙТЫ\n")
-            f.write("-" * 50 + "\n")
-            f.write(ai_insights + "\n\n")
+
             
-            # Детективный анализ причин
-            f.write("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН\n")
-            f.write("-" * 50 + "\n")
-            try:
-                f.write(detective_analysis + "\n\n")
-            except NameError:
-                simple_trend_analysis = analyze_sales_trends(data)
-                f.write(simple_trend_analysis + "\n\n")
-            # ВСТРАИВАЕМ ИНТЕГРИРОВАННЫЙ ML ДЕТЕКТИВНЫЙ АНАЛИЗ В ФАЙЛ
+            # Детективный анализ в формате README (без лишних секций)
             try:
                 from src.analyzers import ProductionSalesAnalyzer
                 _psa = ProductionSalesAnalyzer()
-                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
-                f.write("📋 ML-ДЕТЕКТИВНЫЙ АНАЛИЗ (интегрированный)\n")
-                f.write("-" * 50 + "\n")
+                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=False)
                 f.write("\n".join(_psa_results) + "\n\n")
             except Exception as _e:
-                f.write(f"⚠️ Ошибка ML-детективного анализа: {_e}\n\n")
+                f.write(f"⚠️ Ошибка формирования детективного анализа: {_e}\n\n")
             
             # Стратегические рекомендации
             f.write("💡 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ\n")

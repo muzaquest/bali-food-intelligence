@@ -119,7 +119,7 @@ class ProductionSalesAnalyzer:
         return self._standard_detective_analysis(restaurant_name, start_date, end_date)
     
     def _standard_detective_analysis(self, restaurant_name, start_date, end_date):
-        """Стандартный детективный анализ без ML"""
+        """Стандартный детективный анализ без ML в формате README"""
         try:
             # Определяем проблемные дни
             bad_days = self._find_bad_days(restaurant_name, start_date, end_date)
@@ -132,33 +132,45 @@ class ProductionSalesAnalyzer:
                 ]
             
             results = []
+            # Заголовки и вводная как в README
+            results.append("🔍 5. ДЕТЕКТИВНЫЙ АНАЛИЗ ПРОБЛЕМ")
+            results.append("-----------------------------------------")
             results.append(f"🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ: {restaurant_name}")
             results.append(f"📅 Период: {start_date} - {end_date}")
-            results.append(f"🚨 Найдено {len(bad_days)} проблемных дней")
+            results.append(f"🚨 Найдено {len(bad_days)} критических дня")
             results.append("")
             
-            # Анализируем каждый проблемный день
-            for i, bad_day_info in enumerate(bad_days[:5], 1):  # Топ-5 худших дней
+            # Анализируем каждый проблемный день (топ-5)
+            for i, bad_day_info in enumerate(bad_days[:5], 1):
                 date = bad_day_info[0]
-                problem_percent = bad_day_info[1]
-                problem_type = bad_day_info[2] if len(bad_day_info) > 2 else 'relative_drop'
+                drop_pct = bad_day_info[1]
                 
-                day_analysis = self._analyze_specific_day(restaurant_name, date)
+                day_data = self._get_day_data(restaurant_name, date) or {}
+                day_sales = day_data.get('total_sales', 0)
                 
-                results.append(f"📉 ПРОБЛЕМНЫЙ ДЕНЬ #{i}: {date}")
-                
-                if problem_type == 'absolute_low':
-                    results.append(f"   📉 Критически низкие продажи: {problem_percent:.1f}% ниже медианы")
-                else:
-                    results.append(f"   💔 Падение продаж: {problem_percent:.1f}%")
+                # Шапка проблемного дня
+                results.append(f"📉 ПРОБЛЕМНЫЙ ДЕНЬ #{i}: {self._format_date_ru(date)}")
+                results.append(f"💰 Продажи: {day_sales:,.0f} IDR (-{drop_pct:.1f}% к медиане)")
                 results.append("")
                 
-                # Добавляем детальный анализ
-                for line in day_analysis:
-                    results.append(f"   {line}")
+                # Причины падения
+                results.append("🔎 Причины падения:")
+                factors = self._get_quick_detective_analysis(restaurant_name, date, day_data)
+                for factor in factors:
+                    # Выводим факторы маркерами как в README
+                    results.append(f"- {factor}")
+                
+                # Что делать (короткий actionable-блок)
+                actions = self._generate_day_actions(factors)
+                if actions:
+                    results.append("")
+                    results.append("💡 Что делать:")
+                    for action in actions:
+                        results.append(f"- {action}")
+                
                 results.append("")
             
-            # Общие рекомендации
+            # Общие рекомендации по периоду
             results.extend(self._generate_general_recommendations(bad_days))
             
             return results
@@ -168,6 +180,43 @@ class ProductionSalesAnalyzer:
                 f"❌ Ошибка анализа {restaurant_name}: {e}",
                 "🔧 Используется fallback анализ..."
             ]
+
+    def _format_date_ru(self, date_str: str) -> str:
+        """Форматирует дату YYYY-MM-DD в вид 'DD месяц YYYY' (ru)."""
+        try:
+            from datetime import datetime
+            months = {
+                1: "января", 2: "февраля", 3: "марта", 4: "апреля",
+                5: "мая", 6: "июня", 7: "июля", 8: "августа",
+                9: "сентября", 10: "октября", 11: "ноября", 12: "декабря"
+            }
+            d = datetime.strptime(date_str, "%Y-%m-%d")
+            return f"{d.day} {months.get(d.month, '')} {d.year}"
+        except Exception:
+            return date_str
+
+    def _generate_day_actions(self, factors: list) -> list:
+        """Формирует список кратких действий по фактор-списку дня."""
+        text = "\n".join([str(f).lower() for f in factors])
+        actions = []
+        
+        if ("grab" in text and ("сбой" in text or "offline" in text or "отсутств" in text)):
+            actions.append("🔧 Проверить подключение/доступность GRAB и восстановить данные")
+        if ("gojek" in text and ("сбой" in text or "offline" in text or "отсутств" in text)):
+            actions.append("🔧 Проверить подключение/доступность GOJEK и восстановить данные")
+        if ("дожд" in text):
+            actions.append("🌧️ Запланировать промо/доставку под дождь; увеличить слот курьеров")
+        if ("ожидани" in text or "готов" in text or "доставк" in text):
+            actions.append("⏱️ Сократить операционные задержки: кухня/логистика/слоты курьеров")
+        if ("рейтинг" in text):
+            actions.append("⭐ Поддерживать рейтинг: быстрая реакция на негативные отзывы")
+        
+        # Уникальные и не более 3 пунктов
+        unique_actions = []
+        for a in actions:
+            if a not in unique_actions:
+                unique_actions.append(a)
+        return unique_actions[:3]
     
     def _find_bad_days(self, restaurant_name, start_date, end_date):
         """Находит дни с критическим падением продаж (>30% от медианы)"""
