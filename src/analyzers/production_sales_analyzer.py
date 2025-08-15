@@ -47,7 +47,7 @@ class ProductionSalesAnalyzer:
         # Инициализируем fake orders filter
         if FAKE_ORDERS_AVAILABLE:
             self.fake_orders_filter = get_fake_orders_filter()
-            print(f"✅ Fake orders filter загружен: {len(self.fake_orders_filter.fake_orders_data)} записей")
+            # fake orders filter loaded
         else:
             self.fake_orders_filter = None
         
@@ -1902,7 +1902,7 @@ class ProductionSalesAnalyzer:
             
             signal.signal(signal.SIGALRM, timeout_handler)
             signal.alarm(30)  # 30 секунд максимум
-            print(f"🤖 Запуск НАСТОЯЩЕГО ML анализа для {target_date}...")
+            # starting ML analysis for target date
             
             # Используем полную ML систему
             import sys
