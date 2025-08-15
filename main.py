@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
-from weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
+from src.utils.weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
 
 # ML Детективный анализ - ОБНОВЛЕННАЯ ВЕРСИЯ
 try:
@@ -30,6 +30,28 @@ except ImportError as e:
 # API интеграция
 import requests
 from dotenv import load_dotenv
+from src.utils.weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
+
+# Фолбэк функция локации, если отсутствует API/утилита
+def get_restaurant_location(restaurant_name: str):
+	try:
+		# Попытка получить из локальной JSON карты
+		import json
+		with open('data/bali_restaurant_locations.json', 'r', encoding='utf-8') as f:
+			data = json.load(f)
+		for item in data.get('restaurants', []):
+			if item.get('name') == restaurant_name:
+				return {
+					'latitude': float(item.get('latitude', -8.6700)),
+					'longitude': float(item.get('longitude', 115.2130)),
+					'location': item.get('location', 'Unknown'),
+					'area': item.get('area', 'Unknown'),
+					'zone': item.get('zone', 'Central')
+				}
+	except Exception:
+		pass
+	# Бэкап по Бали
+	return {'latitude': -8.6700, 'longitude': 115.2130, 'location': 'Fallback', 'area': 'Unknown', 'zone': 'Central'}
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -98,12 +120,7 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 # Добавляем импорт ML модуля
-try:
-    from ml_models import analyze_restaurant_with_ml, RestaurantMLAnalyzer
-    ML_MODULE_AVAILABLE = True
-except ImportError:
-    ML_MODULE_AVAILABLE = False
-    print("⚠️ ML модуль недоступен. Запустите: pip install scikit-learn prophet")
+ML_MODULE_AVAILABLE = False  # legacy ML выключен; используем IntegratedMLDetective внутри ProductionSalesAnalyzer
 
 # Добавляем импорт нового профессионального анализа
 try:
@@ -1277,7 +1294,10 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     working_days_count = len(data[data['total_sales'] > 0])
     daily_avg_sales = total_sales / working_days_count if working_days_count > 0 else 0
     
-    print(f"💰 Общая выручка: {total_sales:,.0f} IDR (GRAB + GOJEK)")
+    # Выручка по платформам
+    grab_sales = platform_data[platform_data['platform'] == 'grab']['total_sales'].sum() if not platform_data.empty else 0
+    gojek_sales = platform_data[platform_data['platform'] == 'gojek']['total_sales'].sum() if not platform_data.empty else 0
+    print(f"💰 Общая выручка: {total_sales:,.0f} IDR (GRAB: {grab_sales:,.0f} + GOJEK: {gojek_sales:,.0f})")
     # Получаем детализацию заказов по платформам из исходных данных
     grab_orders = platform_data[platform_data['platform'] == 'grab']['orders'].sum() if not platform_data.empty else 0
     gojek_orders = platform_data[platform_data['platform'] == 'gojek']['orders'].sum() if not platform_data.empty else 0
@@ -1287,9 +1307,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     gojek_cancelled = platform_data[platform_data['platform'] == 'gojek']['cancelled_orders'].sum() if not platform_data.empty else 0
     gojek_lost = platform_data[platform_data['platform'] == 'gojek']['lost_orders'].sum() if not platform_data.empty else 0
     
-    # Рассчитываем успешные заказы
-    grab_successful = grab_orders - grab_cancelled
-    gojek_successful = gojek_orders - gojek_cancelled - gojek_lost
+    # Рассчитываем успешные заказы с учетом fake
+    try:
+        from src.utils.fake_orders_filter import get_fake_orders_filter
+        _fo = get_fake_orders_filter()
+        _fo_summary = _fo.get_fake_orders_summary(restaurant_name, start_date, end_date)
+        grab_fake = int(_fo_summary.get('by_platform', {}).get('Grab', 0))
+        gojek_fake = int(_fo_summary.get('by_platform', {}).get('Gojek', 0))
+    except Exception:
+        grab_fake = 0
+        gojek_fake = 0
+    grab_successful = max(0, grab_orders - grab_cancelled - grab_fake)
+    gojek_successful = max(0, gojek_orders - gojek_cancelled - gojek_lost - gojek_fake)
     
     # Проверяем консистентность данных
     platform_total_orders = grab_orders + gojek_orders
@@ -1301,8 +1330,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print()
     
     print(f"📦 Общие заказы: {total_orders:,.0f}")
-    print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled})")
-    print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost})")
+    print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})")
+    print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})")
     print(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}")
     
     # Рассчитываем средний чек по платформам
@@ -1313,8 +1342,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     gojek_avg_check = gojek_sales / gojek_orders if gojek_orders > 0 else 0
     
     print(f"💵 Средний чек: {avg_order_value:,.0f} IDR")
-    print(f"   ├── 📱 GRAB: {grab_avg_check:,.0f} IDR")
-    print(f"   └── 🛵 GOJEK: {gojek_avg_check:,.0f} IDR")
+    print(f"   ├── 📱 GRAB: {grab_avg_check:,.0f} IDR ({grab_sales:,.0f} ÷ {grab_successful})")
+    print(f"   └── 🛵 GOJEK: {gojek_avg_check:,.0f} IDR ({gojek_sales:,.0f} ÷ {gojek_successful})")
     print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (средняя по рабочим дням)")
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
     # Правильное распределение клиентов по платформам
@@ -1339,9 +1368,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"   Разница: {abs(total_marketing - platform_total_marketing):,.0f} IDR")
         print()
     
-    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (GRAB + GOJEK)")
-    print(f"   ├── 📱 GRAB: {grab_marketing_budget:,.0f} IDR ({grab_marketing_budget/total_marketing*100:.1f}%)")
-    print(f"   └── 🛵 GOJEK: {gojek_marketing_budget:,.0f} IDR ({gojek_marketing_budget/total_marketing*100:.1f}%)")
+    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR ({total_marketing/total_sales*100:.1f}% от выручки)")
+    print("📊 Детализация маркетинговых затрат:")
+    print("   ┌─ 📱 GRAB:")
+    print(f"   │  💰 Бюджет: {grab_marketing_budget:,.0f} IDR ({grab_marketing_budget/total_marketing*100:.1f}% общего бюджета)")
+    grab_share_of_total_sales = (grab_marketing_budget/total_sales*100) if total_sales>0 else 0
+    gojek_share_of_total_sales = (gojek_marketing_budget/total_sales*100) if total_sales>0 else 0
+    grab_sales_only = platform_data[platform_data['platform']=='grab']['total_sales'].sum() if not platform_data.empty else 0
+    gojek_sales_only = platform_data[platform_data['platform']=='gojek']['total_sales'].sum() if not platform_data.empty else 0
+    print(f"   │  📈 {grab_share_of_total_sales:.1f}% от общей выручки | {(grab_marketing_budget/max(grab_sales_only,1))*100:.1f}% от выручки GRAB")
+    print("   └─ 🛵 GOJEK:")
+    print(f"      💰 Бюджет: {gojek_marketing_budget:,.0f} IDR ({gojek_marketing_budget/total_marketing*100:.1f}% общего бюджета)")
+    print(f"      📈 {gojek_share_of_total_sales:.1f}% от общей выручки | {(gojek_marketing_budget/max(gojek_sales_only,1))*100:.1f}% от выручки GOJEK")
     # Получаем данные по платформам отдельно для корректного ROAS анализа
     try:
         # Получаем отдельные данные по платформам из исходных данных
@@ -2264,66 +2302,33 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("🔍 8.5 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН")
     print("-" * 40)
     
-    # Используем ПРОФЕССИОНАЛЬНЫЙ анализатор 
-    if ML_DETECTIVE_AVAILABLE:
-        try:
-            print("🚀 Запуск профессионального детективного анализатора...")
-            from src.analyzers import ProfessionalDetectiveAnalyzer
-            detective_analyzer = ProfessionalDetectiveAnalyzer()
-            detective_results = detective_analyzer.analyze_sales_performance(
-                restaurant_name, start_date, end_date
-            )
-            print("📋 РЕЗУЛЬТАТЫ ДЕТЕКТИВНОГО АНАЛИЗА:")
-            for result in detective_results:
-                print(result)
-        except Exception as e:
-            print(f"⚠️ Ошибка обновленного анализатора: {e}")
-            print("📊 Используем fallback анализ...")
-            import traceback
-            traceback.print_exc()
-            print()
-            
-            # Основной анализ трендов
-            simple_trend_analysis = analyze_sales_trends(data)
-            print(simple_trend_analysis)
-            
-            print()
-            print()
-            
-            # Дополнительный маркетинговый анализ
-            marketing_analysis = analyze_marketing_performance_without_ml(data)
-            print(marketing_analysis)
-    else:
-        print("⚠️ ML детективный анализ недоступен")
-        print("📊 Используем ПРОДВИНУТЫЙ анализ без ML...")
-        print()
-        
-        # Основной анализ трендов
+    # Используем интегрированный ML детективный анализ
+    try:
+        from src.analyzers import ProductionSalesAnalyzer
+        _psa = ProductionSalesAnalyzer()
+        _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
+        print("📋 ML-ДЕТЕКТИВНЫЙ АНАЛИЗ (интегрированный):")
+        for line in _psa_results:
+            print(line)
+    except Exception as e:
+        print(f"⚠️ Ошибка интегрированного ML анализа: {e}")
+        print("📊 Используем fallback анализ...")
         simple_trend_analysis = analyze_sales_trends(data)
         print(simple_trend_analysis)
-        
-        print()
-        print()
-        
-        # Дополнительный маркетинговый анализ
         marketing_analysis = analyze_marketing_performance_without_ml(data)
         print(marketing_analysis)
     
-    # 8.6. ML-АНАЛИЗ И ПРОГНОЗИРОВАНИЕ (НОВИНКА!)
-    if ML_MODULE_AVAILABLE:
-        print("\n🤖 8.6 МАШИННОЕ ОБУЧЕНИЕ - РАСШИРЕННЫЙ АНАЛИЗ")
-        print("-" * 40)
-        
-        try:
-            ml_insights = analyze_restaurant_with_ml(restaurant_name, start_date, end_date)
-            for insight in ml_insights:
-                print(insight)
-        except Exception as e:
-            print(f"⚠️ Ошибка ML анализа: {e}")
-    else:
-        print("\n⚠️ 8.6 ML-АНАЛИЗ НЕДОСТУПЕН")
-        print("-" * 40)
-        print("Установите зависимости: pip install scikit-learn prophet")
+    # 8.6. ML-АНАЛИЗ И ПРОГНОЗИРОВАНИЕ (ИНТЕГРИРОВАНО)
+    print("\n🤖 8.6 ИНТЕГРИРОВАННЫЙ ML-ДЕТЕКТИВНЫЙ АНАЛИЗ")
+    print("-" * 40)
+    try:
+        from src.analyzers import ProductionSalesAnalyzer
+        _psa = ProductionSalesAnalyzer()
+        _ml_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
+        for line in _ml_results:
+            print(line)
+    except Exception as e:
+        print(f"⚠️ Ошибка интегрированного ML анализа: {e}")
     
     # 9. СРАВНИТЕЛЬНЫЙ БЕНЧМАРКИНГ
     print(f"\n📊 9. СРАВНИТЕЛЬНЫЙ АНАЛИЗ И БЕНЧМАРКИ")
@@ -2440,55 +2445,144 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         filename = f"reports/detailed_analysis_{restaurant_name.replace(' ', '_')}_{timestamp}.txt"
         
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write("═" * 100 + "\n")
-            f.write(f"🎯 MUZAQUEST ANALYTICS - ДЕТАЛЬНЫЙ ОТЧЕТ: {restaurant_name.upper()}\n")
-            f.write("═" * 100 + "\n")
-            f.write(f"📅 Период анализа: {start_date} → {end_date}\n")
+            # Шапка отчета по образцу README
+            separator = """════════════════════════════════════════════════════════════════════════════════════════════════════\n"""
+            f.write(separator)
+            f.write(f"🏪 Полный отчет анализа ресторана \"{restaurant_name}\"\n")
+            f.write(f"🏪 АНАЛИЗ РЕСТОРАНА: {restaurant_name}\n")
+            # Кол-во дней периода
+            try:
+                from datetime import datetime as _dt
+                _sd = _dt.strptime(start_date, '%Y-%m-%d')
+                _ed = _dt.strptime(end_date, '%Y-%m-%d')
+                _days = (_ed - _sd).days + 1
+            except Exception:
+                _days = len(data)
+            f.write(f"🗓️ ПЕРИОД: {start_date} — {end_date} ({_days} дней)\n\n")
+            f.write(separator)
             f.write(f"📊 Создан: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"🔬 Использованы все 63 параметра + 3 API интеграции\n\n")
             
             # Исполнительное резюме
             f.write("📊 ИСПОЛНИТЕЛЬНОЕ РЕЗЮМЕ\n")
             f.write("-" * 50 + "\n")
-            f.write(f"💰 Общая выручка: {total_sales:,.0f} IDR\n")
+            f.write(f"💰 Общая выручка: {total_sales:,.0f} IDR (GRAB: {grab_sales:,.0f} + GOJEK: {gojek_sales:,.0f})\n")
             f.write(f"📦 Общие заказы: {total_orders:,.0f}\n")
+            f.write(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})\n")
+            f.write(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})\n")
+            f.write(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}\n")
             f.write(f"💵 Средний чек: {avg_order_value:,.0f} IDR\n")
-            f.write(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR\n")
+            f.write(f"   ├── 📱 GRAB: {grab_avg_check:,.0f} IDR ({grab_sales:,.0f} ÷ {grab_successful})\n")
+            f.write(f"   └── 🛵 GOJEK: {gojek_avg_check:,.0f} IDR ({gojek_sales:,.0f} ÷ {gojek_successful})\n")
+            f.write(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (средняя по рабочим дням)\n")
             f.write(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0\n")
             f.write(f"👥 Обслужено клиентов: {total_customers:,.0f}\n")
             f.write(f"🎯 ROAS: {avg_roas:.2f}x\n")
-            f.write(f"📈 ROI маркетинга: {format_roi(roi_percentage)}\n\n")
+            f.write(f"📈 ROI маркетинга: {format_roi(roi_percentage)}\n")
+            f.write(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR ({(total_marketing/total_sales*100) if total_sales>0 else 0:.1f}% от выручки)\n")
+            f.write("📊 Детализация маркетинговых затрат:\n")
+            f.write("   ┌─ 📱 GRAB:\n")
+            f.write(f"   │  💰 Бюджет: {grab_marketing_budget:,.0f} IDR ({(grab_marketing_budget/total_marketing*100) if total_marketing>0 else 0:.1f}% общего бюджета)\n")
+            f.write(f"   │  📈 {((grab_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((grab_marketing_budget/max(grab_sales,1))*100):.1f}% от выручки GRAB\n")
+            f.write("   └─ 🛵 GOJEK:\n")
+            f.write(f"      💰 Бюджет: {gojek_marketing_budget:,.0f} IDR ({(gojek_marketing_budget/total_marketing*100) if total_marketing>0 else 0:.1f}% общего бюджета)\n")
+            f.write(f"      📈 {((gojek_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((gojek_marketing_budget/max(gojek_sales,1))*100):.1f}% от выручки GOJEK\n\n")
             
             # Динамика по месяцам
-            f.write("📈 ДИНАМИКА ПО МЕСЯЦАМ\n")
-            f.write("-" * 50 + "\n")
+            f.write("📈 2. АНАЛИЗ ПРОДАЖ И ТРЕНДОВ\n")
+            f.write("-" * 40 + "\n")
+            f.write("📊 Динамика по месяцам:\n")
             for month, sales in monthly_sales.items():
                 month_name = month_names.get(month, f"Месяц {month}")
                 month_data = data_sorted[data_sorted['month'] == month]
                 days_in_month = len(month_data)
                 daily_avg = sales / days_in_month if days_in_month > 0 else 0
-                f.write(f"{month_name}: {sales:,.0f} IDR ({days_in_month} дней, {daily_avg:,.0f} IDR/день)\n")
-            f.write("\n")
+                f.write(f"  {month_name}: {sales:,.0f} IDR ({days_in_month} дней, {daily_avg:,.0f} IDR/день)\n")
+            # Выходные vs будни
+            weekend = data_sorted[pd.to_datetime(data_sorted['date']).dt.dayofweek.isin([5,6])]
+            weekday = data_sorted[~pd.to_datetime(data_sorted['date']).dt.dayofweek.isin([5,6])]
+            if not weekend.empty and not weekday.empty:
+                f.write("\n🗓️ Выходные vs Будни:\n")
+                f.write(f"  📅 Средние продажи в выходные: {weekend['total_sales'].mean():,.0f} IDR\n")
+                f.write(f"  📅 Средние продажи в будни: {weekday['total_sales'].mean():,.0f} IDR\n")
+                effect = (weekend['total_sales'].mean() - weekday['total_sales'].mean())/weekday['total_sales'].mean()*100 if weekday['total_sales'].mean()>0 else 0
+                f.write(f"  📊 Эффект выходных: {effect:+.1f}%\n")
+            # Лучший/худший день
+            if not data_sorted.empty:
+                best = data_sorted.loc[data_sorted['total_sales'].idxmax()]
+                worst = data_sorted.loc[data_sorted['total_sales'].idxmin()]
+                f.write("📊 АНАЛИЗ РАБОЧИХ ДНЕЙ ({} дней):\n".format(len(data_sorted)))
+                f.write(f"🏆 Лучший день: {best['date']} - {best['total_sales']:,.0f} IDR\n")
+                f.write(f"📉 Худший день: {worst['date']} - {worst['total_sales']:,.0f} IDR\n")
+                spread = (best['total_sales'] - worst['total_sales'])/max(1, weekday['total_sales'].mean())*100 if not weekday.empty else 0
+                f.write(f"📊 Разброс продаж: {spread:.1f}% (только рабочие дни)\n")
+                f.write(f"📈 Средние продажи: {daily_avg_sales:,.0f} IDR/день\n")
+                # Коэф. вариации
+                cv = (data_sorted['total_sales'].std()/data_sorted['total_sales'].mean()*100) if data_sorted['total_sales'].mean()>0 else 0
+                f.write(f"📊 Коэффициент вариации: {cv:.1f}% (стабильность продаж)\n\n")
             
             # Клиентская база
-            f.write("👥 КЛИЕНТСКАЯ БАЗА\n")
-            f.write("-" * 50 + "\n")
-            if 'new_rate' in locals():
-                f.write(f"🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)\n")
-                f.write(f"🔄 Повторные клиенты: {repeated_customers:,.0f} ({repeat_rate:.1f}%)\n")
-                f.write(f"📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)\n")
-                if 'loyalty_premium' in locals():
-                    f.write(f"🏆 Премия лояльности: +{loyalty_premium:.1f}%\n")
+            f.write("👥 3. ДЕТАЛЬНЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ\n")
+            f.write("-" * 40 + "\n")
+            f.write("📊 Структура клиентской базы (GRAB + GOJEK):\n")
+            if total_customers > 0:
+                f.write(f"  🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)\n")
+                f.write(f"    📱 GRAB: {grab_new:,.0f} | 🛵 GOJEK: {gojek_new:,.0f}\n")
+                f.write(f"  🔄 Повторные клиенты: {repeated_customers:,.0f} ({repeat_rate:.1f}%)\n")
+                f.write(f"    📱 GRAB: {grab_repeat:,.0f} | 🛵 GOJEK: {gojek_repeat:,.0f}\n")
+                f.write(f"  📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)\n")
+                f.write(f"    📱 GRAB: {grab_reactive:,.0f} | 🛵 GOJEK: {gojek_reactive:,.0f}\n\n")
+                # Доходность по типам клиентов (только GRAB)
+                if new_customer_revenue > 0 and grab_new > 0:
+                    avg_new = new_customer_revenue / grab_new
+                    avg_repeat = (repeated_customer_revenue / grab_repeat) if grab_repeat > 0 else 0
+                    avg_reactive = (reactivated_customer_revenue / grab_reactive) if grab_reactive > 0 else 0
+                    f.write("💰 Доходность по типам клиентов (только GRAB):\n")
+                    f.write(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR (средний чек: {avg_new:,.0f} IDR) - только {grab_new} клиентов GRAB\n")
+                    f.write(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR (средний чек: {avg_repeat:,.0f} IDR) - только {grab_repeat} клиентов GRAB\n")
+                    if reactivated_customer_revenue > 0:
+                        f.write(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR (средний чек: {avg_reactive:,.0f} IDR) - только {grab_reactive} клиентов GRAB\n\n")
+                    f.write(f"  ⚠️ КРИТИЧНО: Данные о доходах от {gojek_new + gojek_repeat + gojek_reactive:,.0f} клиентов GOJEK ОТСУТСТВУЮТ в базе данных\n")
+                    f.write("  📊 Это означает, что реальная доходность может быть выше указанной\n")
+                    if avg_repeat > avg_new:
+                        loyalty_premium = ((avg_repeat - avg_new) / avg_new * 100)
+                        f.write(f"  🏆 Премия лояльности (GRAB): +{loyalty_premium:.1f}% к среднему чеку\n")
             f.write("\n")
             
             # Маркетинговая эффективность
-            f.write("📈 МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ\n")
-            f.write("-" * 50 + "\n")
+            f.write("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА\n")
+            f.write("-" * 40 + "\n")
             if total_impressions > 0:
                 f.write(f"👁️ Показы рекламы: {total_impressions:,.0f}\n")
                 f.write(f"🔗 CTR: {ctr:.2f}%\n")
-                f.write(f"✅ Конверсия: {conversion_rate:.2f}%\n")
+                f.write(f"✅ Конверсия: {overall_conversion:.2f}%\n")
                 f.write(f"💰 Стоимость заказа: {cost_per_order:,.0f} IDR\n")
+                
+                # Детальная воронка и потенциал
+                bounce_rate = ((total_menu_visits - total_add_to_carts) / total_menu_visits * 100) if total_menu_visits > 0 else 0
+                lost_from_bounce = max(0, total_menu_visits - total_add_to_carts)
+                cart_abandon_rate = ((total_add_to_carts - grab_marketing_orders) / total_add_to_carts * 100) if total_add_to_carts > 0 else 0
+                lost_from_abandon = max(0, total_add_to_carts - grab_marketing_orders)
+                f.write("ДЕТАЛЬНАЯ ВОРОНКА:\n")
+                f.write(f"  💔 Bounce rate: {bounce_rate:.1f}% ({lost_from_bounce:,} ушли без покупки)\n")
+                f.write(f"  🛒 Брошенные корзины: {cart_abandon_rate:.1f}% ({lost_from_abandon:,} добавили, но не купили)\n")
+                potential_from_bounce = lost_from_bounce * 0.1 * (total_sales / total_orders) if total_orders > 0 else 0
+                potential_from_abandon = lost_from_abandon * (total_sales / total_orders) if total_orders > 0 else 0
+                f.write("  💰 Потенциал оптимизации:\n")
+                f.write(f"  • Снижение bounce на 10%: +{potential_from_bounce:,.0f} IDR\n")
+                f.write(f"  • Устранение брошенных корзин: +{potential_from_abandon:,.0f} IDR\n")
+                total_ads_sales_now = grab_marketing_sales + gojek_marketing_sales
+                if total_ads_sales_now > 0:
+                    improvement_percent = ((potential_from_bounce + potential_from_abandon) / total_ads_sales_now * 100)
+                    f.write(f"  • Потенциальный рост к рекламным продажам: +{improvement_percent:.1f}%\n")
+                
+                # Расширенные метрики (при наличии данных)
+                mer = (marketing_sales / total_marketing) if total_marketing > 0 else 0
+                cpm = (grab_only_spend / total_impressions * 1000) if total_impressions > 0 else 0
+                reach = data['unique_impressions_reach'].sum() if 'unique_impressions_reach' in data.columns else 0
+                frequency = (total_impressions / reach) if reach > 0 else 0
+                f.write(f"📊 Расширенные метрики: MER {mer:.2f}x; CPM {cpm:,.0f} IDR; frequency {frequency:.2f}\n")
+                
                 # ROAS по месяцам - пересчитываем для сохранения отчета
                 f.write("ROAS по месяцам (GRAB + GOJEK):\n")
                 
@@ -2518,11 +2612,60 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             # Операционные показатели
             f.write("⚠️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ\n")
             f.write("-" * 50 + "\n")
+            # Финансовые показатели payouts (по образцу README)
+            try:
+                conn_pay = sqlite3.connect('database.sqlite')
+                cur = conn_pay.cursor()
+                cur.execute("""
+                SELECT 
+                  SUM(COALESCE(g.payouts,0)) as grab_payouts,
+                  SUM(COALESCE(gj.payouts,0)) as gojek_payouts
+                FROM restaurants r
+                LEFT JOIN grab_stats g ON r.id=g.restaurant_id
+                LEFT JOIN gojek_stats gj ON r.id=gj.restaurant_id
+                WHERE r.name = ? AND (g.stat_date BETWEEN ? AND ? OR gj.stat_date BETWEEN ? AND ?)
+                """, (restaurant_name, start_date, end_date, start_date, end_date))
+                row = cur.fetchone() or (0,0)
+                conn_pay.close()
+                grab_payouts, gojek_payouts = int(row[0] or 0), int(row[1] or 0)
+                total_payouts = grab_payouts + gojek_payouts
+                f.write("\n💳 ФИНАНСОВЫЕ ПОКАЗАТЕЛИ\n")
+                f.write("-" * 60 + "\n")
+                f.write("💰 Выплаты:\n")
+                f.write(f"   ├── 📱 GRAB: {grab_payouts:,.0f} IDR\n")
+                f.write(f"   ├── 🛵 GOJEK: {gojek_payouts:,.0f} IDR\n")
+                f.write(f"   └── 💎 Общие выплаты: {total_payouts:,.0f} IDR\n")
+            except Exception:
+                pass
             f.write(f"🚫 Дней с отменами 'закрыто': {days_with_closure_cancellations} ({(days_with_closure_cancellations/len(data)*100):.1f}%)\n")
             f.write(f"📦 Дней с дефицитом: {out_of_stock_days} ({(out_of_stock_days/len(data)*100):.1f}%)\n")
             f.write(f"❌ Отмененные заказы: {cancelled_orders:,.0f}\n")
+            # Детализация offline по платформам (по минутам и критичным дням)
+            f.write("\n⏰ ВЫКЛЮЧЕНИЯ ПЛАТФОРМ (детализация):\n")
+            try:
+                conn_tmp = sqlite3.connect('database.sqlite')
+                cur = conn_tmp.cursor()
+                cur.execute("""
+                SELECT 
+                  SUM(COALESCE(g.offline_rate,0)) as grab_offline_min,
+                  SUM(CASE WHEN COALESCE(g.offline_rate,0)>60 THEN 1 ELSE 0 END) as grab_crit_days,
+                  SUM(CASE WHEN gj.close_time IS NOT NULL AND gj.close_time!='00:00:00' THEN 
+                           CAST(substr(gj.close_time,1,2) AS INTEGER)*60+CAST(substr(gj.close_time,4,2) AS INTEGER) ELSE 0 END) as gojek_offline_min,
+                  SUM(CASE WHEN gj.close_time IS NOT NULL AND gj.close_time!='00:00:00' THEN 1 ELSE 0 END) as gojek_crit_days
+                FROM grab_stats g
+                LEFT JOIN gojek_stats gj ON g.restaurant_id=gj.restaurant_id AND g.stat_date=gj.stat_date
+                WHERE g.restaurant_id=(SELECT id FROM restaurants WHERE name=? LIMIT 1)
+                  AND g.stat_date BETWEEN ? AND ?
+                """, (restaurant_name, start_date, end_date))
+                row = cur.fetchone() or (0,0,0,0)
+                conn_tmp.close()
+                f.write(f"  📱 GRAB: {int(row[0])} мин offline; критичные дни: {int(row[1])}\n")
+                f.write(f"  🛵 GOJEK: {int(row[2])} мин offline; критичные дни: {int(row[3])}\n")
+            except Exception as e:
+                f.write(f"  ⚠️ Детализация offline недоступна: {e}\n")
+            
             if 'total_operational_losses' in locals() and total_operational_losses > 0:
-                f.write(f"💸 Реальные потери: {total_operational_losses:,.0f} IDR ({(total_operational_losses/total_sales*100):.1f}%)\n")
+                f.write(f"\n💸 Реальные потери: {total_operational_losses:,.0f} IDR ({(total_operational_losses/total_sales*100):.1f}%)\n")
             f.write("\n")
             
             # Качество обслуживания
@@ -2600,7 +2743,21 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             # Детективный анализ причин
             f.write("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН\n")
             f.write("-" * 50 + "\n")
-            f.write(detective_analysis + "\n\n")
+            try:
+                f.write(detective_analysis + "\n\n")
+            except NameError:
+                simple_trend_analysis = analyze_sales_trends(data)
+                f.write(simple_trend_analysis + "\n\n")
+            # ВСТРАИВАЕМ ИНТЕГРИРОВАННЫЙ ML ДЕТЕКТИВНЫЙ АНАЛИЗ В ФАЙЛ
+            try:
+                from src.analyzers import ProductionSalesAnalyzer
+                _psa = ProductionSalesAnalyzer()
+                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
+                f.write("📋 ML-ДЕТЕКТИВНЫЙ АНАЛИЗ (интегрированный)\n")
+                f.write("-" * 50 + "\n")
+                f.write("\n".join(_psa_results) + "\n\n")
+            except Exception as _e:
+                f.write(f"⚠️ Ошибка ML-детективного анализа: {_e}\n\n")
             
             # Стратегические рекомендации
             f.write("💡 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ\n")
@@ -2926,7 +3083,6 @@ def analyze_market(start_date=None, end_date=None):
         top_daily_sales = leaders.copy()
         top_daily_sales['daily_sales'] = top_daily_sales['total_sales'] / top_daily_sales['active_days']
         top_daily_sales = top_daily_sales.nlargest(5, 'daily_sales')
-        
         print("🎯 ТОП-5 по ROAS:")
         roas_leaders = leaders[leaders['marketing_spend'] > 0].copy()
         roas_leaders['roas'] = roas_leaders['marketing_sales'] / roas_leaders['marketing_spend']
@@ -4175,7 +4331,7 @@ def analyze_sales_trends(data):
         insights.append(f"✅ СТАБИЛЬНЫЕ продажи (коэф. вариации: {cv:.1f}%)")
         insights.append("💡 Рекомендация: Хорошая база для экспериментов")
     elif cv < 40:
-        insights.append(f"⚠️ УМЕРЕННЫЕ колебания (коэф. вариации: {cv:.1f}%)")
+        insights.append(f"⚠️ УМЕРЕНЫЕ колебания (коэф. вариации: {cv:.1f}%)")
         insights.append("💡 Рекомендация: Найти факторы стабильности")
     else:
         insights.append(f"🚨 ВЫСОКАЯ волатильность (коэф. вариации: {cv:.1f}%)")

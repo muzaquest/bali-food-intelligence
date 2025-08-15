@@ -232,7 +232,7 @@ results/
 outputs/
 plots/
 figures/
-reports/
+# reports/  # Теперь публикуем отчёты в репозиторий для ревью
 
 # Docker
 .dockerignore

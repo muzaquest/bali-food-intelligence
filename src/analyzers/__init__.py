@@ -8,7 +8,7 @@ from .enhanced_executive_summary import EnhancedExecutiveSummary
 
 # ML интеграция (опциональная)
 try:
-    from .integrated_ml_detective import IntegratedMLDetective, ProperMLDetectiveAnalysis
-    __all__ = ['ProductionSalesAnalyzer', 'EnhancedExecutiveSummary', 'IntegratedMLDetective', 'ProperMLDetectiveAnalysis']
+	from .integrated_ml_detective import IntegratedMLDetective, ProperMLDetectiveAnalysis
+	__all__ = ['ProductionSalesAnalyzer', 'EnhancedExecutiveSummary', 'IntegratedMLDetective', 'ProperMLDetectiveAnalysis']
 except ImportError:
-    __all__ = ['ProductionSalesAnalyzer', 'EnhancedExecutiveSummary']
+	__all__ = ['ProductionSalesAnalyzer', 'EnhancedExecutiveSummary']

@@ -316,11 +316,13 @@ class IntegratedMLDetective:
             g.impressions,
             COALESCE(g.rating, gj.rating, 4.5) as rating,
             (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders
-        FROM grab_stats g
-        FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id 
-                                       AND g.stat_date = gj.stat_date
-        WHERE (g.restaurant_id = {restaurant_id} OR gj.restaurant_id = {restaurant_id})
-        AND (g.stat_date = '{target_date}' OR gj.stat_date = '{target_date}')
+        FROM (
+            SELECT stat_date, restaurant_id FROM grab_stats WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
+            UNION
+            SELECT stat_date, restaurant_id FROM gojek_stats WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
+        ) d
+        LEFT JOIN grab_stats g ON g.restaurant_id = d.restaurant_id AND g.stat_date = d.stat_date
+        LEFT JOIN gojek_stats gj ON gj.restaurant_id = d.restaurant_id AND gj.stat_date = d.stat_date
         """
         
         df = pd.read_sql_query(query, conn)

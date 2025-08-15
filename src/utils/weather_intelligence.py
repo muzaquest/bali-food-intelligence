@@ -158,7 +158,12 @@ class WeatherIntelligence:
     def calculate_zone_modifier(self, zone, base_impact, weather_type):
         """Рассчитывает модификатор влияния для конкретной зоны"""
         if zone not in self.zone_sensitivities:
-            return base_impact
+            return {
+                'base_impact': base_impact,
+                'zone_modifier': 0,
+                'adjusted_impact': base_impact,
+                'zone_description': 'Unknown zone'
+            }
         
         zone_data = self.zone_sensitivities[zone]
         
