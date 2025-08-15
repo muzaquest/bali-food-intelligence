@@ -2561,19 +2561,36 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 f.write(f"📊 Коэффициент вариации: {cv:.1f}% (стабильность продаж)\n\n")
             
             # Клиентская база
-            f.write("👥 КЛИЕНТСКАЯ БАЗА\n")
-            f.write("-" * 50 + "\n")
-            if 'new_rate' in locals():
-                f.write(f"🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)\n")
-                f.write(f"🔄 Повторные клиенты: {repeated_customers:,.0f} ({repeat_rate:.1f}%)\n")
-                f.write(f"📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)\n")
-                if 'loyalty_premium' in locals():
-                    f.write(f"🏆 Премия лояльности: +{loyalty_premium:.1f}%\n")
+            f.write("👥 3. ДЕТАЛЬНЫЙ АНАЛИЗ КЛИЕНТСКОЙ БАЗЫ\n")
+            f.write("-" * 40 + "\n")
+            f.write("📊 Структура клиентской базы (GRAB + GOJEK):\n")
+            if total_customers > 0:
+                f.write(f"  🆕 Новые клиенты: {new_customers:,.0f} ({new_rate:.1f}%)\n")
+                f.write(f"    📱 GRAB: {grab_new:,.0f} | 🛵 GOJEK: {gojek_new:,.0f}\n")
+                f.write(f"  🔄 Повторные клиенты: {repeated_customers:,.0f} ({repeat_rate:.1f}%)\n")
+                f.write(f"    📱 GRAB: {grab_repeat:,.0f} | 🛵 GOJEK: {gojek_repeat:,.0f}\n")
+                f.write(f"  📲 Реактивированные: {reactivated_customers:,.0f} ({reactive_rate:.1f}%)\n")
+                f.write(f"    📱 GRAB: {grab_reactive:,.0f} | 🛵 GOJEK: {gojek_reactive:,.0f}\n\n")
+                # Доходность по типам клиентов (только GRAB)
+                if new_customer_revenue > 0 and grab_new > 0:
+                    avg_new = new_customer_revenue / grab_new
+                    avg_repeat = (repeated_customer_revenue / grab_repeat) if grab_repeat > 0 else 0
+                    avg_reactive = (reactivated_customer_revenue / grab_reactive) if grab_reactive > 0 else 0
+                    f.write("💰 Доходность по типам клиентов (только GRAB):\n")
+                    f.write(f"  🆕 Новые: {new_customer_revenue:,.0f} IDR (средний чек: {avg_new:,.0f} IDR) - только {grab_new} клиентов GRAB\n")
+                    f.write(f"  🔄 Повторные: {repeated_customer_revenue:,.0f} IDR (средний чек: {avg_repeat:,.0f} IDR) - только {grab_repeat} клиентов GRAB\n")
+                    if reactivated_customer_revenue > 0:
+                        f.write(f"  📲 Реактивированные: {reactivated_customer_revenue:,.0f} IDR (средний чек: {avg_reactive:,.0f} IDR) - только {grab_reactive} клиентов GRAB\n\n")
+                    f.write(f"  ⚠️ КРИТИЧНО: Данные о доходах от {gojek_new + gojek_repeat + gojek_reactive:,.0f} клиентов GOJEK ОТСУТСТВУЮТ в базе данных\n")
+                    f.write("  📊 Это означает, что реальная доходность может быть выше указанной\n")
+                    if avg_repeat > avg_new:
+                        loyalty_premium = ((avg_repeat - avg_new) / avg_new * 100)
+                        f.write(f"  🏆 Премия лояльности (GRAB): +{loyalty_premium:.1f}% к среднему чеку\n")
             f.write("\n")
             
             # Маркетинговая эффективность
-            f.write("📈 МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ\n")
-            f.write("-" * 50 + "\n")
+            f.write("📈 4. МАРКЕТИНГОВАЯ ЭФФЕКТИВНОСТЬ И ВОРОНКА\n")
+            f.write("-" * 40 + "\n")
             if total_impressions > 0:
                 f.write(f"👁️ Показы рекламы: {total_impressions:,.0f}\n")
                 f.write(f"🔗 CTR: {ctr:.2f}%\n")
@@ -2634,6 +2651,31 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             # Операционные показатели
             f.write("⚠️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ\n")
             f.write("-" * 50 + "\n")
+            # Финансовые показатели payouts (по образцу README)
+            try:
+                conn_pay = sqlite3.connect('database.sqlite')
+                cur = conn_pay.cursor()
+                cur.execute("""
+                SELECT 
+                  SUM(COALESCE(g.payouts,0)) as grab_payouts,
+                  SUM(COALESCE(gj.payouts,0)) as gojek_payouts
+                FROM restaurants r
+                LEFT JOIN grab_stats g ON r.id=g.restaurant_id
+                LEFT JOIN gojek_stats gj ON r.id=gj.restaurant_id
+                WHERE r.name = ? AND (g.stat_date BETWEEN ? AND ? OR gj.stat_date BETWEEN ? AND ?)
+                """, (restaurant_name, start_date, end_date, start_date, end_date))
+                row = cur.fetchone() or (0,0)
+                conn_pay.close()
+                grab_payouts, gojek_payouts = int(row[0] or 0), int(row[1] or 0)
+                total_payouts = grab_payouts + gojek_payouts
+                f.write("\n💳 ФИНАНСОВЫЕ ПОКАЗАТЕЛИ\n")
+                f.write("-" * 60 + "\n")
+                f.write("💰 Выплаты:\n")
+                f.write(f"   ├── 📱 GRAB: {grab_payouts:,.0f} IDR\n")
+                f.write(f"   ├── 🛵 GOJEK: {gojek_payouts:,.0f} IDR\n")
+                f.write(f"   └── 💎 Общие выплаты: {total_payouts:,.0f} IDR\n")
+            except Exception:
+                pass
             f.write(f"🚫 Дней с отменами 'закрыто': {days_with_closure_cancellations} ({(days_with_closure_cancellations/len(data)*100):.1f}%)\n")
             f.write(f"📦 Дней с дефицитом: {out_of_stock_days} ({(out_of_stock_days/len(data)*100):.1f}%)\n")
             f.write(f"❌ Отмененные заказы: {cancelled_orders:,.0f}\n")
