@@ -2723,7 +2723,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             try:
                 from src.analyzers import ProductionSalesAnalyzer
                 _psa = ProductionSalesAnalyzer()
-                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=False)
+                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
                 f.write("\n".join(_psa_results) + "\n\n")
             except Exception as _e:
                 f.write(f"⚠️ Ошибка формирования детективного анализа: {_e}\n\n")

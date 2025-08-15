@@ -84,7 +84,7 @@ class IntegratedMLDetective:
             ml_enhanced_results.append(result)
             
             # Ищем проблемные дни для ML анализа
-            if "ПРОБЛЕМНЫЙ ДЕНЬ" in result and "2025-" in result:
+            if "ПРОБЛЕМНЫЙ ДЕНЬ" in result:
                 # Извлекаем дату из строки
                 date_str = self._extract_date_from_result(result)
                 if date_str:
@@ -179,8 +179,11 @@ class IntegratedMLDetective:
             
             -- Операционные факторы  
             COALESCE(g.offline_rate, 0) as grab_offline_rate,
-            CASE WHEN gj.close_time IS NOT NULL AND gj.close_time != '00:00:00' THEN 1 ELSE 0 END as gojek_closed,
-            
+            CASE WHEN gj.close_time IS NOT NULL AND gj.close_time != '00:00:00'
+                 THEN (CAST(substr(gj.close_time, 1, 2) AS INTEGER) * 60 + 
+                       CAST(substr(gj.close_time, 4, 2) AS INTEGER))
+                 ELSE 0 END as gojek_close_minutes,
+             
             -- Временные метрики (в минутах)
             CASE WHEN gj.preparation_time IS NOT NULL AND gj.preparation_time != '00:00:00'
                 THEN (CAST(substr(gj.preparation_time, 1, 2) AS INTEGER) * 60 + 
@@ -192,12 +195,20 @@ class IntegratedMLDetective:
                       CAST(substr(gj.delivery_time, 7, 2) AS INTEGER))
                 ELSE 20 END as delivery_minutes,
             
+            -- Ожидание водителей (в минутах)
+            COALESCE(g.driver_waiting_time, 0) / 60.0 as grab_driver_waiting_minutes,
+            COALESCE(gj.driver_waiting, 0) as gojek_driver_waiting_minutes,
+            
             -- Маркетинговые факторы
             COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0) as total_ads_spend,
             COALESCE(g.impressions, 0) as impressions,
+            COALESCE(g.ads_sales, 0) + COALESCE(gj.ads_sales, 0) as total_ads_sales,
+            CASE WHEN COALESCE(g.ads_spend, 0) > 0 THEN COALESCE(g.ads_sales, 0) / g.ads_spend ELSE 0 END as roas_grab,
+            CASE WHEN COALESCE(gj.ads_spend, 0) > 0 THEN COALESCE(gj.ads_sales, 0) / gj.ads_spend ELSE 0 END as roas_gojek,
             
             -- Качественные факторы
-            COALESCE(g.rating, gj.rating, 4.5) as rating,
+            COALESCE(g.rating, 0) as rating_grab,
+            COALESCE(gj.rating, 0) as rating_gojek,
             COALESCE(g.orders, 0) + COALESCE(gj.orders, 0) as total_orders
             
         FROM all_dates ad
@@ -216,7 +227,7 @@ class IntegratedMLDetective:
         df['is_holiday'] = df['date'].apply(self._check_holiday)
         
         # Добавляем погодные данные (упрощенно для обучения)
-        df['precipitation'] = 0  # Будем получать из API при реальном анализе
+        df['precipitation'] = 0  # Для обучения без внешних запросов
         df['temperature'] = 27   # Средняя температура для Бали
         
         # Добавляем скользящие средние (исторические)
@@ -311,10 +322,15 @@ class IntegratedMLDetective:
             gj.close_time,
             gj.preparation_time,
             gj.delivery_time,
+            g.driver_waiting_time as grab_driver_wait_sec,
+            gj.driver_waiting as gojek_driver_wait_min,
             g.ads_spend as grab_ads_spend,
             gj.ads_spend as gojek_ads_spend,
+            g.ads_sales as grab_ads_sales,
+            gj.ads_sales as gojek_ads_sales,
             g.impressions,
-            COALESCE(g.rating, gj.rating, 4.5) as rating,
+            g.rating as rating_grab,
+            gj.rating as rating_gojek,
             (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders
         FROM (
             SELECT stat_date, restaurant_id FROM grab_stats WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
@@ -340,12 +356,18 @@ class IntegratedMLDetective:
             'is_weekend': 1 if date_obj.weekday() >= 5 else 0,
             'day_of_week': date_obj.weekday(),
             'grab_offline_rate': float(row['offline_rate']) if pd.notna(row['offline_rate']) else 0,
-            'gojek_closed': 1 if (pd.notna(row['close_time']) and row['close_time'] != '00:00:00') else 0,
+            'gojek_close_minutes': self._time_to_minutes(row['close_time']) if pd.notna(row['close_time']) else 0,
             'preparation_minutes': self._time_to_minutes(row['preparation_time']) if pd.notna(row['preparation_time']) else 15,
             'delivery_minutes': self._time_to_minutes(row['delivery_time']) if pd.notna(row['delivery_time']) else 20,
+            'grab_driver_waiting_minutes': float(row['grab_driver_wait_sec'])/60.0 if pd.notna(row['grab_driver_wait_sec']) else 0,
+            'gojek_driver_waiting_minutes': float(row['gojek_driver_wait_min']) if pd.notna(row['gojek_driver_wait_min']) else 0,
             'total_ads_spend': float(row['grab_ads_spend'] or 0) + float(row['gojek_ads_spend'] or 0),
+            'total_ads_sales': float(row['grab_ads_sales'] or 0) + float(row['gojek_ads_sales'] or 0),
+            'roas_grab': (float(row['grab_ads_sales'])/float(row['grab_ads_spend'])) if (float(row.get('grab_ads_spend') or 0) > 0 and pd.notna(row['grab_ads_sales'])) else 0,
+            'roas_gojek': (float(row['gojek_ads_sales'])/float(row['gojek_ads_spend'])) if (float(row.get('gojek_ads_spend') or 0) > 0 and pd.notna(row['gojek_ads_sales'])) else 0,
             'impressions': float(row['impressions']) if pd.notna(row['impressions']) else 0,
-            'rating': float(row['rating']) if pd.notna(row['rating']) else 4.5,
+            'rating_grab': float(row['rating_grab']) if pd.notna(row['rating_grab']) else 0,
+            'rating_gojek': float(row['rating_gojek']) if pd.notna(row['rating_gojek']) else 0,
             'total_orders': int(row['total_orders']) if pd.notna(row['total_orders']) else 0,
             'is_holiday': 1 if self._check_holiday(target_date) else 0
         }
@@ -397,21 +419,36 @@ class IntegratedMLDetective:
         return 0
     
     def _check_holiday(self, date_str):
-        """Проверяет является ли день праздником"""
-        return date_str in self.detective.holidays_data
+        """Проверяет является ли день праздником (поддержка dict или list структур)."""
+        holidays = self.detective.holidays_data
+        if not holidays:
+            return False
+        if isinstance(holidays, dict):
+            return date_str in holidays
+        if isinstance(holidays, list):
+            for h in holidays:
+                if isinstance(h, dict) and h.get('date') == date_str:
+                    return True
+        return False
     
     def _format_feature_name(self, feature_name):
         """Форматирует название признака для отчета"""
         
         name_mapping = {
             'grab_offline_rate': '📱 Grab offline rate',
-            'gojek_closed': '🛵 Gojek закрыт',
+            'gojek_close_minutes': '🛵 Gojek закрыт (мин)',
             'preparation_minutes': '⏱️ Время готовки',
             'delivery_minutes': '🚚 Время доставки',
+            'grab_driver_waiting_minutes': '⏳ GRAB ожидание водителей',
+            'gojek_driver_waiting_minutes': '⏳ GOJEK ожидание водителей',
             'total_ads_spend': '💰 Расходы на рекламу',
+            'total_ads_sales': '💰 Продажи от рекламы',
+            'roas_grab': '📈 ROAS GRAB',
+            'roas_gojek': '📈 ROAS GOJEK',
             'is_holiday': '🎉 Праздник',
             'is_weekend': '📅 Выходной',
-            'rating': '⭐ Рейтинг',
+            'rating_grab': '⭐ Рейтинг GRAB',
+            'rating_gojek': '⭐ Рейтинг GOJEK',
             'precipitation': '🌧️ Осадки (мм)',
             'temperature': '🌡️ Температура (°C)',
             'sales_7day_avg': '📈 Средние продажи (7 дней)',
@@ -482,7 +519,7 @@ class IntegratedMLDetective:
         """Извлекает дату из строки результата"""
         
         import re
-        date_pattern = r'(2025-\d{2}-\d{2})'
+        date_pattern = r'(\d{4}-\d{2}-\d{2})'
         match = re.search(date_pattern, result_line)
         return match.group(1) if match else None
 
