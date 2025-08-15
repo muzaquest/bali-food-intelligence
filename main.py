@@ -12,7 +12,7 @@ import json
 from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
-from weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
+from src.utils.weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
 
 # ML Детективный анализ - ОБНОВЛЕННАЯ ВЕРСИЯ
 try:
@@ -30,6 +30,28 @@ except ImportError as e:
 # API интеграция
 import requests
 from dotenv import load_dotenv
+from src.utils.weather_intelligence import analyze_weather_impact_for_report, get_weather_intelligence
+
+# Фолбэк функция локации, если отсутствует API/утилита
+def get_restaurant_location(restaurant_name: str):
+	try:
+		# Попытка получить из локальной JSON карты
+		import json
+		with open('data/bali_restaurant_locations.json', 'r', encoding='utf-8') as f:
+			data = json.load(f)
+		for item in data.get('restaurants', []):
+			if item.get('name') == restaurant_name:
+				return {
+					'latitude': float(item.get('lat', -8.6700)),
+					'longitude': float(item.get('lon', 115.2130)),
+					'location': item.get('location', 'Unknown'),
+					'area': item.get('area', 'Unknown'),
+					'zone': item.get('zone', 'Central')
+				}
+	except Exception:
+		pass
+	# Бэкап по Бали
+	return {'latitude': -8.6700, 'longitude': 115.2130, 'location': 'Fallback', 'area': 'Unknown', 'zone': 'Central'}
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -102,8 +124,12 @@ try:
     from ml_models import analyze_restaurant_with_ml, RestaurantMLAnalyzer
     ML_MODULE_AVAILABLE = True
 except ImportError:
-    ML_MODULE_AVAILABLE = False
-    print("⚠️ ML модуль недоступен. Запустите: pip install scikit-learn prophet")
+    try:
+        from backup_ml_20250809_175202.ml_models.ml_models import analyze_restaurant_with_ml, RestaurantMLAnalyzer
+        ML_MODULE_AVAILABLE = True
+    except ImportError:
+        ML_MODULE_AVAILABLE = False
+        print("⚠️ ML модуль недоступен. Запустите: pip install scikit-learn prophet")
 
 # Добавляем импорт нового профессионального анализа
 try:
@@ -2487,7 +2513,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             if total_impressions > 0:
                 f.write(f"👁️ Показы рекламы: {total_impressions:,.0f}\n")
                 f.write(f"🔗 CTR: {ctr:.2f}%\n")
-                f.write(f"✅ Конверсия: {conversion_rate:.2f}%\n")
+                f.write(f"✅ Конверсия: {overall_conversion:.2f}%\n")
                 f.write(f"💰 Стоимость заказа: {cost_per_order:,.0f} IDR\n")
                 # ROAS по месяцам - пересчитываем для сохранения отчета
                 f.write("ROAS по месяцам (GRAB + GOJEK):\n")
@@ -2600,7 +2626,12 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             # Детективный анализ причин
             f.write("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН\n")
             f.write("-" * 50 + "\n")
-            f.write(detective_analysis + "\n\n")
+            try:
+                f.write(detective_analysis + "\n\n")
+            except NameError:
+                # Если нет переменной, записываем fallback анализ трендов
+                simple_trend_analysis = analyze_sales_trends(data)
+                f.write(simple_trend_analysis + "\n\n")
             
             # Стратегические рекомендации
             f.write("💡 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ\n")
@@ -2926,7 +2957,6 @@ def analyze_market(start_date=None, end_date=None):
         top_daily_sales = leaders.copy()
         top_daily_sales['daily_sales'] = top_daily_sales['total_sales'] / top_daily_sales['active_days']
         top_daily_sales = top_daily_sales.nlargest(5, 'daily_sales')
-        
         print("🎯 ТОП-5 по ROAS:")
         roas_leaders = leaders[leaders['marketing_spend'] > 0].copy()
         roas_leaders['roas'] = roas_leaders['marketing_sales'] / roas_leaders['marketing_spend']
@@ -4175,7 +4205,7 @@ def analyze_sales_trends(data):
         insights.append(f"✅ СТАБИЛЬНЫЕ продажи (коэф. вариации: {cv:.1f}%)")
         insights.append("💡 Рекомендация: Хорошая база для экспериментов")
     elif cv < 40:
-        insights.append(f"⚠️ УМЕРЕННЫЕ колебания (коэф. вариации: {cv:.1f}%)")
+        insights.append(f"⚠️ УМЕРЕНЫЕ колебания (коэф. вариации: {cv:.1f}%)")
         insights.append("💡 Рекомендация: Найти факторы стабильности")
     else:
         insights.append(f"🚨 ВЫСОКАЯ волатильность (коэф. вариации: {cv:.1f}%)")
