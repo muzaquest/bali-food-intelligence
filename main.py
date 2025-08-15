@@ -2302,58 +2302,19 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     print("🔍 8.5 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН")
     print("-" * 40)
     
-    # Используем ПРОФЕССИОНАЛЬНЫЙ анализатор 
-    if ML_DETECTIVE_AVAILABLE:
-        try:
-            print("🚀 Запуск профессионального детективного анализатора...")
-            from src.analyzers import ProfessionalDetectiveAnalyzer
-            detective_analyzer = ProfessionalDetectiveAnalyzer()
-            detective_results = detective_analyzer.analyze_sales_performance(
-                restaurant_name, start_date, end_date
-            )
-            print("📋 РЕЗУЛЬТАТЫ ДЕТЕКТИВНОГО АНАЛИЗА:")
-            for result in detective_results:
-                print(result)
-            # ВСТРАИВАЕМ ИНТЕГРИРОВАННЫЙ ML ДЕТЕКТИВНЫЙ АНАЛИЗ В КОНСОЛЬ
-            try:
-                from src.analyzers import ProductionSalesAnalyzer
-                _psa = ProductionSalesAnalyzer()
-                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
-                print("\n📋 ML-ДЕТЕКТИВНЫЙ АНАЛИЗ (интегрированный):")
-                for line in _psa_results:
-                    print(line)
-            except Exception as _e:
-                print(f"⚠️ Ошибка ML-детективного анализа: {_e}")
-        except Exception as e:
-            print(f"⚠️ Ошибка обновленного анализатора: {e}")
-            print("📊 Используем fallback анализ...")
-            import traceback
-            traceback.print_exc()
-            print()
-            
-            # Основной анализ трендов
-            simple_trend_analysis = analyze_sales_trends(data)
-            print(simple_trend_analysis)
-            
-            print()
-            print()
-            
-            # Дополнительный маркетинговый анализ
-            marketing_analysis = analyze_marketing_performance_without_ml(data)
-            print(marketing_analysis)
-    else:
-        print("⚠️ ML детективный анализ недоступен")
-        print("📊 Используем ПРОДВИНУТЫЙ анализ без ML...")
-        print()
-        
-        # Основной анализ трендов
+    # Используем интегрированный ML детективный анализ
+    try:
+        from src.analyzers import ProductionSalesAnalyzer
+        _psa = ProductionSalesAnalyzer()
+        _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
+        print("📋 ML-ДЕТЕКТИВНЫЙ АНАЛИЗ (интегрированный):")
+        for line in _psa_results:
+            print(line)
+    except Exception as e:
+        print(f"⚠️ Ошибка интегрированного ML анализа: {e}")
+        print("📊 Используем fallback анализ...")
         simple_trend_analysis = analyze_sales_trends(data)
         print(simple_trend_analysis)
-        
-        print()
-        print()
-        
-        # Дополнительный маркетинговый анализ
         marketing_analysis = analyze_marketing_performance_without_ml(data)
         print(marketing_analysis)
     
