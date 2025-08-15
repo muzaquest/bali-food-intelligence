@@ -1294,7 +1294,10 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     working_days_count = len(data[data['total_sales'] > 0])
     daily_avg_sales = total_sales / working_days_count if working_days_count > 0 else 0
     
-    print(f"💰 Общая выручка: {total_sales:,.0f} IDR (GRAB + GOJEK)")
+    # Выручка по платформам
+    grab_sales = platform_data[platform_data['platform'] == 'grab']['total_sales'].sum() if not platform_data.empty else 0
+    gojek_sales = platform_data[platform_data['platform'] == 'gojek']['total_sales'].sum() if not platform_data.empty else 0
+    print(f"💰 Общая выручка: {total_sales:,.0f} IDR (GRAB: {grab_sales:,.0f} + GOJEK: {gojek_sales:,.0f})")
     # Получаем детализацию заказов по платформам из исходных данных
     grab_orders = platform_data[platform_data['platform'] == 'grab']['orders'].sum() if not platform_data.empty else 0
     gojek_orders = platform_data[platform_data['platform'] == 'gojek']['orders'].sum() if not platform_data.empty else 0
@@ -1304,9 +1307,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     gojek_cancelled = platform_data[platform_data['platform'] == 'gojek']['cancelled_orders'].sum() if not platform_data.empty else 0
     gojek_lost = platform_data[platform_data['platform'] == 'gojek']['lost_orders'].sum() if not platform_data.empty else 0
     
-    # Рассчитываем успешные заказы
-    grab_successful = grab_orders - grab_cancelled
-    gojek_successful = gojek_orders - gojek_cancelled - gojek_lost
+    # Рассчитываем успешные заказы с учетом fake
+    try:
+        from src.utils.fake_orders_filter import get_fake_orders_filter
+        _fo = get_fake_orders_filter()
+        _fo_summary = _fo.get_fake_orders_summary(restaurant_name, start_date, end_date)
+        grab_fake = int(_fo_summary.get('by_platform', {}).get('Grab', 0))
+        gojek_fake = int(_fo_summary.get('by_platform', {}).get('Gojek', 0))
+    except Exception:
+        grab_fake = 0
+        gojek_fake = 0
+    grab_successful = max(0, grab_orders - grab_cancelled - grab_fake)
+    gojek_successful = max(0, gojek_orders - gojek_cancelled - gojek_lost - gojek_fake)
     
     # Проверяем консистентность данных
     platform_total_orders = grab_orders + gojek_orders
@@ -1318,8 +1330,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print()
     
     print(f"📦 Общие заказы: {total_orders:,.0f}")
-    print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled})")
-    print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost})")
+    print(f"   ├── 📱 GRAB: {grab_orders:,.0f} (успешно: {grab_successful:,.0f}, отменено: {grab_cancelled}, fake: {grab_fake})")
+    print(f"   └── 🛵 GOJEK: {gojek_orders:,.0f} (успешно: {gojek_successful:,.0f}, отменено: {gojek_cancelled}, потеряно: {gojek_lost}, fake: {gojek_fake})")
     print(f"   💡 Успешных заказов: {grab_successful + gojek_successful:,.0f}")
     
     # Рассчитываем средний чек по платформам
@@ -1330,8 +1342,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
     gojek_avg_check = gojek_sales / gojek_orders if gojek_orders > 0 else 0
     
     print(f"💵 Средний чек: {avg_order_value:,.0f} IDR")
-    print(f"   ├── 📱 GRAB: {grab_avg_check:,.0f} IDR")
-    print(f"   └── 🛵 GOJEK: {gojek_avg_check:,.0f} IDR")
+    print(f"   ├── 📱 GRAB: {grab_avg_check:,.0f} IDR ({grab_sales:,.0f} ÷ {grab_successful})")
+    print(f"   └── 🛵 GOJEK: {gojek_avg_check:,.0f} IDR ({gojek_sales:,.0f} ÷ {gojek_successful})")
     print(f"📊 Дневная выручка: {daily_avg_sales:,.0f} IDR (средняя по рабочим дням)")
     print(f"⭐ Средний рейтинг: {avg_rating:.2f}/5.0")
     # Правильное распределение клиентов по платформам
@@ -1356,9 +1368,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         print(f"   Разница: {abs(total_marketing - platform_total_marketing):,.0f} IDR")
         print()
     
-    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR (GRAB + GOJEK)")
-    print(f"   ├── 📱 GRAB: {grab_marketing_budget:,.0f} IDR ({grab_marketing_budget/total_marketing*100:.1f}%)")
-    print(f"   └── 🛵 GOJEK: {gojek_marketing_budget:,.0f} IDR ({gojek_marketing_budget/total_marketing*100:.1f}%)")
+    print(f"💸 Маркетинговый бюджет: {total_marketing:,.0f} IDR ({total_marketing/total_sales*100:.1f}% от выручки)")
+    print("📊 Детализация маркетинговых затрат:")
+    print("   ┌─ 📱 GRAB:")
+    print(f"   │  💰 Бюджет: {grab_marketing_budget:,.0f} IDR ({grab_marketing_budget/total_marketing*100:.1f}% общего бюджета)")
+    grab_share_of_total_sales = (grab_marketing_budget/total_sales*100) if total_sales>0 else 0
+    gojek_share_of_total_sales = (gojek_marketing_budget/total_sales*100) if total_sales>0 else 0
+    grab_sales_only = platform_data[platform_data['platform']=='grab']['total_sales'].sum() if not platform_data.empty else 0
+    gojek_sales_only = platform_data[platform_data['platform']=='gojek']['total_sales'].sum() if not platform_data.empty else 0
+    print(f"   │  📈 {grab_share_of_total_sales:.1f}% от общей выручки | {(grab_marketing_budget/max(grab_sales_only,1))*100:.1f}% от выручки GRAB")
+    print("   └─ 🛵 GOJEK:")
+    print(f"      💰 Бюджет: {gojek_marketing_budget:,.0f} IDR ({gojek_marketing_budget/total_marketing*100:.1f}% общего бюджета)")
+    print(f"      📈 {gojek_share_of_total_sales:.1f}% от общей выручки | {(gojek_marketing_budget/max(gojek_sales_only,1))*100:.1f}% от выручки GOJEK")
     # Получаем данные по платформам отдельно для корректного ROAS анализа
     try:
         # Получаем отдельные данные по платформам из исходных данных
