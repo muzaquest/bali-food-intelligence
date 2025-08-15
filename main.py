@@ -2483,7 +2483,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write("📊 Детализация маркетинговых затрат:\n")
             f.write("   ┌─ 📱 GRAB:\n")
             f.write(f"   │  💰 Бюджет: {grab_marketing_budget:,.0f} IDR ({(grab_marketing_budget/total_marketing*100) if total_marketing>0 else 0:.1f}% общего бюджета)\n")
-            f.write(f"   │  📈 {((grab_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((grab_marketing_budget/max(grab_sales,1))*100):.1f}% от выручки GRAB\n")
+            f.write(f"   │  📈 {((grab_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((grab_marketing_budget/max(grab_sales,1))*100):.1f}% от выручки GRAB | {((grab_marketing_budget/max(grab_marketing_sales,1))*100):.1f}% от рекламных продаж\n")
             f.write("   └─ 🛵 GOJEK:\n")
             f.write(f"      💰 Бюджет: {gojek_marketing_budget:,.0f} IDR ({(gojek_marketing_budget/total_marketing*100) if total_marketing>0 else 0:.1f}% общего бюджета)\n")
             f.write(f"      📈 {((gojek_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((gojek_marketing_budget/max(gojek_sales,1))*100):.1f}% от выручки GOJEK\n\n")
@@ -2717,8 +2717,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write("\n")
             
             # Качество обслуживания
-            f.write("⭐ КАЧЕСТВО ОБСЛУЖИВАНИЯ\n")
-            f.write("-" * 50 + "\n")
+            f.write("⭐ 6. КАЧЕСТВО ОБСЛУЖИВАНИЯ И УДОВЛЕТВОРЕННОСТЬ\n")
+            f.write("-" * 40 + "\n")
             
             # Используем те же переменные что и в консольном выводе
             gojek_ratings_data = gojek_platform_data if not gojek_platform_data.empty else pd.DataFrame()
@@ -2767,8 +2767,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write("\n")
             
             # Внешние факторы
-            f.write("🌐 ВНЕШНИЕ ФАКТОРЫ\n")
-            f.write("-" * 50 + "\n")
+            f.write("🌐 7. ВНЕШНИЕ ФАКТОРЫ\n")
+            f.write("-" * 40 + "\n")
             f.write("Погодные условия и их влияние:\n")
             if 'weather_groups' in locals() and weather_groups:
                 for condition, sales_list in weather_groups.items():
@@ -2789,8 +2789,8 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write(ai_insights + "\n\n")
             
             # Детективный анализ причин
-            f.write("🔍 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН\n")
-            f.write("-" * 50 + "\n")
+            f.write("🔍 8.5 ДЕТЕКТИВНЫЙ АНАЛИЗ ПРИЧИН\n")
+            f.write("-" * 40 + "\n")
             try:
                 f.write(detective_analysis + "\n\n")
             except NameError:
