@@ -2525,6 +2525,32 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 f.write(f"🔗 CTR: {ctr:.2f}%\n")
                 f.write(f"✅ Конверсия: {overall_conversion:.2f}%\n")
                 f.write(f"💰 Стоимость заказа: {cost_per_order:,.0f} IDR\n")
+                
+                # Детальная воронка и потенциал
+                bounce_rate = ((total_menu_visits - total_add_to_carts) / total_menu_visits * 100) if total_menu_visits > 0 else 0
+                lost_from_bounce = max(0, total_menu_visits - total_add_to_carts)
+                cart_abandon_rate = ((total_add_to_carts - grab_marketing_orders) / total_add_to_carts * 100) if total_add_to_carts > 0 else 0
+                lost_from_abandon = max(0, total_add_to_carts - grab_marketing_orders)
+                f.write("ДЕТАЛЬНАЯ ВОРОНКА:\n")
+                f.write(f"  💔 Bounce rate: {bounce_rate:.1f}% ({lost_from_bounce:,} ушли без покупки)\n")
+                f.write(f"  🛒 Брошенные корзины: {cart_abandon_rate:.1f}% ({lost_from_abandon:,} добавили, но не купили)\n")
+                potential_from_bounce = lost_from_bounce * 0.1 * (total_sales / total_orders) if total_orders > 0 else 0
+                potential_from_abandon = lost_from_abandon * (total_sales / total_orders) if total_orders > 0 else 0
+                f.write("  💰 Потенциал оптимизации:\n")
+                f.write(f"  • Снижение bounce на 10%: +{potential_from_bounce:,.0f} IDR\n")
+                f.write(f"  • Устранение брошенных корзин: +{potential_from_abandon:,.0f} IDR\n")
+                total_ads_sales_now = grab_marketing_sales + gojek_marketing_sales
+                if total_ads_sales_now > 0:
+                    improvement_percent = ((potential_from_bounce + potential_from_abandon) / total_ads_sales_now * 100)
+                    f.write(f"  • Потенциальный рост к рекламным продажам: +{improvement_percent:.1f}%\n")
+                
+                # Расширенные метрики (при наличии данных)
+                mer = (marketing_sales / total_marketing) if total_marketing > 0 else 0
+                cpm = (grab_only_spend / total_impressions * 1000) if total_impressions > 0 else 0
+                reach = data['unique_impressions_reach'].sum() if 'unique_impressions_reach' in data.columns else 0
+                frequency = (total_impressions / reach) if reach > 0 else 0
+                f.write(f"📊 Расширенные метрики: MER {mer:.2f}x; CPM {cpm:,.0f} IDR; frequency {frequency:.2f}\n")
+                
                 # ROAS по месяцам - пересчитываем для сохранения отчета
                 f.write("ROAS по месяцам (GRAB + GOJEK):\n")
                 
@@ -2557,8 +2583,32 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write(f"🚫 Дней с отменами 'закрыто': {days_with_closure_cancellations} ({(days_with_closure_cancellations/len(data)*100):.1f}%)\n")
             f.write(f"📦 Дней с дефицитом: {out_of_stock_days} ({(out_of_stock_days/len(data)*100):.1f}%)\n")
             f.write(f"❌ Отмененные заказы: {cancelled_orders:,.0f}\n")
+            # Детализация offline по платформам (по минутам и критичным дням)
+            f.write("\n⏰ ВЫКЛЮЧЕНИЯ ПЛАТФОРМ (детализация):\n")
+            try:
+                conn_tmp = sqlite3.connect('database.sqlite')
+                cur = conn_tmp.cursor()
+                cur.execute("""
+                SELECT 
+                  SUM(COALESCE(g.offline_rate,0)) as grab_offline_min,
+                  SUM(CASE WHEN COALESCE(g.offline_rate,0)>60 THEN 1 ELSE 0 END) as grab_crit_days,
+                  SUM(CASE WHEN gj.close_time IS NOT NULL AND gj.close_time!='00:00:00' THEN 
+                           CAST(substr(gj.close_time,1,2) AS INTEGER)*60+CAST(substr(gj.close_time,4,2) AS INTEGER) ELSE 0 END) as gojek_offline_min,
+                  SUM(CASE WHEN gj.close_time IS NOT NULL AND gj.close_time!='00:00:00' THEN 1 ELSE 0 END) as gojek_crit_days
+                FROM grab_stats g
+                LEFT JOIN gojek_stats gj ON g.restaurant_id=gj.restaurant_id AND g.stat_date=gj.stat_date
+                WHERE g.restaurant_id=(SELECT id FROM restaurants WHERE name=? LIMIT 1)
+                  AND g.stat_date BETWEEN ? AND ?
+                """, (restaurant_name, start_date, end_date))
+                row = cur.fetchone() or (0,0,0,0)
+                conn_tmp.close()
+                f.write(f"  📱 GRAB: {int(row[0])} мин offline; критичные дни: {int(row[1])}\n")
+                f.write(f"  🛵 GOJEK: {int(row[2])} мин offline; критичные дни: {int(row[3])}\n")
+            except Exception as e:
+                f.write(f"  ⚠️ Детализация offline недоступна: {e}\n")
+            
             if 'total_operational_losses' in locals() and total_operational_losses > 0:
-                f.write(f"💸 Реальные потери: {total_operational_losses:,.0f} IDR ({(total_operational_losses/total_sales*100):.1f}%)\n")
+                f.write(f"\n💸 Реальные потери: {total_operational_losses:,.0f} IDR ({(total_operational_losses/total_sales*100):.1f}%)\n")
             f.write("\n")
             
             # Качество обслуживания
