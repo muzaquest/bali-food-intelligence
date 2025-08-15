@@ -42,8 +42,8 @@ def get_restaurant_location(restaurant_name: str):
 		for item in data.get('restaurants', []):
 			if item.get('name') == restaurant_name:
 				return {
-					'latitude': float(item.get('lat', -8.6700)),
-					'longitude': float(item.get('lon', 115.2130)),
+					'latitude': float(item.get('latitude', -8.6700)),
+					'longitude': float(item.get('longitude', 115.2130)),
 					'location': item.get('location', 'Unknown'),
 					'area': item.get('area', 'Unknown'),
 					'zone': item.get('zone', 'Central')
@@ -120,16 +120,7 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 # Добавляем импорт ML модуля
-try:
-    from ml_models import analyze_restaurant_with_ml, RestaurantMLAnalyzer
-    ML_MODULE_AVAILABLE = True
-except ImportError:
-    try:
-        from backup_ml_20250809_175202.ml_models.ml_models import analyze_restaurant_with_ml, RestaurantMLAnalyzer
-        ML_MODULE_AVAILABLE = True
-    except ImportError:
-        ML_MODULE_AVAILABLE = False
-        print("⚠️ ML модуль недоступен. Запустите: pip install scikit-learn prophet")
+ML_MODULE_AVAILABLE = False  # legacy ML выключен; используем IntegratedMLDetective внутри ProductionSalesAnalyzer
 
 # Добавляем импорт нового профессионального анализа
 try:
@@ -2302,16 +2293,16 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             print("📋 РЕЗУЛЬТАТЫ ДЕТЕКТИВНОГО АНАЛИЗА:")
             for result in detective_results:
                 print(result)
-            # ВСТРАИВАЕМ ПРОИЗВОДСТВЕННЫЙ АНАЛИЗАТОР
+            # ВСТРАИВАЕМ ИНТЕГРИРОВАННЫЙ ML ДЕТЕКТИВНЫЙ АНАЛИЗ В КОНСОЛЬ
             try:
                 from src.analyzers import ProductionSalesAnalyzer
                 _psa = ProductionSalesAnalyzer()
-                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date)
-                print("\n📋 ДОПОЛНИТЕЛЬНЫЙ ПРОИЗВОДСТВЕННЫЙ АНАЛИЗ:")
+                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
+                print("\n📋 ML-ДЕТЕКТИВНЫЙ АНАЛИЗ (интегрированный):")
                 for line in _psa_results:
                     print(line)
             except Exception as _e:
-                print(f"⚠️ Ошибка ProductionSalesAnalyzer: {_e}")
+                print(f"⚠️ Ошибка ML-детективного анализа: {_e}")
         except Exception as e:
             print(f"⚠️ Ошибка обновленного анализатора: {e}")
             print("📊 Используем fallback анализ...")
@@ -2345,21 +2336,17 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         marketing_analysis = analyze_marketing_performance_without_ml(data)
         print(marketing_analysis)
     
-    # 8.6. ML-АНАЛИЗ И ПРОГНОЗИРОВАНИЕ (НОВИНКА!)
-    if ML_MODULE_AVAILABLE:
-        print("\n🤖 8.6 МАШИННОЕ ОБУЧЕНИЕ - РАСШИРЕННЫЙ АНАЛИЗ")
-        print("-" * 40)
-        
-        try:
-            ml_insights = analyze_restaurant_with_ml(restaurant_name, start_date, end_date)
-            for insight in ml_insights:
-                print(insight)
-        except Exception as e:
-            print(f"⚠️ Ошибка ML анализа: {e}")
-    else:
-        print("\n⚠️ 8.6 ML-АНАЛИЗ НЕДОСТУПЕН")
-        print("-" * 40)
-        print("Установите зависимости: pip install scikit-learn prophet")
+    # 8.6. ML-АНАЛИЗ И ПРОГНОЗИРОВАНИЕ (ИНТЕГРИРОВАНО)
+    print("\n🤖 8.6 ИНТЕГРИРОВАННЫЙ ML-ДЕТЕКТИВНЫЙ АНАЛИЗ")
+    print("-" * 40)
+    try:
+        from src.analyzers import ProductionSalesAnalyzer
+        _psa = ProductionSalesAnalyzer()
+        _ml_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
+        for line in _ml_results:
+            print(line)
+    except Exception as e:
+        print(f"⚠️ Ошибка интегрированного ML анализа: {e}")
     
     # 9. СРАВНИТЕЛЬНЫЙ БЕНЧМАРКИНГ
     print(f"\n📊 9. СРАВНИТЕЛЬНЫЙ АНАЛИЗ И БЕНЧМАРКИ")
@@ -2691,16 +2678,16 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             except NameError:
                 simple_trend_analysis = analyze_sales_trends(data)
                 f.write(simple_trend_analysis + "\n\n")
-            # ВСТРАИВАЕМ ПРОИЗВОДСТВЕННЫЙ АНАЛИЗАТОР В ФАЙЛ
+            # ВСТРАИВАЕМ ИНТЕГРИРОВАННЫЙ ML ДЕТЕКТИВНЫЙ АНАЛИЗ В ФАЙЛ
             try:
                 from src.analyzers import ProductionSalesAnalyzer
                 _psa = ProductionSalesAnalyzer()
-                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date)
-                f.write("📋 ДОПОЛНИТЕЛЬНЫЙ ПРОИЗВОДСТВЕННЫЙ АНАЛИЗ\n")
+                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date, use_ml=True)
+                f.write("📋 ML-ДЕТЕКТИВНЫЙ АНАЛИЗ (интегрированный)\n")
                 f.write("-" * 50 + "\n")
                 f.write("\n".join(_psa_results) + "\n\n")
             except Exception as _e:
-                f.write(f"⚠️ Ошибка ProductionSalesAnalyzer: {_e}\n\n")
+                f.write(f"⚠️ Ошибка ML-детективного анализа: {_e}\n\n")
             
             # Стратегические рекомендации
             f.write("💡 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ\n")

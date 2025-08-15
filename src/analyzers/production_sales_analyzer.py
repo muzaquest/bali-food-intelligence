@@ -201,11 +201,21 @@ class ProductionSalesAnalyzer:
                         END
                     ELSE CAST(gj.close_time AS INTEGER)
                 END as gojek_close_minutes
-            FROM grab_stats g 
-            FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
-            WHERE COALESCE(g.restaurant_id, gj.restaurant_id) = {restaurant_id}
-                AND COALESCE(g.stat_date, gj.stat_date) BETWEEN '{start_date}' AND '{end_date}'
-                AND (COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) > 0
+            FROM (
+                SELECT g.stat_date, g.restaurant_id, g.sales, g.orders, g.offline_rate,
+                       NULL as close_time
+                FROM grab_stats g
+                WHERE g.restaurant_id = {restaurant_id}
+                UNION ALL
+                SELECT gj.stat_date, gj.restaurant_id, NULL as sales, NULL as orders, NULL as offline_rate,
+                       gj.close_time
+                FROM gojek_stats gj
+                WHERE gj.restaurant_id = {restaurant_id}
+            ) dates
+            LEFT JOIN grab_stats g ON g.restaurant_id = dates.restaurant_id AND g.stat_date = dates.stat_date
+            LEFT JOIN gojek_stats gj ON gj.restaurant_id = dates.restaurant_id AND gj.stat_date = dates.stat_date
+            WHERE dates.stat_date BETWEEN '{start_date}' AND '{end_date}'
+              AND (COALESCE(g.sales, 0) + COALESCE(gj.sales, 0)) > 0
             ORDER BY stat_date
             """
             
