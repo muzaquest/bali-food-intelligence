@@ -523,6 +523,39 @@ class IntegratedMLDetective:
         match = re.search(date_pattern, result_line)
         return match.group(1) if match else None
 
+    def _build_concise_ml_block(self, restaurant_name: str, target_date: str) -> list:
+        """Возвращает короткий ML-блок по проблемному дню: факт vs прогноз, отклонение, топ-факторы (IDR/%)."""
+        if not self.model_trained:
+            return []
+        try:
+            features = self._prepare_features_for_date(restaurant_name, target_date)
+            if not features:
+                return []
+            actual_sales = self._get_actual_sales(restaurant_name, target_date)
+            feature_array = np.array([list(features.values())])
+            predicted_sales = max(1.0, float(self.ml_model.predict(feature_array)[0]))
+            # SHAP
+            shap_values = self.shap_explainer.shap_values(feature_array)[0]
+            pairs = list(zip(self.feature_names, shap_values))
+            # Отсечь неинформативные факторы
+            pairs = [p for p in pairs if abs(p[1]) >= predicted_sales * 0.01]
+            pairs.sort(key=lambda x: abs(x[1]), reverse=True)
+            block = []
+            dev_pct = (actual_sales - predicted_sales) / predicted_sales * 100.0
+            block.append(f"   🔎 ML: факт {actual_sales:,.0f} vs прогноз {predicted_sales:,.0f} ({dev_pct:+.1f}%)")
+            # Топ-5 факторов как waterfall
+            top = pairs[:5]
+            if top:
+                block.append("   📊 Факторы (вклад):")
+                for name, shap_val in top:
+                    pct = shap_val / predicted_sales * 100.0
+                    sign = "+" if shap_val >= 0 else ""
+                    readable = self._format_feature_name(name)
+                    block.append(f"      • {readable}: {sign}{pct:.1f}% ({shap_val:,.0f} IDR)")
+            return block
+        except Exception:
+            return []
+
 
 # Класс-обертка для совместимости с main.py
 class ProperMLDetectiveAnalysis:

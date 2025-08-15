@@ -148,8 +148,8 @@ class ProductionSalesAnalyzer:
                 day_data = self._get_day_data(restaurant_name, date) or {}
                 day_sales = day_data.get('total_sales', 0)
                 
-                # Шапка проблемного дня
-                results.append(f"📉 ПРОБЛЕМНЫЙ ДЕНЬ #{i}: {self._format_date_ru(date)}")
+                # Шапка проблемного дня (включаем ISO дату для ML)
+                results.append(f"📉 ПРОБЛЕМНЫЙ ДЕНЬ #{i}: {self._format_date_ru(date)} ({date})")
                 results.append(f"💰 Продажи: {day_sales:,.0f} IDR (-{drop_pct:.1f}% к медиане)")
                 results.append("")
                 
@@ -159,6 +159,20 @@ class ProductionSalesAnalyzer:
                 for factor in factors:
                     # Выводим факторы маркерами как в README
                     results.append(f"- {factor}")
+                
+                # Вставляем короткий ML-блок (факт vs прогноз и топ-факторы)
+                try:
+                    from .integrated_ml_detective import IntegratedMLDetective
+                    _imd = IntegratedMLDetective()
+                    if _imd.model_trained or _imd._prepare_training_data(restaurant_name).shape[0] > 10:
+                        if not _imd.model_trained:
+                            _imd._train_ml_model(restaurant_name)
+                        ml_block = _imd._build_concise_ml_block(restaurant_name, date)
+                        if ml_block:
+                            results.append("")
+                            results.extend(ml_block)
+                except Exception:
+                    pass
                 
                 # Что делать (короткий actionable-блок)
                 actions = self._generate_day_actions(factors)
