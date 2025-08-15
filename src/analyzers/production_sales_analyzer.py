@@ -140,6 +140,16 @@ class ProductionSalesAnalyzer:
             results.append(f"🚨 Найдено {len(bad_days)} критических дня")
             results.append("")
             
+            # Инициализируем ML для проверки под/над прогнозом
+            imd = None
+            try:
+                from .integrated_ml_detective import IntegratedMLDetective
+                imd = IntegratedMLDetective()
+                if not imd.model_trained:
+                    imd._train_ml_model(restaurant_name)
+            except Exception:
+                imd = None
+            
             # Анализируем каждый проблемный день (топ-5)
             for i, bad_day_info in enumerate(bad_days[:5], 1):
                 date = bad_day_info[0]
@@ -147,6 +157,18 @@ class ProductionSalesAnalyzer:
                 
                 day_data = self._get_day_data(restaurant_name, date) or {}
                 day_sales = day_data.get('total_sales', 0)
+                
+                # Если ML доступен и прогноз >= факта (или совсем близко), день не считаем проблемным
+                try:
+                    if imd is not None:
+                        feats = imd._prepare_features_for_date(restaurant_name, date)
+                        if feats:
+                            import numpy as _np
+                            pred = float(imd.ml_model.predict(_np.array([list(feats.values())]))[0])
+                            if day_sales >= pred * 0.98:  # не проблема, факт не ниже ожиданий
+                                continue
+                except Exception:
+                    pass
                 
                 # Шапка проблемного дня (включаем ISO дату для ML)
                 results.append(f"📉 ПРОБЛЕМНЫЙ ДЕНЬ #{i}: {self._format_date_ru(date)} ({date})")
@@ -269,7 +291,7 @@ class ProductionSalesAnalyzer:
                        NULL as close_time
                 FROM grab_stats g
                 WHERE g.restaurant_id = {restaurant_id}
-                UNION ALL
+                UNION
                 SELECT gj.stat_date, gj.restaurant_id, NULL as sales, NULL as orders, NULL as offline_rate,
                        gj.close_time
                 FROM gojek_stats gj
