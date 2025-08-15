@@ -2619,8 +2619,13 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 
                 # 5.2 Платформенные сбои: топ критичных дней
                 conn_cause = sqlite3.connect('database.sqlite')
-                cause_df = pd.read_sql_query(f"""
-                    SELECT COALESCE(g.stat_date, gj.stat_date) as date,
+                                 cause_df = pd.read_sql_query(f"""
+                    WITH dates AS (
+                        SELECT stat_date, restaurant_id FROM grab_stats WHERE restaurant_id = (SELECT id FROM restaurants WHERE name = '{restaurant_name}' LIMIT 1) AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+                        UNION
+                        SELECT stat_date, restaurant_id FROM gojek_stats WHERE restaurant_id = (SELECT id FROM restaurants WHERE name = '{restaurant_name}' LIMIT 1) AND stat_date BETWEEN '{start_date}' AND '{end_date}'
+                    )
+                    SELECT d.stat_date as date,
                            COALESCE(g.offline_rate, 0) as grab_off_min,
                            CASE 
                                WHEN gj.close_time IS NULL THEN 0
@@ -2629,10 +2634,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                                WHEN typeof(gj.close_time) = 'text' THEN CAST(gj.close_time AS INTEGER)
                                ELSE CAST(gj.close_time AS INTEGER)
                            END as gojek_off_min
-                    FROM grab_stats g
-                    FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
-                    WHERE COALESCE(g.restaurant_id, gj.restaurant_id) = (SELECT id FROM restaurants WHERE name = '{restaurant_name}' LIMIT 1)
-                      AND COALESCE(g.stat_date, gj.stat_date) BETWEEN '{start_date}' AND '{end_date}'
+                    FROM dates d
+                    LEFT JOIN grab_stats g ON g.restaurant_id = d.restaurant_id AND g.stat_date = d.stat_date
+                    LEFT JOIN gojek_stats gj ON gj.restaurant_id = d.restaurant_id AND gj.stat_date = d.stat_date
                 """, conn_cause)
                 conn_cause.close()
                 if not cause_df.empty:
@@ -2653,9 +2657,9 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 f.write(f"⚠️ Не удалось сформировать детективный раздел: {e}\n")
             f.write("\n")
             
-            # Операционные показатели
-            f.write("⚠️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ\n")
-            f.write("-" * 50 + "\n")
+            # 6. КАЧЕСТВО ОБСЛУЖИВАНИЯ И ОПЕРАЦИИ
+            f.write("⚠️ 5. ОПЕРАЦИОННАЯ ЭФФЕКТИВНОСТЬ\n")
+            f.write("-" * 40 + "\n")
             # Финансовые показатели payouts (по образцу README)
             try:
                 conn_pay = sqlite3.connect('database.sqlite')
