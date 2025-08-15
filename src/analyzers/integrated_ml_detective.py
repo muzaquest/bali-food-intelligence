@@ -547,8 +547,9 @@ class IntegratedMLDetective:
             top = pairs[:5]
             if top:
                 block.append("   📊 Факторы (вклад):")
+                sum_abs = sum(abs(v) for _, v in top) or 1.0
                 for name, shap_val in top:
-                    pct = shap_val / predicted_sales * 100.0
+                    pct = (shap_val / sum_abs) * 100.0
                     sign = "+" if shap_val >= 0 else ""
                     readable = self._format_feature_name(name)
                     block.append(f"      • {readable}: {sign}{pct:.1f}% ({shap_val:,.0f} IDR)")
