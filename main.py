@@ -2619,7 +2619,7 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 
                 # 5.2 Платформенные сбои: топ критичных дней
                 conn_cause = sqlite3.connect('database.sqlite')
-                                 cause_df = pd.read_sql_query(f"""
+                cause_df = pd.read_sql_query(f"""
                     WITH dates AS (
                         SELECT stat_date, restaurant_id FROM grab_stats WHERE restaurant_id = (SELECT id FROM restaurants WHERE name = '{restaurant_name}' LIMIT 1) AND stat_date BETWEEN '{start_date}' AND '{end_date}'
                         UNION
