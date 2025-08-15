@@ -2484,10 +2484,21 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
         filename = f"reports/detailed_analysis_{restaurant_name.replace(' ', '_')}_{timestamp}.txt"
         
         with open(filename, 'w', encoding='utf-8') as f:
-            f.write("═" * 100 + "\n")
-            f.write(f"🎯 MUZAQUEST ANALYTICS - ДЕТАЛЬНЫЙ ОТЧЕТ: {restaurant_name.upper()}\n")
-            f.write("═" * 100 + "\n")
-            f.write(f"📅 Период анализа: {start_date} → {end_date}\n")
+            # Шапка отчета по образцу README
+            separator = """════════════════════════════════════════════════════════════════════════════════════════════════════\n"""
+            f.write(separator)
+            f.write(f"🏪 Полный отчет анализа ресторана \"{restaurant_name}\"\n")
+            f.write(f"🏪 АНАЛИЗ РЕСТОРАНА: {restaurant_name}\n")
+            # Кол-во дней периода
+            try:
+                from datetime import datetime as _dt
+                _sd = _dt.strptime(start_date, '%Y-%m-%d')
+                _ed = _dt.strptime(end_date, '%Y-%m-%d')
+                _days = (_ed - _sd).days + 1
+            except Exception:
+                _days = len(data)
+            f.write(f"🗓️ ПЕРИОД: {start_date} — {end_date} ({_days} дней)\n\n")
+            f.write(separator)
             f.write(f"📊 Создан: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"🔬 Использованы все 63 параметра + 3 API интеграции\n\n")
             
@@ -2517,15 +2528,37 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             f.write(f"      📈 {((gojek_marketing_budget/total_sales*100) if total_sales>0 else 0):.1f}% от общей выручки | {((gojek_marketing_budget/max(gojek_sales,1))*100):.1f}% от выручки GOJEK\n\n")
             
             # Динамика по месяцам
-            f.write("📈 ДИНАМИКА ПО МЕСЯЦАМ\n")
-            f.write("-" * 50 + "\n")
+            f.write("📈 2. АНАЛИЗ ПРОДАЖ И ТРЕНДОВ\n")
+            f.write("-" * 40 + "\n")
+            f.write("📊 Динамика по месяцам:\n")
             for month, sales in monthly_sales.items():
                 month_name = month_names.get(month, f"Месяц {month}")
                 month_data = data_sorted[data_sorted['month'] == month]
                 days_in_month = len(month_data)
                 daily_avg = sales / days_in_month if days_in_month > 0 else 0
-                f.write(f"{month_name}: {sales:,.0f} IDR ({days_in_month} дней, {daily_avg:,.0f} IDR/день)\n")
-            f.write("\n")
+                f.write(f"  {month_name}: {sales:,.0f} IDR ({days_in_month} дней, {daily_avg:,.0f} IDR/день)\n")
+            # Выходные vs будни
+            weekend = data_sorted[pd.to_datetime(data_sorted['date']).dt.dayofweek.isin([5,6])]
+            weekday = data_sorted[~pd.to_datetime(data_sorted['date']).dt.dayofweek.isin([5,6])]
+            if not weekend.empty and not weekday.empty:
+                f.write("\n🗓️ Выходные vs Будни:\n")
+                f.write(f"  📅 Средние продажи в выходные: {weekend['total_sales'].mean():,.0f} IDR\n")
+                f.write(f"  📅 Средние продажи в будни: {weekday['total_sales'].mean():,.0f} IDR\n")
+                effect = (weekend['total_sales'].mean() - weekday['total_sales'].mean())/weekday['total_sales'].mean()*100 if weekday['total_sales'].mean()>0 else 0
+                f.write(f"  📊 Эффект выходных: {effect:+.1f}%\n")
+            # Лучший/худший день
+            if not data_sorted.empty:
+                best = data_sorted.loc[data_sorted['total_sales'].idxmax()]
+                worst = data_sorted.loc[data_sorted['total_sales'].idxmin()]
+                f.write("📊 АНАЛИЗ РАБОЧИХ ДНЕЙ ({} дней):\n".format(len(data_sorted)))
+                f.write(f"🏆 Лучший день: {best['date']} - {best['total_sales']:,.0f} IDR\n")
+                f.write(f"📉 Худший день: {worst['date']} - {worst['total_sales']:,.0f} IDR\n")
+                spread = (best['total_sales'] - worst['total_sales'])/max(1, weekday['total_sales'].mean())*100 if not weekday.empty else 0
+                f.write(f"📊 Разброс продаж: {spread:.1f}% (только рабочие дни)\n")
+                f.write(f"📈 Средние продажи: {daily_avg_sales:,.0f} IDR/день\n")
+                # Коэф. вариации
+                cv = (data_sorted['total_sales'].std()/data_sorted['total_sales'].mean()*100) if data_sorted['total_sales'].mean()>0 else 0
+                f.write(f"📊 Коэффициент вариации: {cv:.1f}% (стабильность продаж)\n\n")
             
             # Клиентская база
             f.write("👥 КЛИЕНТСКАЯ БАЗА\n")
