@@ -2302,6 +2302,16 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             print("📋 РЕЗУЛЬТАТЫ ДЕТЕКТИВНОГО АНАЛИЗА:")
             for result in detective_results:
                 print(result)
+            # ВСТРАИВАЕМ ПРОИЗВОДСТВЕННЫЙ АНАЛИЗАТОР
+            try:
+                from src.analyzers import ProductionSalesAnalyzer
+                _psa = ProductionSalesAnalyzer()
+                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date)
+                print("\n📋 ДОПОЛНИТЕЛЬНЫЙ ПРОИЗВОДСТВЕННЫЙ АНАЛИЗ:")
+                for line in _psa_results:
+                    print(line)
+            except Exception as _e:
+                print(f"⚠️ Ошибка ProductionSalesAnalyzer: {_e}")
         except Exception as e:
             print(f"⚠️ Ошибка обновленного анализатора: {e}")
             print("📊 Используем fallback анализ...")
@@ -2629,9 +2639,18 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
             try:
                 f.write(detective_analysis + "\n\n")
             except NameError:
-                # Если нет переменной, записываем fallback анализ трендов
                 simple_trend_analysis = analyze_sales_trends(data)
                 f.write(simple_trend_analysis + "\n\n")
+            # ВСТРАИВАЕМ ПРОИЗВОДСТВЕННЫЙ АНАЛИЗАТОР В ФАЙЛ
+            try:
+                from src.analyzers import ProductionSalesAnalyzer
+                _psa = ProductionSalesAnalyzer()
+                _psa_results = _psa.analyze_restaurant_performance(restaurant_name, start_date, end_date)
+                f.write("📋 ДОПОЛНИТЕЛЬНЫЙ ПРОИЗВОДСТВЕННЫЙ АНАЛИЗ\n")
+                f.write("-" * 50 + "\n")
+                f.write("\n".join(_psa_results) + "\n\n")
+            except Exception as _e:
+                f.write(f"⚠️ Ошибка ProductionSalesAnalyzer: {_e}\n\n")
             
             # Стратегические рекомендации
             f.write("💡 СТРАТЕГИЧЕСКИЕ РЕКОМЕНДАЦИИ\n")
