@@ -2037,130 +2037,133 @@ class ProductionSalesAnalyzer:
             return [f"      ❌ ML анализ недоступен: {e}"]
     
     def _get_quick_detective_analysis(self, restaurant_name, target_date, day_data):
-        """Быстрый детективный анализ без ML как в README"""
+        """Быстрый детективный анализ без ML как в README, усиленный атрибуцией и бенчмарками."""
         factors = []
+        baselines = self._get_context_baselines(restaurant_name, target_date)
+        period_median = baselines.get('period_median_sales', 0) or 0
+        dow_median = baselines.get('dow_median_sales', 0) or period_median
+        avg7 = baselines.get('avg_7d_sales', 0) or period_median
+        avg30 = baselines.get('avg_30d_sales', 0) or period_median
         
-        # Получаем погоду для анализа
-        weather_data = self._get_weather_data(restaurant_name, target_date)
+        # Текущие метрики
+        total_sales = float(day_data.get('total_sales', 0) or 0)
+        grab_sales = float(day_data.get('grab_sales', 0) or 0)
+        gojek_sales = float(day_data.get('gojek_sales', 0) or 0)
+        grab_offline = float(day_data.get('grab_offline_rate', 0) or 0)
+        gojek_close = day_data.get('gojek_close_time', '00:00:00') or '00:00:00'
+        try:
+            if isinstance(gojek_close, str) and ':' in gojek_close:
+                parts = gojek_close.split(':')
+                gojek_off_min = int(parts[0]) * 60 + int(parts[1])
+            else:
+                gojek_off_min = int(float(gojek_close))
+        except Exception:
+            gojek_off_min = 0
+        rating = float(day_data.get('grab_rating', 0) or 0) if day_data.get('grab_rating', 0) else float(day_data.get('gojek_rating', 0) or 0)
         
-        # 1. Анализ технических проблем
+        # 0) Общее отклонение
+        deficit_idr = max(0.0, (dow_median or period_median) - total_sales)
+        
+        # 1) Технические проблемы (весомая атрибуция)
         technical_issues = []
-        
-        # GRAB проблемы
-        if day_data.get('grab_sales', 0) == 0:
-            technical_issues.append("🚨 **GRAB данные отсутствуют** (-50%) — полная недоступность платформы")
+        tech_impact = 0.0
+        if grab_sales == 0:
+            est = min(deficit_idr, (dow_median or period_median) * 0.5)
+            technical_issues.append(f"🚨 **GRAB данных нет в базе** (~-{est:,.0f} IDR) — полное отсутствие канала")
+            tech_impact += est
         else:
-            # Конвертируем offline_rate в число
-            grab_offline = day_data.get('grab_offline_rate', 0)
-            try:
-                grab_offline = float(grab_offline) if grab_offline else 0
-            except (ValueError, TypeError):
-                grab_offline = 0
-                
-            if grab_offline > 300:  # >5 часов
-                hours = int(grab_offline // 60)
-                mins = int(grab_offline % 60)
-                technical_issues.append(f"🚨 **GRAB сбой {hours}ч {mins}м** (-35%) — платформа была недоступна {int(grab_offline)} минут")
-            elif grab_offline > 60:  # >1 час
-                hours = int(grab_offline // 60)
-                mins = int(grab_offline % 60)
-                technical_issues.append(f"⚠️ **GRAB offline {hours}ч {mins}м** (-15%) — операционные проблемы")
-        
-        # GOJEK проблемы
-        if day_data.get('gojek_sales', 0) == 0:
-            technical_issues.append("📊 **GOJEK данные отсутствуют** (-25%) — техническая проблема сбора данных")
+            if grab_offline > 300:
+                est = min(deficit_idr - tech_impact, (dow_median or period_median) * 0.35)
+                technical_issues.append(f"🚨 **GRAB сбой {int(grab_offline//60)}ч {int(grab_offline%60)}м** (~-{est:,.0f} IDR) — длительная недоступность")
+                tech_impact += est
+            elif grab_offline > 60:
+                est = min(deficit_idr - tech_impact, (dow_median or period_median) * 0.15)
+                technical_issues.append(f"⚠️ **GRAB offline {int(grab_offline//60)}ч {int(grab_offline%60)}м** (~-{est:,.0f} IDR) — существенные перебои")
+                tech_impact += est
+        if gojek_sales == 0:
+            est = min(deficit_idr - tech_impact, (dow_median or period_median) * 0.25)
+            technical_issues.append(f"📊 **GOJEK данные отсутствуют** (~-{est:,.0f} IDR) — потеря продаж по каналу")
+            tech_impact += est
         else:
-            # Конвертируем close_time в число
-            gojek_close = day_data.get('gojek_close_time', 0)
-            try:
-                # Если это строка времени (HH:MM:SS), конвертируем в минуты
-                if isinstance(gojek_close, str) and ':' in gojek_close:
-                    parts = gojek_close.split(':')
-                    gojek_close = int(parts[0]) * 60 + int(parts[1])  # часы * 60 + минуты
-                else:
-                    gojek_close = float(gojek_close) if gojek_close else 0
-            except (ValueError, TypeError):
-                gojek_close = 0
-                
-            if gojek_close > 120:  # >2 часа в минутах
-                technical_issues.append(f"⚙️ **GOJEK сбой {int(gojek_close)} минут** (-20%) — операционная проблема")
-            elif gojek_close > 60:  # >1 час
-                technical_issues.append(f"⚠️ **GOJEK offline {int(gojek_close)}мин** (-10%) — временные проблемы")
+            if gojek_off_min > 120:
+                est = min(deficit_idr - tech_impact, (dow_median or period_median) * 0.20)
+                technical_issues.append(f"⚙️ **GOJEK сбой {gojek_off_min}мин** (~-{est:,.0f} IDR) — операционная недоступность")
+                tech_impact += est
+            elif gojek_off_min > 60:
+                est = min(deficit_idr - tech_impact, (dow_median or period_median) * 0.10)
+                technical_issues.append(f"⚠️ **GOJEK offline {gojek_off_min}мин** (~-{est:,.0f} IDR) — временные проблемы")
+                tech_impact += est
         
-        # 2. Анализ погоды
+        # 2) Погода (лишь если вклад остаётся не покрытым тех. проблемами)
+        weather_data = self._get_weather_data(restaurant_name, target_date)
         weather_factors = []
-        if weather_data.get('precipitation', 0) > 20:
-            weather_factors.append(f"🌧️ **Сильный дождь {weather_data['precipitation']:.1f}мм** (-15%) — снижает активность курьеров и заказы")
-        elif weather_data.get('precipitation', 0) > 5:
-            weather_factors.append(f"🌦️ **Умеренный дождь {weather_data['precipitation']:.1f}мм** (-10%) — влияет на доставку")
-        elif weather_data.get('precipitation', 0) > 1:
-            weather_factors.append(f"🌦️ **Легкий дождь {weather_data['precipitation']:.1f}мм** (-5%) — незначительное влияние")
+        weather_impact = 0.0
+        remaining = max(0.0, deficit_idr - tech_impact)
+        if remaining > 0 and weather_data:
+            pr = float(weather_data.get('precipitation', 0) or 0)
+            if pr > 20:
+                est = min(remaining, (dow_median or period_median) * 0.15)
+                weather_factors.append(f"🌧️ **Сильный дождь {pr:.1f}мм** (~-{est:,.0f} IDR) — снижает оффер/логистику")
+                weather_impact += est
+            elif pr > 5:
+                est = min(remaining, (dow_median or period_median) * 0.10)
+                weather_factors.append(f"🌦️ **Умеренный дождь {pr:.1f}мм** (~-{est:,.0f} IDR) — влияет на доставку")
+                weather_impact += est
+            elif pr > 1:
+                est = min(remaining, (dow_median or period_median) * 0.05)
+                weather_factors.append(f"🌦️ **Легкий дождь {pr:.1f}мм** (~-{est:,.0f} IDR) — незначительный эффект")
+                weather_impact += est
         
-        if weather_data.get('temperature', 27) < 24:
-            weather_factors.append(f"🌡️ **Прохладная температура {weather_data['temperature']:.1f}°C** (-5%) — снижает активность")
-        elif weather_data.get('temperature', 27) > 32:
-            weather_factors.append(f"🌡️ **Жаркая температура {weather_data['temperature']:.1f}°C** (-3%) — дискомфорт для курьеров")
-        
-        # 3. Анализ дня недели
-        from datetime import datetime
-        date_obj = datetime.strptime(target_date, '%Y-%m-%d')
-        day_name = date_obj.strftime('%A')
-        weekday_impact = {
-            'Monday': ('📅 **Понедельник**', '(-5%) — медленный старт недели'),
-            'Tuesday': ('📅 **Вторник**', '(-4%) — будний день с меньшей активностью'),
-            'Wednesday': ('📅 **Среда**', '(-5%) — середина недели, обычно средние показатели'),
-            'Thursday': ('📅 **Четверг**', '(+2%) — хороший день для заказов'),
-            'Friday': ('📅 **Пятница**', '(+5%) — активный день перед выходными'),
-            'Saturday': ('📅 **Суббота**', '(+8%) — выходной день'),
-            'Sunday': ('📅 **Воскресенье**', '(+3%) — день отдыха')
-        }
-        
-        if day_name in weekday_impact:
-            day_factor, impact = weekday_impact[day_name]
-            factors.append(f"{day_factor} {impact}")
-        
-        # 4. Проверка праздников
+        # 3) Праздники (строже по именам + знаку влияния)
         holiday_info = self._check_holiday_impact(target_date)
-        if holiday_info:
-            factors.append(holiday_info)
+        holiday_factor = []
+        if holiday_info and (deficit_idr - tech_impact - weather_impact) > 0:
+            holiday_factor.append(holiday_info.replace('%', '').replace('—', '—'))
         
-        # Добавляем технические проблемы в начало
-        factors = technical_issues + weather_factors + factors
+        # 4) День недели — как пояснение, без сильной атрибуции IDR
+        from datetime import datetime
+        day_name = datetime.strptime(target_date, '%Y-%m-%d').strftime('%A')
+        weekday_label = {
+            'Monday': '📅 **Понедельник** (обычно ниже среднего)',
+            'Tuesday': '📅 **Вторник** (обычно ниже среднего)',
+            'Wednesday': '📅 **Среда** (средние показатели)',
+            'Thursday': '📅 **Четверг** (слегка выше)',
+            'Friday': '📅 **Пятница** (выше среднего)',
+            'Saturday': '📅 **Суббота** (пик выходных)',
+            'Sunday': '📅 **Воскресенье** (выше среднего)'
+        }.get(day_name, f"📅 **{day_name}**")
+        weekday_factor = [weekday_label]
         
-        # 5. Анализ операционных показателей
-        operational_factors = []
-        
-        # Время ожидания водителей (конвертируем в числа)
+        # 5) Рейтинг/операционные времена (если выше бенчмарка)
+        ops_factors = []
+        prep_min = day_data.get('gojek_preparation_time', '00:00:00')
         try:
-            grab_waiting = float(day_data.get('grab_driver_waiting', 0) or 0)
-            if grab_waiting > 15:
-                operational_factors.append(f"⏰ **GRAB ожидание водителей {grab_waiting:.1f}мин** (-8%) — длительные ожидания")
-        except (ValueError, TypeError):
-            pass
-            
+            if isinstance(prep_min, str) and ':' in prep_min:
+                prt = prep_min.split(':')
+                prep_min_val = int(prt[0]) * 60 + int(prt[1])
+            else:
+                prep_min_val = float(prep_min or 0)
+        except Exception:
+            prep_min_val = 0
+        if prep_min_val and prep_min_val > baselines.get('avg_30d_prep_min', 25) + 10:
+            ops_factors.append(f"⏱️ **Время приготовления {prep_min_val:.0f}мин** — выше нормы")
+        deliv = day_data.get('gojek_delivery_time', '00:00:00')
         try:
-            gojek_waiting = float(day_data.get('gojek_driver_waiting', 0) or 0)
-            if gojek_waiting > 15:
-                operational_factors.append(f"⏰ **GOJEK ожидание водителей {gojek_waiting:.1f}мин** (-8%) — проблемы с логистикой")
-        except (ValueError, TypeError):
-            pass
+            if isinstance(deliv, str) and ':' in deliv:
+                prd = deliv.split(':')
+                deliv_min_val = int(prd[0]) * 60 + int(prd[1])
+            else:
+                deliv_min_val = float(deliv or 0)
+        except Exception:
+            deliv_min_val = 0
+        if deliv_min_val and deliv_min_val > baselines.get('avg_30d_delivery_min', 25) + 10:
+            ops_factors.append(f"🚚 **Время доставки {deliv_min_val:.0f}мин** — выше нормы")
+        if rating and rating < max(4.0, baselines.get('avg_30d_rating', 4.5) - 0.3):
+            ops_factors.append(f"⭐ **Низкий рейтинг {rating:.2f}/5.0** — снижает конверсию")
         
-        # Время приготовления (конвертируем в число)
-        try:
-            prep_time = float(day_data.get('gojek_preparation_time', 0) or 0)
-            if prep_time > 25:
-                operational_factors.append(f"⏱️ **Время приготовления {prep_time:.1f}мин** (-10%) — превышает норму")
-        except (ValueError, TypeError):
-            pass
-        
-        factors.extend(operational_factors)
-        
-        # Если нет очевидных факторов, добавляем общий анализ
-        if not factors:
-            factors.append("🤖 **ML анализ требуется** — нет очевидной технической причины")
-            factors.append("📊 **Обе платформы работали** — требует детального анализа всех факторов")
-        
-        return factors[:5]  # Топ-5 факторов
+        # Сбор итогов по приоритету
+        ordered = technical_issues + weather_factors + holiday_factor + weekday_factor + ops_factors
+        return ordered
     
     def _format_feature_name(self, feature):
         """Форматирует название фичи для ML анализа"""
@@ -2522,6 +2525,91 @@ class ProductionSalesAnalyzer:
                 'temperature': 27,
                 'wind_speed': 5
             }
+
+    def _get_context_baselines(self, restaurant_name: str, target_date: str) -> dict:
+        """Возвращает контекстные бенчмарки для даты: медиана периода, медиана по дню недели,
+        средние за 7 и 30 дней по продажам, показам, расходам, рейтингам и временам.
+        """
+        baselines = {
+            'period_median_sales': 0.0,
+            'dow_median_sales': 0.0,
+            'avg_7d_sales': 0.0,
+            'avg_30d_sales': 0.0,
+            'avg_7d_impressions': 0.0,
+            'avg_7d_ads_spend': 0.0,
+            'avg_30d_rating': 4.5,
+            'avg_30d_prep_min': 20.0,
+            'avg_30d_delivery_min': 25.0
+        }
+        try:
+            with sqlite3.connect('database.sqlite') as conn:
+                # Найдем restaurant_id
+                rid_df = pd.read_sql_query(
+                    f"SELECT id FROM restaurants WHERE name = '{restaurant_name}'",
+                    conn
+                )
+                if rid_df.empty:
+                    return baselines
+                rid = int(rid_df.iloc[0]['id'])
+                # Все даты периода +/- 60 дней вокруг target для устойчивых бенчмарков
+                query_all = f"""
+                SELECT d.stat_date as date,
+                       COALESCE(g.sales, 0) + COALESCE(gj.sales, 0) as total_sales,
+                       COALESCE(g.impressions, 0) + 0 as impressions,
+                       COALESCE(g.ads_spend, 0) + COALESCE(gj.ads_spend, 0) as total_ads_spend,
+                       COALESCE(g.rating, gj.rating, 4.5) as rating,
+                       CASE WHEN gj.preparation_time IS NOT NULL AND gj.preparation_time != '00:00:00'
+                            THEN (CAST(substr(gj.preparation_time, 1, 2) AS INTEGER) * 60 + 
+                                  CAST(substr(gj.preparation_time, 4, 2) AS INTEGER)) ELSE NULL END as prep_min,
+                       CASE WHEN gj.delivery_time IS NOT NULL AND gj.delivery_time != '00:00:00'
+                            THEN (CAST(substr(gj.delivery_time, 1, 2) AS INTEGER) * 60 + 
+                                  CAST(substr(gj.delivery_time, 4, 2) AS INTEGER)) ELSE NULL END as delivery_min
+                FROM (
+                    SELECT stat_date, {rid} as restaurant_id FROM grab_stats 
+                      WHERE restaurant_id = {rid}
+                    UNION
+                    SELECT stat_date, {rid} as restaurant_id FROM gojek_stats 
+                      WHERE restaurant_id = {rid}
+                ) d
+                LEFT JOIN grab_stats g ON g.restaurant_id = d.restaurant_id AND g.stat_date = d.stat_date
+                LEFT JOIN gojek_stats gj ON gj.restaurant_id = d.restaurant_id AND gj.stat_date = d.stat_date
+                WHERE d.stat_date < '{target_date}' AND d.stat_date >= date('{target_date}', '-60 day')
+                ORDER BY d.stat_date
+                """
+                df_all = pd.read_sql_query(query_all, conn)
+                if not df_all.empty:
+                    baselines['avg_30d_sales'] = float(df_all['total_sales'].tail(30).mean()) if len(df_all) >= 7 else float(df_all['total_sales'].mean())
+                    baselines['avg_7d_sales'] = float(df_all['total_sales'].tail(7).mean()) if len(df_all) >= 7 else baselines['avg_30d_sales']
+                    baselines['avg_7d_impressions'] = float(df_all['impressions'].tail(7).mean()) if 'impressions' in df_all.columns else 0.0
+                    baselines['avg_7d_ads_spend'] = float(df_all['total_ads_spend'].tail(7).mean()) if 'total_ads_spend' in df_all.columns else 0.0
+                    if 'rating' in df_all.columns and df_all['rating'].notna().any():
+                        baselines['avg_30d_rating'] = float(df_all['rating'].dropna().tail(30).mean())
+                    if 'prep_min' in df_all.columns and df_all['prep_min'].notna().any():
+                        baselines['avg_30d_prep_min'] = float(df_all['prep_min'].dropna().tail(30).mean())
+                    if 'delivery_min' in df_all.columns and df_all['delivery_min'].notna().any():
+                        baselines['avg_30d_delivery_min'] = float(df_all['delivery_min'].dropna().tail(30).mean())
+                # Медиана периода (в пределах глобального окна периода из аргументов)
+                # Пытаемся прочитать из таблиц за реальный анализируемый период (если известен в окружении)
+                try:
+                    # Тянем последние 90 дней до target_date как период для медианы, если нет явного периода
+                    df_period = df_all.copy()
+                    if not df_period.empty:
+                        baselines['period_median_sales'] = float(df_period['total_sales'].median())
+                except Exception:
+                    pass
+                # Медиана по дню недели
+                from datetime import datetime as _dt
+                if not df_all.empty:
+                    df_all = df_all.copy()
+                    df_all['dow'] = df_all['date'].apply(lambda x: _dt.strptime(x, '%Y-%m-%d').weekday())
+                    try:
+                        dow_target = _dt.strptime(target_date, '%Y-%m-%d').weekday()
+                        baselines['dow_median_sales'] = float(df_all[df_all['dow'] == dow_target]['total_sales'].median()) if (df_all['dow'] == dow_target).any() else baselines['period_median_sales']
+                    except Exception:
+                        baselines['dow_median_sales'] = baselines['period_median_sales']
+        except Exception:
+            return baselines
+        return baselines
 
 # Совместимость с main.py
 class ProperMLDetectiveAnalysis:
