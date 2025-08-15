@@ -373,7 +373,7 @@ elif page == "🤖 ML-модель и прогнозы":
             
             # Запуск ML анализа через proper_ml_detective_analysis.py
             try:
-                import proper_ml_detective_analysis as ml_detective
+                from src.analyzers.proper_ml_detective_analysis import run_detective_analysis
                 
                 st.markdown("### 🤖 Результаты ML-анализа")
                 
@@ -382,7 +382,7 @@ elif page == "🤖 ML-модель и прогнозы":
                     st.info("Запуск детективного анализа с SHAP объяснениями...")
                     result = subprocess.run([
                         sys.executable, '-c',
-                        f"import proper_ml_detective_analysis; proper_ml_detective_analysis.run_detective_analysis('{selected_restaurant}')"
+                        f"from src.analyzers.proper_ml_detective_analysis import run_detective_analysis; run_detective_analysis('{selected_restaurant}')"
                     ], capture_output=True, text=True)
                     
                     if result.returncode == 0:
