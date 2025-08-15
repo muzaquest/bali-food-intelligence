@@ -315,7 +315,9 @@ class IntegratedMLDetective:
             gj.ads_spend as gojek_ads_spend,
             g.impressions,
             COALESCE(g.rating, gj.rating, 4.5) as rating,
-            (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders
+            (COALESCE(g.orders, 0) + COALESCE(gj.orders, 0)) as total_orders,
+            COALESCE(g.ads_sales,0) + COALESCE(gj.ads_sales,0) as total_ads_sales,
+            COALESCE(g.ads_spend,0) + COALESCE(gj.ads_spend,0) as total_ads_spend
         FROM (
             SELECT stat_date, restaurant_id FROM grab_stats WHERE restaurant_id = {restaurant_id} AND stat_date = '{target_date}'
             UNION

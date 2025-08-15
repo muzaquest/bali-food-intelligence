@@ -2609,6 +2609,50 @@ def analyze_restaurant(restaurant_name, start_date=None, end_date=None):
                 f.write(f"  Май: {may_roas_save:.2f}x\n")
             f.write("\n")
             
+            # 5. ДЕТЕКТИВНЫЙ АНАЛИЗ ПРОБЛЕМ
+            f.write("🔍 5. ДЕТЕКТИВНЫЙ АНАЛИЗ ПРОБЛЕМ\n")
+            f.write("-" * 40 + "\n")
+            try:
+                # 5.1 Реклама отключена (дни без бюджета)
+                ads_off_days = int((data['marketing_spend'] <= 0).sum()) if 'marketing_spend' in data.columns else 0
+                f.write(f"• 📉 Дни с отключенной рекламой (оба канала): {ads_off_days}\n")
+                
+                # 5.2 Платформенные сбои: топ критичных дней
+                conn_cause = sqlite3.connect('database.sqlite')
+                cause_df = pd.read_sql_query(f"""
+                    SELECT COALESCE(g.stat_date, gj.stat_date) as date,
+                           COALESCE(g.offline_rate, 0) as grab_off_min,
+                           CASE 
+                               WHEN gj.close_time IS NULL THEN 0
+                               WHEN typeof(gj.close_time) = 'text' AND instr(gj.close_time, ':') > 0 THEN 
+                                   CAST(substr(gj.close_time,1,2) AS INTEGER)*60 + CAST(substr(gj.close_time,4,2) AS INTEGER)
+                               WHEN typeof(gj.close_time) = 'text' THEN CAST(gj.close_time AS INTEGER)
+                               ELSE CAST(gj.close_time AS INTEGER)
+                           END as gojek_off_min
+                    FROM grab_stats g
+                    FULL OUTER JOIN gojek_stats gj ON g.restaurant_id = gj.restaurant_id AND g.stat_date = gj.stat_date
+                    WHERE COALESCE(g.restaurant_id, gj.restaurant_id) = (SELECT id FROM restaurants WHERE name = '{restaurant_name}' LIMIT 1)
+                      AND COALESCE(g.stat_date, gj.stat_date) BETWEEN '{start_date}' AND '{end_date}'
+                """, conn_cause)
+                conn_cause.close()
+                if not cause_df.empty:
+                    cause_df['total_off_min'] = cause_df['grab_off_min'].fillna(0) + cause_df['gojek_off_min'].fillna(0)
+                    critical = cause_df.sort_values('total_off_min', ascending=False).head(5)
+                    crit_days = int((cause_df['total_off_min'] > 60).sum())
+                    f.write(f"• 🛑 Критичные оффлайны платформ (>60 мин): {crit_days} дней\n")
+                    for _, r in critical.iterrows():
+                        if r['total_off_min'] > 0:
+                            f.write(f"   ─ {r['date']}: GRAB {int(r['grab_off_min']):,} мин; GOJEK {int(r['gojek_off_min']):,} мин\n")
+                
+                # 5.3 Погодные и праздничные факторы (агрегировано)
+                if 'weather_impact' in locals():
+                    f.write(f"• 🌧️ Влияние погоды (среднее): {weather_impact:+.1f}%\n")
+                if 'holiday_effect' in locals():
+                    f.write(f"• 🎉 Влияние праздников (среднее): {holiday_effect:+.1f}%\n")
+            except Exception as e:
+                f.write(f"⚠️ Не удалось сформировать детективный раздел: {e}\n")
+            f.write("\n")
+            
             # Операционные показатели
             f.write("⚠️ ОПЕРАЦИОННЫЕ ПОКАЗАТЕЛИ\n")
             f.write("-" * 50 + "\n")
